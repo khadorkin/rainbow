@@ -19,6 +19,8 @@ export let web3Provider = new ethers.providers.JsonRpcProvider(
   replace(infuraUrl, 'network', 'mainnet')
 );
 
+web3Provider.pollingInterval = -1;
+
 /**
  * @desc set a different web3 provider
  * @param {String} network
