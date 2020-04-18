@@ -4,8 +4,8 @@ import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { getAccountInfo } from '../handlers/localstorage/accountLocal';
-
 import { walletInit } from '../model/wallet';
+import runMigrations from '../model/migrations';
 import { setIsWalletEthZero } from '../redux/isWalletEthZero';
 import {
   settingsLoadNetwork,
@@ -20,14 +20,12 @@ import {
   useInitializeAccountData,
   useAccountSettings,
   useCheckEthBalance,
-  useMigrations,
 } from '../hooks';
 
 import { logger } from '../utils';
 
 export default function useInitializeWallet() {
   const dispatch = useDispatch();
-  const runMigrations = useMigrations();
   const onHideSplashScreen = useHideSplashScreen();
   const clearAccountData = useClearAccountData();
   const loadAccountData = useLoadAccountData();
@@ -74,10 +72,11 @@ export default function useInitializeWallet() {
         }
         await runMigrations();
         onHideSplashScreen();
-        logger.sentry('Hide splash screen');
+        logger.log('Hide splash screen');
         initializeAccountData();
         return walletAddress;
       } catch (error) {
+        console.log(error);
         // TODO specify error states more granular
         onHideSplashScreen();
         captureException(error);
@@ -93,7 +92,6 @@ export default function useInitializeWallet() {
       loadAccountData,
       network,
       onHideSplashScreen,
-      runMigrations,
     ]
   );
 
