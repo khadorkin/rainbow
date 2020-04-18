@@ -30,7 +30,7 @@ const Container = styled.View`
 class ProfileList extends React.Component {
   static propTypes = {
     accountAddress: PropTypes.string,
-    allAssets: PropTypes.array,
+    allProfiles: PropTypes.array,
     currentProfile: PropTypes.object,
     height: PropTypes.number,
     isInitializationOver: PropTypes.bool,
@@ -51,7 +51,7 @@ class ProfileList extends React.Component {
 
     this._layoutProvider = new LayoutProvider(
       i => {
-        if (this.props.allAssets && i < this.props.allAssets.length) {
+        if (this.props.allProfiles && i < this.props.allProfiles.length) {
           return WALLET_ROW;
         }
         return WALLET_LAST_ROW;
@@ -79,7 +79,7 @@ class ProfileList extends React.Component {
     if (this.props.isInitializationOver !== props.isInitializationOver) {
       this.isInitalized = true;
     }
-    const newAssets = Object.assign([], props.allAssets || []);
+    const newAssets = Object.assign([], props.allProfiles || []);
     for (let i = 0; i < newAssets.length; i++) {
       if (this.props.accountAddress === newAssets[i].address.toLowerCase()) {
         newAssets.splice(i, 1);

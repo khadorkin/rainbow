@@ -15,14 +15,44 @@ default_platform(:ios)
 platform :ios do
   desc "Refresh dSYMs"
   lane :refresh_dsyms do
-    download_dsyms(version: "latest")
-    upload_symbols_to_crashlytics
-    sentry_upload_dsym
+    upload_symbols_to_crashlytics(
+      dsym_path: './Rainbow.app.dSYM.zip'
+    )
+    sentry_upload_dsym(
+      dsym_path: './Rainbow.app.dSYM.zip'
+    )
+
+    version_from_plist = get_version_number
+
+    release_version = "me.rainbow-#{version_from_plist}"
+
+    dist = (latest_testflight_build_number(version: get_version_number) + 1).to_s
+
+    sentry_create_release(
+      finalize: true, # Whether to finalize the release. If not provided or false, the release can be finalized using the sentry_finalize_release action
+      version: release_version
+    )
+    sentry_upload_sourcemap(
+      sourcemap: './main.jsbundle', # file to upload
+      rewrite: true,
+      version: release_version,
+      dist: dist
+    )
+    sentry_upload_sourcemap(
+      sourcemap: './main.jsbundle.map', # sourcemap to upload
+      rewrite: true,
+      version: release_version,
+      dist: dist
+    )
     clean_build_artifacts
   end
 
   desc "Submit a new Beta build to Apple TestFlight"
   lane :beta do
+    increment_build_number({
+      build_number: latest_testflight_build_number(version: get_version_number) + 1
+    })
+
     update_info_plist(
       plist_path: "Rainbow/Info.plist",
       display_name: "Rainbow"
@@ -33,18 +63,24 @@ platform :ios do
       plist_path: "Rainbow/Info.plist",
     )
     match(
+      force: true,
       type: "appstore",
       app_identifier: "me.rainbow",
       git_url: "git@github.com:rainbow-me/rainbow-code-signing.git"
     )
+    automatic_code_signing(
+      use_automatic_signing: false
+    )
     gym(
+      workspace: "Rainbow.xcworkspace",
       scheme: "Rainbow",
-      export_method: "app-store",
       include_symbols: true,
+      configuration: "Release",
+      export_method: "app-store",
     )
     pilot(
-      app_identifier: "me.rainbow"
+      app_identifier: "me.rainbow",
+      skip_waiting_for_build_processing: true
     )
-    refresh_dsyms
   end
 end

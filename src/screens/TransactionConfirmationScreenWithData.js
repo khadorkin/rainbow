@@ -1,4 +1,5 @@
 import analytics from '@segment/analytics-react-native';
+import { isEmulatorSync } from 'react-native-device-info';
 import { ethers } from 'ethers';
 import lang from 'i18n-js';
 import { get, isNil, omit } from 'lodash';
@@ -11,16 +12,20 @@ import { withGas, withTransactionConfirmationScreen } from '../hoc';
 import {
   signMessage,
   signPersonalMessage,
+  signTypedDataMessage,
   signTransaction,
   sendTransaction,
 } from '../model/wallet';
 import { estimateGas, getTransactionCount, toHex } from '../handlers/web3';
-import { gasUtils } from '../utils';
+import { gasUtils, logger } from '../utils';
 import {
   isMessageDisplayType,
   isSignFirstParamType,
   isSignSecondParamType,
   SEND_TRANSACTION,
+  SIGN_TYPED_DATA,
+  SIGN,
+  PERSONAL_SIGN,
 } from '../utils/signingMethods';
 import TransactionConfirmationScreen from './TransactionConfirmationScreen';
 
@@ -42,7 +47,7 @@ class TransactionConfirmationScreenWithData extends PureComponent {
       this.props,
       'navigation.state.params.openAutomatically'
     );
-    if (openAutomatically) {
+    if (openAutomatically && !isEmulatorSync()) {
       Vibration.vibrate();
     }
 
@@ -92,7 +97,7 @@ class TransactionConfirmationScreenWithData extends PureComponent {
         const rawGasLimit = await estimateGas(txPayload);
         gasLimit = toHex(rawGasLimit);
       } catch (error) {
-        console.log('error estimating gas', error);
+        logger.log('error estimating gas', error);
       }
     }
 
@@ -158,10 +163,19 @@ class TransactionConfirmationScreenWithData extends PureComponent {
     let flatFormatSignature = null;
     if (isSignFirstParamType(method)) {
       message = get(params, '[0]');
-      flatFormatSignature = await signPersonalMessage(message);
     } else if (isSignSecondParamType(method)) {
       message = get(params, '[1]');
-      flatFormatSignature = await signMessage(message);
+    }
+
+    switch (method) {
+      case SIGN:
+        flatFormatSignature = await signMessage(message);
+        break;
+      case PERSONAL_SIGN:
+        flatFormatSignature = await signPersonalMessage(message);
+        break;
+      case SIGN_TYPED_DATA:
+        flatFormatSignature = await signTypedDataMessage(message, method);
     }
 
     if (flatFormatSignature) {
@@ -205,7 +219,7 @@ class TransactionConfirmationScreenWithData extends PureComponent {
         method === SEND_TRANSACTION ? 'transaction' : 'signature';
       analytics.track(`Rejected WalletConnect ${rejectionType} request`);
     } catch (error) {
-      console.log('error while handling cancel request', error);
+      logger.log('error while handling cancel request', error);
       this.closeScreen();
       Alert.alert(lang.t('wallet.transaction.alert.cancelled_transaction'));
     }

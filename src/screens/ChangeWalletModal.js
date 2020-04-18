@@ -5,19 +5,15 @@ import { orderBy } from 'lodash';
 import { compose, lifecycle, withHandlers, withState } from 'recompact';
 import { withNavigation } from 'react-navigation';
 import { Modal, LoadingOverlay } from '../components/modal';
-import {
-  withDataInit,
-  withIsWalletImporting,
-  withAccountAddress,
-} from '../hoc';
+import { withIsWalletImporting } from '../hoc';
 import ProfileList from '../components/change-wallet/ProfileList';
 import { removeFirstEmojiFromString } from '../helpers/emojiHandler';
+import { useAccountSettings, useProfiles } from '../hooks';
 
 const headerHeight = 68;
 const profileRowHeight = 54;
 
 const ChangeWalletModal = ({
-  accountAddress,
   currentProfile,
   isCreatingWallet,
   isInitializationOver,
@@ -27,8 +23,9 @@ const ChangeWalletModal = ({
   onDeleteWallet,
   onPressCreateWallet,
   onPressImportSeedPhrase,
-  profiles,
 }) => {
+  const { profiles } = useProfiles();
+  const { accountAddress } = useAccountSettings();
   const size = profiles ? profiles.length - 1 : 0;
   let listHeight = profileRowHeight * 2 + profileRowHeight * size;
   if (listHeight > 258) {
@@ -61,7 +58,6 @@ const ChangeWalletModal = ({
 };
 
 ChangeWalletModal.propTypes = {
-  accountAddress: PropTypes.string,
   currentProfile: PropTypes.object,
   isCreatingWallet: PropTypes.bool,
   isInitializationOver: PropTypes.bool,
@@ -71,12 +67,9 @@ ChangeWalletModal.propTypes = {
   onDeleteWallet: PropTypes.func,
   onPressCreateWallet: PropTypes.func,
   onPressImportSeedPhrase: PropTypes.func,
-  profiles: PropTypes.array,
 };
 
 export default compose(
-  withAccountAddress,
-  withDataInit,
   withNavigation,
   withIsWalletImporting,
   withState('currentProfile', 'setCurrentProfile', undefined),

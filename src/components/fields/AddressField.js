@@ -4,7 +4,7 @@ import React from 'react';
 import styled from 'styled-components/primitives';
 import { withNavigation } from 'react-navigation';
 import { TouchableWithoutFeedback } from 'react-native-gesture-handler';
-import { Clipboard } from 'react-native';
+import { Clipboard, Platform } from 'react-native';
 import { checkIsValidAddress } from '../../helpers/validators';
 import { isHexString } from '../../handlers/web3';
 import { colors } from '../../styles';
@@ -14,6 +14,7 @@ import { Row } from '../layout';
 import { Label } from '../text';
 
 const Placeholder = styled(Row)`
+  margin-top: ${Platform.OS === 'android' ? 13 : 0};
   position: absolute;
   top: 0;
   z-index: 1;
@@ -146,16 +147,20 @@ export default withNavigation(
           <Input
             {...props}
             {...omit(Label.textProps, 'opacity')}
+            autoCapitalize="none"
             autoCorrect={false}
             autoFocus={autoFocus}
             color={isValid ? colors.appleBlue : colors.blueGreyDark}
+            keyboardType={
+              Platform.OS === 'android' ? 'visible-password' : 'default'
+            }
             maxLength={addressUtils.maxLength}
             onBlur={this.onBlur}
             onChange={this.onChange}
             onChangeText={this.onChangeText}
             ref={this.handleInputRef}
             selectTextOnFocus
-            spellCheck
+            spellCheck={false}
             size="bmedium"
             style={{
               flexGrow: 1,
@@ -168,10 +173,8 @@ export default withNavigation(
           {!inputValue && (
             <Placeholder>
               <TouchableWithoutFeedback onPress={this.onPressNickname}>
-                <PlaceholderText>ENS or Address (</PlaceholderText>
+                <PlaceholderText>ENS or Address (0x...)</PlaceholderText>
               </TouchableWithoutFeedback>
-              <PlaceholderText family="SFMono">0x</PlaceholderText>
-              <PlaceholderText>...)</PlaceholderText>
             </Placeholder>
           )}
         </Row>

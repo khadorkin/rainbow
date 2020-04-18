@@ -6,7 +6,9 @@ import {
   findIndex,
   flatten,
   get,
+  includes,
   isEmpty,
+  map,
   partition,
   pick,
   reverse,
@@ -17,10 +19,12 @@ import {
   uniqBy,
 } from 'lodash';
 import TransactionStatusTypes from '../helpers/transactionStatusTypes';
+import TransactionTypes from '../helpers/transactionTypes';
 import {
   convertRawAmountToBalance,
   convertRawAmountToNativeDisplay,
 } from '../helpers/utilities';
+import { savingsAssetsList } from '../references';
 import { isLowerCaseMatch } from '../utils';
 
 const DIRECTION_OUT = 'out';
@@ -39,42 +43,49 @@ const dataFromLastTxHash = (transactionData, transactions) => {
   return transactionData;
 };
 
-export default (
+export const parseTransactions = (
   transactionData,
   accountAddress,
   nativeCurrency,
   existingTransactions,
+  purchaseTransactions,
   tokenOverrides,
+  network,
   appended = false
 ) => {
+  const purchaseTransactionHashes = map(purchaseTransactions, 'hash');
   const data = appended
     ? dataFromLastTxHash(transactionData, existingTransactions)
     : transactionData;
   const parsedNewTransactions = flatten(
     data.map(txn =>
-      parseTransaction(txn, accountAddress, nativeCurrency, tokenOverrides)
+      parseTransaction(
+        txn,
+        accountAddress,
+        nativeCurrency,
+        tokenOverrides,
+        purchaseTransactionHashes,
+        network
+      )
     )
   );
   const [pendingTransactions, remainingTransactions] = partition(
     existingTransactions,
     txn => txn.pending
   );
-  const [approvalTransactions, parsedTransactions] = partition(
-    parsedNewTransactions,
-    txn => txn.type === 'authorize'
-  );
   const updatedPendingTransactions = dedupePendingTransactions(
     accountAddress,
     pendingTransactions,
-    parsedTransactions
+    parsedNewTransactions
   );
-  const updatedResults = concat(
-    updatedPendingTransactions,
-    parsedTransactions,
-    remainingTransactions
-  );
-  const dedupedResults = uniqBy(updatedResults, txn => txn.hash);
-  return { approvalTransactions, dedupedResults };
+  const updatedResults = appended
+    ? concat(
+        updatedPendingTransactions,
+        parsedNewTransactions,
+        remainingTransactions
+      )
+    : concat(updatedPendingTransactions, parsedNewTransactions);
+  return uniqBy(updatedResults, txn => txn.hash);
 };
 
 const transformUniswapRefund = internalTransactions => {
@@ -109,7 +120,9 @@ const parseTransaction = (
   txn,
   accountAddress,
   nativeCurrency,
-  tokenOverrides
+  tokenOverrides,
+  purchaseTransactions,
+  network
 ) => {
   const transaction = pick(txn, [
     'hash',
@@ -122,12 +135,31 @@ const parseTransaction = (
   transaction.minedAt = txn.mined_at;
   transaction.pending = false;
   transaction.to = txn.address_to;
+
   const changes = get(txn, 'changes', []);
   let internalTransactions = changes;
+
   if (
     isEmpty(changes) &&
-    txn.status === 'failed' &&
-    txn.type === 'execution' &&
+    (txn.type === TransactionTypes.deposit ||
+      txn.type === TransactionTypes.withdraw)
+  ) {
+    transaction.status = TransactionStatusTypes.failed;
+    const asset = savingsAssetsList[network][toLower(transaction.to)];
+
+    const assetInternalTransaction = {
+      address_from: transaction.from,
+      address_to: transaction.to,
+      asset,
+      value: transaction.value,
+    };
+    internalTransactions = [assetInternalTransaction];
+  }
+
+  if (
+    isEmpty(changes) &&
+    txn.status === TransactionStatusTypes.failed &&
+    txn.type === TransactionTypes.execution &&
     txn.direction === 'out'
   ) {
     const assetInternalTransaction = {
@@ -143,7 +175,8 @@ const parseTransaction = (
     };
     internalTransactions = [assetInternalTransaction];
   }
-  if (isEmpty(changes) && txn.type === 'authorize') {
+
+  if (isEmpty(changes) && txn.type === TransactionTypes.authorize) {
     const approveInternalTransaction = {
       address_from: transaction.from,
       address_to: transaction.to,
@@ -174,7 +207,10 @@ const parseTransaction = (
     };
     internalTransactions = [ethInternalTransaction];
   }
-  if (transaction.type === 'trade' && transaction.protocol === 'uniswap') {
+  if (
+    transaction.type === TransactionTypes.trade &&
+    transaction.protocol === 'uniswap'
+  ) {
     internalTransactions = transformUniswapRefund(internalTransactions);
   }
   internalTransactions = internalTransactions.map((internalTxn, index) => {
@@ -195,16 +231,23 @@ const parseTransaction = (
       nativeCurrency
     );
 
+    if (includes(purchaseTransactions, toLower(transaction.hash))) {
+      transaction.type = TransactionTypes.purchase;
+    }
+
     const status = getTransactionLabel(
       accountAddress,
       internalTxn.address_from,
       transaction.pending,
       transaction.status,
-      internalTxn.address_to
+      internalTxn.address_to,
+      transaction.hash,
+      transaction.type
     );
 
     return {
       ...transaction,
+      address: updatedAsset.address,
       balance: convertRawAmountToBalance(valueUnit, updatedAsset),
       from: internalTxn.address_from,
       hash: `${transaction.hash}-${index}`,
@@ -215,6 +258,7 @@ const parseTransaction = (
       to: internalTxn.address_to,
     };
   });
+
   return reverse(internalTransactions);
 };
 
@@ -244,14 +288,42 @@ export const dedupePendingTransactions = (
   return updatedPendingTransactions;
 };
 
-const getTransactionLabel = (accountAddress, from, pending, status, to) => {
+const getTransactionLabel = (
+  accountAddress,
+  from,
+  pending,
+  status,
+  to,
+  hash,
+  type
+) => {
+  if (pending && type === TransactionTypes.purchase)
+    return TransactionStatusTypes.purchasing;
+
   const isFromAccount = isLowerCaseMatch(from, accountAddress);
   const isToAccount = isLowerCaseMatch(to, accountAddress);
+
+  if (pending && type === TransactionTypes.authorize)
+    return TransactionStatusTypes.approving;
+  if (pending && type === TransactionTypes.deposit)
+    return TransactionStatusTypes.depositing;
+  if (pending && type === TransactionTypes.withdraw)
+    return TransactionStatusTypes.withdrawing;
 
   if (pending && isFromAccount) return TransactionStatusTypes.sending;
   if (pending && isToAccount) return TransactionStatusTypes.receiving;
 
-  if (status === 'failed') return TransactionStatusTypes.failed;
+  if (status === TransactionStatusTypes.failed)
+    return TransactionStatusTypes.failed;
+
+  if (type === TransactionTypes.purchase)
+    return TransactionStatusTypes.purchased;
+  if (type === TransactionTypes.deposit)
+    return TransactionStatusTypes.deposited;
+  if (type === TransactionTypes.withdraw)
+    return TransactionStatusTypes.withdrew;
+  if (type === TransactionTypes.authorize)
+    return TransactionStatusTypes.approved;
 
   if (isFromAccount && isToAccount) return TransactionStatusTypes.self;
 

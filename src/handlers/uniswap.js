@@ -1,17 +1,35 @@
-import { getExecutionDetails, getTokenReserves } from '@uniswap/sdk';
+import {
+  getExecutionDetails,
+  getTokenReserves,
+  tradeExactEthForTokensWithData,
+  tradeEthForExactTokensWithData,
+  tradeExactTokensForEthWithData,
+  tradeTokensForExactEthWithData,
+  tradeExactTokensForTokensWithData,
+  tradeTokensForExactTokensWithData,
+} from '@uniswap/sdk';
 import axios from 'axios';
 import contractMap from 'eth-contract-metadata';
 import { ethers } from 'ethers';
 import { get, map, mapKeys, mapValues, toLower, zipObject } from 'lodash';
+import { uniswapClient } from '../apollo/client';
+import { UNISWAP_ALL_EXCHANGES_QUERY } from '../apollo/queries';
 import {
+  convertAmountToRawAmount,
   convertRawAmountToDecimalFormat,
   divide,
   fromWei,
+  greaterThan,
   multiply,
 } from '../helpers/utilities';
 import { loadWallet } from '../model/wallet';
-import exchangeABI from '../references/uniswap-exchange-abi.json';
-import erc20ABI from '../references/erc20-abi.json';
+import {
+  erc20ABI,
+  ethUnits,
+  exchangeABI,
+  uniswapTestnetAssets,
+} from '../references';
+import { logger } from '../utils';
 import { toHex, web3Provider } from './web3';
 
 const uniswapPairsEndpoint = axios.create({
@@ -33,7 +51,20 @@ export const getUniswapPairs = async tokenOverrides => {
       ...tokenOverrides[key],
     }));
   } catch (error) {
-    console.log('Error getting uniswap pairs', error);
+    logger.log('Error getting uniswap pairs', error);
+    throw error;
+  }
+};
+
+export const getTestnetUniswapPairs = async network => {
+  try {
+    const pairs = uniswapTestnetAssets[network];
+    const loweredPairs = mapKeys(pairs, (_, key) => toLower(key));
+    return mapValues(loweredPairs, value => ({
+      ...value,
+    }));
+  } catch (error) {
+    logger.log('Error getting uniswap testnet pairs', error);
     throw error;
   }
 };
@@ -51,7 +82,7 @@ const convertValueForEthers = value => {
 export const getReserve = async tokenAddress =>
   !tokenAddress || tokenAddress === 'eth'
     ? Promise.resolve(null)
-    : getTokenReserves(toLower(tokenAddress));
+    : getTokenReserves(toLower(tokenAddress), web3Provider);
 
 const getGasLimit = async (
   accountAddress,
@@ -112,9 +143,9 @@ export const estimateSwapGasLimit = async (accountAddress, tradeDetails) => {
       updatedMethodArgs,
       value
     );
-    return gasLimit ? gasLimit.toString() : null;
+    return gasLimit ? gasLimit.toString() : ethUnits.basic_swap;
   } catch (error) {
-    return null;
+    return ethUnits.basic_swap;
   }
 };
 
@@ -141,20 +172,26 @@ export const getContractExecutionDetails = (tradeDetails, providerOrSigner) => {
   };
 };
 
-export const executeSwap = async (tradeDetails, gasLimit, gasPrice) => {
-  const wallet = await loadWallet();
-  if (!wallet) return null;
+export const executeSwap = async (
+  tradeDetails,
+  gasLimit,
+  gasPrice,
+  wallet = null
+) => {
+  const walletToUse = wallet || (await loadWallet());
+  if (!walletToUse) return null;
   const {
     exchange,
     methodName,
     updatedMethodArgs,
     value,
-  } = getContractExecutionDetails(tradeDetails, wallet);
+  } = getContractExecutionDetails(tradeDetails, walletToUse);
   const transactionParams = {
     gasLimit: gasLimit ? toHex(gasLimit) : undefined,
     gasPrice: gasPrice ? toHex(gasPrice) : undefined,
     value,
   };
+
   switch (methodName) {
     case 'ethToTokenSwapInput':
       return exchange.ethToTokenSwapInput(
@@ -191,7 +228,11 @@ export const executeSwap = async (tradeDetails, gasLimit, gasPrice) => {
   }
 };
 
-export const getLiquidityInfo = async (accountAddress, exchangeContracts) => {
+export const getLiquidityInfo = async (
+  accountAddress,
+  exchangeContracts,
+  pairs
+) => {
   const promises = map(exchangeContracts, async exchangeAddress => {
     try {
       const ethReserveCall = web3Provider.getBalance(exchangeAddress);
@@ -221,42 +262,49 @@ export const getLiquidityInfo = async (accountAddress, exchangeContracts) => {
         erc20ABI,
         web3Provider
       );
-      const tokenReserveCall = tokenContract.balanceOf(exchangeAddress);
-      const tokenDecimalsCall = tokenContract.decimals();
+      const token = get(pairs, `[${toLower(tokenAddress)}]`);
 
-      const [reserve, decimals] = await Promise.all([
-        tokenReserveCall,
-        tokenDecimalsCall,
-      ]);
-
+      let decimals = 18;
       let name = '';
-      try {
-        name = await tokenContract.name().catch();
-      } catch (error) {
-        name = get(contractMap, `[${tokenAddress}].name`, '');
-        if (!name) {
-          console.log(
-            'error getting name for token: ',
-            tokenAddress,
-            ' Error = ',
-            error
-          );
+      let symbol = '';
+      if (token) {
+        name = token.name;
+        symbol = token.symbol;
+        decimals = token.decimals;
+      } else {
+        decimals = await tokenContract.decimals();
+
+        try {
+          name = await tokenContract.name().catch();
+        } catch (error) {
+          name = get(contractMap, `[${tokenAddress}].name`, '');
+          if (!name) {
+            logger.log(
+              'error getting name for token: ',
+              tokenAddress,
+              ' Error = ',
+              error
+            );
+          }
+        }
+
+        let symbol = get(contractMap, `[${tokenAddress}].symbol`, '');
+        try {
+          symbol = await tokenContract.symbol().catch();
+        } catch (error) {
+          if (!symbol) {
+            logger.log(
+              'error getting symbol for token: ',
+              tokenAddress,
+              ' Error = ',
+              error
+            );
+          }
         }
       }
 
-      let symbol = get(contractMap, `[${tokenAddress}].symbol`, '');
-      try {
-        symbol = await tokenContract.symbol().catch();
-      } catch (error) {
-        if (!symbol) {
-          console.log(
-            'error getting symbol for token: ',
-            tokenAddress,
-            ' Error = ',
-            error
-          );
-        }
-      }
+      const reserve = await tokenContract.balanceOf(exchangeAddress);
+
       const ethBalance = fromWei(
         divide(multiply(ethReserve, balance), totalSupply)
       );
@@ -280,11 +328,108 @@ export const getLiquidityInfo = async (accountAddress, exchangeContracts) => {
         uniqueId: `uniswap_${tokenAddress}`,
       };
     } catch (error) {
-      console.log('error getting uniswap info', error);
+      logger.log('error getting uniswap info', error);
       return {};
     }
   });
 
   const results = await Promise.all(promises);
   return zipObject(exchangeContracts, results);
+};
+
+export const getAllExchanges = async (tokenOverrides, excluded = []) => {
+  const pageSize = 600;
+  let allTokens = {};
+  let data = [];
+  try {
+    let dataEnd = false;
+    let skip = 0;
+    while (!dataEnd) {
+      let result = await uniswapClient.query({
+        query: UNISWAP_ALL_EXCHANGES_QUERY,
+        variables: {
+          excluded,
+          first: pageSize,
+          skip: skip,
+        },
+      });
+      data = data.concat(result.data.exchanges);
+      skip = skip + pageSize;
+      if (result.data.exchanges.length < pageSize) {
+        dataEnd = true;
+      }
+    }
+  } catch (err) {
+    logger.log('error: ', err);
+  }
+  data.forEach(exchange => {
+    const tokenAddress = toLower(exchange.tokenAddress);
+    const hasLiquidity = greaterThan(exchange.ethBalance, 0);
+    if (hasLiquidity) {
+      const tokenExchangeInfo = {
+        decimals: exchange.tokenDecimals,
+        ethBalance: exchange.ethBalance,
+        exchangeAddress: exchange.id,
+        name: exchange.tokenName,
+        symbol: exchange.tokenSymbol,
+        ...tokenOverrides[tokenAddress],
+      };
+      allTokens[tokenAddress] = tokenExchangeInfo;
+    }
+  });
+  return allTokens;
+};
+
+export const calculateTradeDetails = (
+  chainId,
+  inputAmount,
+  inputCurrency,
+  inputReserve,
+  outputAmount,
+  outputCurrency,
+  outputReserve,
+  inputAsExactAmount
+) => {
+  const { address: inputAddress, decimals: inputDecimals } = inputCurrency;
+  const { address: outputAddress, decimals: outputDecimals } = outputCurrency;
+
+  const isInputEth = inputAddress === 'eth';
+  const isOutputEth = outputAddress === 'eth';
+
+  const rawInputAmount = convertAmountToRawAmount(
+    inputAmount || 0,
+    inputDecimals
+  );
+
+  const rawOutputAmount = convertAmountToRawAmount(
+    outputAmount || 0,
+    outputDecimals
+  );
+
+  let tradeDetails = null;
+
+  if (isInputEth && !isOutputEth) {
+    tradeDetails = inputAsExactAmount
+      ? tradeExactEthForTokensWithData(outputReserve, rawInputAmount, chainId)
+      : tradeEthForExactTokensWithData(outputReserve, rawOutputAmount, chainId);
+  } else if (!isInputEth && isOutputEth) {
+    tradeDetails = inputAsExactAmount
+      ? tradeExactTokensForEthWithData(inputReserve, rawInputAmount, chainId)
+      : tradeTokensForExactEthWithData(inputReserve, rawOutputAmount, chainId);
+  } else if (!isInputEth && !isOutputEth) {
+    tradeDetails = inputAsExactAmount
+      ? tradeExactTokensForTokensWithData(
+          inputReserve,
+          outputReserve,
+          rawInputAmount,
+          chainId
+        )
+      : tradeTokensForExactTokensWithData(
+          inputReserve,
+          outputReserve,
+          rawOutputAmount,
+          chainId
+        );
+  }
+  return tradeDetails;
 };

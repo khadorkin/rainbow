@@ -1,4 +1,4 @@
-import { concat, get, groupBy, isEmpty, isNil, map, toNumber } from 'lodash';
+import { get, groupBy, isEmpty, isNil, map, toNumber } from 'lodash';
 import { createSelector } from 'reselect';
 import { sortList } from '../helpers/sortList';
 import {
@@ -11,16 +11,43 @@ import { isLowerCaseMatch } from '../utils';
 
 const EMPTY_ARRAY = [];
 
-const assetsSelector = state => state.assets;
-const compoundAssetsSelector = state => state.compoundAssets;
-const nativeCurrencySelector = state => state.nativeCurrency;
+const assetPricesFromUniswapSelector = state =>
+  state.data ? state.data.assetPricesFromUniswap : state.assetPricesFromUniswap;
+const assetsSelector = state => (state.data ? state.data.assets : state.assets);
+const nativeCurrencySelector = state =>
+  state.settings ? state.settings.nativeCurrency : state.nativeCurrency;
 
 const sortAssetsByNativeAmount = (
   originalAssets,
-  compoundAssets,
+  assetPricesFromUniswap,
   nativeCurrency
 ) => {
-  let assetsNativePrices = concat(originalAssets, compoundAssets);
+  let updatedAssets = originalAssets;
+  if (!isEmpty(assetPricesFromUniswap)) {
+    updatedAssets = map(originalAssets, asset => {
+      if (isNil(asset.price)) {
+        const assetPrice = get(
+          assetPricesFromUniswap,
+          `[${asset.address}].price`
+        );
+        const relativePriceChange = get(
+          assetPricesFromUniswap,
+          `[${asset.address}].relativePriceChange`
+        );
+        if (assetPrice) {
+          return {
+            ...asset,
+            price: {
+              relative_change_24h: relativePriceChange,
+              value: assetPrice,
+            },
+          };
+        }
+      }
+      return asset;
+    });
+  }
+  let assetsNativePrices = updatedAssets;
   let total = null;
   if (!isEmpty(assetsNativePrices)) {
     const parsedAssets = parseAssetsNative(assetsNativePrices, nativeCurrency);
@@ -45,10 +72,12 @@ const sortAssetsByNativeAmount = (
   return {
     allAssets,
     allAssetsCount: allAssets.length,
+    assetPricesFromUniswap,
     assets: sortedAssets,
     assetsCount: sortedAssets.length,
     assetsTotal: total,
     isBalancesSectionEmpty: isEmpty(allAssets),
+    nativeCurrency,
     shitcoins: sortedShitcoins,
     shitcoinsCount: sortedShitcoins.length,
   };
@@ -76,7 +105,7 @@ const parseAssetsNative = (assets, nativeCurrency) => {
       native: {
         balance: nativeDisplay,
         change: isLowerCaseMatch(get(asset, 'symbol'), nativeCurrency)
-          ? '———'
+          ? null
           : convertAmountToPercentageDisplay(
               assetNativePrice.relative_change_24h
             ),
@@ -100,6 +129,6 @@ const parseAssetsNative = (assets, nativeCurrency) => {
 };
 
 export const sortAssetsByNativeAmountSelector = createSelector(
-  [assetsSelector, compoundAssetsSelector, nativeCurrencySelector],
+  [assetsSelector, assetPricesFromUniswapSelector, nativeCurrencySelector],
   sortAssetsByNativeAmount
 );

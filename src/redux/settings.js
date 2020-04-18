@@ -1,23 +1,27 @@
 import { updateLanguage } from '../languages';
 import {
   getLanguage,
+  getNetwork,
   getNativeCurrency,
   saveLanguage,
   saveNativeCurrency,
+  saveNetwork,
 } from '../handlers/localstorage/globalSettings';
+
 import { dataClearState } from './data';
 import { explorerInit } from './explorer';
 import { ethereumUtils } from '../utils';
-import { web3SetHttpProvider } from '../handlers/web3';
+import { web3Provider, web3SetHttpProvider } from '../handlers/web3';
+import networkTypes from '../helpers/networkTypes';
 
 // -- Constants ------------------------------------------------------------- //
-const SETTINGS_UPDATE_NETWORK = 'settings/SETTINGS_UPDATE_NETWORK';
-const SETTINGS_UPDATE_CHAIN_ID = 'settings/SETTINGS_UPDATE_CHAIN_ID';
+
 const SETTINGS_UPDATE_SETTINGS_ADDRESS =
   'settings/SETTINGS_UPDATE_SETTINGS_ADDRESS';
-const SETTINGS_UPDATE_SETTINGS_NAME = 'settings/SETTINGS_UPDATE_SETTINGS_NAME';
 const SETTINGS_UPDATE_SETTINGS_COLOR =
   'settings/SETTINGS_UPDATE_SETTINGS_COLOR';
+const SETTINGS_UPDATE_SETTINGS_ENS = 'settings/SETTINGS_UPDATE_SETTINGS_ENS';
+const SETTINGS_UPDATE_SETTINGS_NAME = 'settings/SETTINGS_UPDATE_SETTINGS_NAME';
 const SETTINGS_UPDATE_NATIVE_CURRENCY_SUCCESS =
   'settings/SETTINGS_UPDATE_NATIVE_CURRENCY_SUCCESS';
 const SETTINGS_UPDATE_NATIVE_CURRENCY_FAILURE =
@@ -27,6 +31,11 @@ const SETTINGS_UPDATE_LANGUAGE_SUCCESS =
   'settings/SETTINGS_UPDATE_LANGUAGE_SUCCESS';
 const SETTINGS_UPDATE_LANGUAGE_FAILURE =
   'settings/SETTINGS_UPDATE_LANGUAGE_FAILURE';
+
+const SETTINGS_UPDATE_NETWORK_SUCCESS =
+  'settings/SETTINGS_UPDATE_NETWORK_SUCCESS';
+const SETTINGS_UPDATE_NETWORK_FAILURE =
+  'settings/SETTINGS_UPDATE_NETWORK_FAILURE';
 
 // -- Actions --------------------------------------------------------------- //
 export const settingsLoadState = () => async dispatch => {
@@ -50,6 +59,20 @@ export const settingsLoadState = () => async dispatch => {
   }
 };
 
+export const settingsLoadNetwork = () => async dispatch => {
+  try {
+    const network = await getNetwork();
+    const chainId = ethereumUtils.getChainIdFromNetwork(network);
+    await web3SetHttpProvider(network);
+    dispatch({
+      payload: { chainId, network },
+      type: SETTINGS_UPDATE_NETWORK_SUCCESS,
+    });
+  } catch (error) {
+    dispatch({ type: SETTINGS_UPDATE_NETWORK_FAILURE });
+  }
+};
+
 export const settingsUpdateAccountName = accountName => dispatch => {
   dispatch({
     payload: { accountName },
@@ -64,28 +87,34 @@ export const settingsUpdateAccountColor = accountColor => dispatch => {
   });
 };
 
-export const settingsUpdateAccountAddress = accountAddress => dispatch =>
+export const settingsUpdateAccountAddress = accountAddress => async dispatch => {
   dispatch({
     payload: accountAddress,
     type: SETTINGS_UPDATE_SETTINGS_ADDRESS,
   });
 
-export const settingsUpdateNetwork = network => dispatch => {
-  const chainId = ethereumUtils.getChainIdFromNetwork(network);
-  web3SetHttpProvider(network);
-  dispatch({
-    payload: { chainId, network },
-    type: SETTINGS_UPDATE_NETWORK,
-  });
+  await web3Provider.lookupAddress(accountAddress).then(accountENS =>
+    dispatch({
+      payload: accountENS,
+      type: SETTINGS_UPDATE_SETTINGS_ENS,
+    })
+  );
 };
 
-export const settingsUpdateChainId = chainId => dispatch => {
-  const network = ethereumUtils.getNetworkFromChainId(chainId);
-  web3SetHttpProvider(network);
-  dispatch({
-    payload: { chainId, network },
-    type: SETTINGS_UPDATE_CHAIN_ID,
-  });
+export const settingsUpdateNetwork = network => async dispatch => {
+  const chainId = ethereumUtils.getChainIdFromNetwork(network);
+  await web3SetHttpProvider(network);
+  try {
+    await saveNetwork(network);
+    dispatch({
+      payload: { chainId, network },
+      type: SETTINGS_UPDATE_NETWORK_SUCCESS,
+    });
+  } catch (error) {
+    dispatch({
+      type: SETTINGS_UPDATE_NETWORK_FAILURE,
+    });
+  }
 };
 
 export const settingsChangeLanguage = language => dispatch => {
@@ -124,12 +153,13 @@ export const settingsChangeNativeCurrency = nativeCurrency => dispatch => {
 // -- Reducer --------------------------------------------------------------- //
 export const INITIAL_STATE = {
   accountAddress: '',
-  accountColor: 0,
-  accountName: '',
+  accountColor: 6,
+  accountENS: null,
+  accountName: '🤑',
   chainId: 1,
   language: 'en',
   nativeCurrency: 'USD',
-  network: 'mainnet',
+  network: networkTypes.mainnet,
 };
 
 export default (state = INITIAL_STATE, action) => {
@@ -138,6 +168,11 @@ export default (state = INITIAL_STATE, action) => {
       return {
         ...state,
         accountAddress: action.payload,
+      };
+    case SETTINGS_UPDATE_SETTINGS_ENS:
+      return {
+        ...state,
+        accountENS: action.payload,
       };
     case SETTINGS_UPDATE_SETTINGS_NAME:
       return {
@@ -158,13 +193,7 @@ export default (state = INITIAL_STATE, action) => {
       return {
         ...state,
       };
-    case SETTINGS_UPDATE_NETWORK:
-      return {
-        ...state,
-        chainId: action.payload.chainId,
-        network: action.payload.network,
-      };
-    case SETTINGS_UPDATE_CHAIN_ID:
+    case SETTINGS_UPDATE_NETWORK_SUCCESS:
       return {
         ...state,
         chainId: action.payload.chainId,

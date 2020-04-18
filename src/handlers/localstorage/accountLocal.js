@@ -7,19 +7,43 @@ import {
   saveLocal,
 } from './common';
 
-const transactionsVersion = '0.2.1';
-const uniqueTokensVersion = '0.2.0';
+const assetPricesFromUniswapVersion = '0.1.0';
 const assetsVersion = '0.2.0';
-const compoundAssetsVersion = '0.1.0';
+const purchaseTransactionsVersion = '0.1.0';
+const savingsVersion = '0.1.0';
+const transactionsVersion = '0.2.3';
+const uniqueTokensVersion = '0.2.0';
 
+const ACCOUNT_INFO = 'accountInfo';
+const ASSET_PRICES_FROM_UNISWAP = 'assetPricesFromUniswap';
 const ASSETS = 'assets';
-const COMPOUND_ASSETS = 'compoundAssets';
 const OPEN_FAMILIES = 'openFamilies';
 const OPEN_INVESTMENT_CARDS = 'openInvestmentCards';
+const PURCHASE_TRANSACTIONS = 'purchaseTransactions';
 const SMALL_BALANCE_TOGGLE = 'smallBalanceToggle';
+const SAVINGS = 'savings';
+const SAVINGS_TOGGLE = 'savingsToggle';
 const TRANSACTIONS = 'transactions';
 const UNIQUE_TOKENS = 'uniquetokens';
 const WALLET_EMPTY = 'iswalletempty';
+
+/**
+ * @desc get savings
+ * @param  {String}   [address]
+ * @param  {String}   [network]
+ * @return {Object}
+ */
+export const getSavings = (accountAddress, network) =>
+  getAccountLocal(SAVINGS, accountAddress, network, [], savingsVersion);
+
+/**
+ * @desc save savings
+ * @param  {String}   [address]
+ * @param  {Array}    [savings]
+ * @param  {String}   [network]
+ */
+export const saveSavings = (savings, accountAddress, network) =>
+  saveAccountLocal(SAVINGS, savings, accountAddress, network, savingsVersion);
 
 /**
  * @desc get assets
@@ -49,43 +73,81 @@ export const removeAssets = (accountAddress, network) =>
   removeAccountLocal(ASSETS, accountAddress, network);
 
 /**
- * @desc get compound assets
+ * @desc get asset prices from Uniswap
  * @param  {String}   [address]
  * @param  {String}   [network]
  * @return {Object}
  */
-export const getCompoundAssets = (accountAddress, network) =>
+export const getAssetPricesFromUniswap = (accountAddress, network) =>
   getAccountLocal(
-    COMPOUND_ASSETS,
+    ASSET_PRICES_FROM_UNISWAP,
     accountAddress,
     network,
     [],
-    compoundAssetsVersion
+    assetPricesFromUniswapVersion
   );
 
 /**
- * @desc save compound assets
+ * @desc save asset prices from Uniswap
  * @param  {String}   [address]
- * @param  {Array}    [compound assets]
+ * @param  {Array}    [assets]
  * @param  {String}   [network]
  */
-export const saveCompoundAssets = (compoundAssets, accountAddress, network) =>
+export const saveAssetPricesFromUniswap = (
+  assetPrices,
+  accountAddress,
+  network
+) =>
   saveAccountLocal(
-    COMPOUND_ASSETS,
-    compoundAssets,
+    ASSET_PRICES_FROM_UNISWAP,
+    assetPrices,
     accountAddress,
     network,
-    compoundAssetsVersion
+    assetPricesFromUniswapVersion
   );
 
 /**
- * @desc remove compound assets
+ * @desc remove asset from Uniswap
  * @param  {String}   [address]
  * @param  {String}   [network]
  * @return {Object}
  */
-export const removeCompoundAssets = (accountAddress, network) =>
-  removeAccountLocal(COMPOUND_ASSETS, accountAddress, network);
+export const removeAssetPricesFromUniswap = (accountAddress, network) =>
+  removeAccountLocal(ASSET_PRICES_FROM_UNISWAP, accountAddress, network);
+
+/**
+ * @desc get purchase transactions
+ * @param  {String}   [address]
+ * @param  {String}   [network]
+ * @return {Object}
+ */
+export const getPurchaseTransactions = (accountAddress, network) =>
+  getAccountLocal(
+    PURCHASE_TRANSACTIONS,
+    accountAddress,
+    network,
+    [],
+    purchaseTransactionsVersion
+  );
+
+/**
+ * @desc save purchase transactions
+ * @param  {String}   [address]
+ * @param  {Array}   [purchaseTransactions]
+ * @param  {String}   [network]
+ */
+export const savePurchaseTransactions = (
+  purchaseTransactions,
+  accountAddress,
+  network
+) =>
+  saveAccountLocal(
+    PURCHASE_TRANSACTIONS,
+    purchaseTransactions,
+    accountAddress,
+    network,
+    purchaseTransactionsVersion
+  );
 
 /**
  * @desc get transactions
@@ -234,6 +296,33 @@ export const removeSmallBalanceToggle = (accountAddress, network) =>
   removeAccountLocal(SMALL_BALANCE_TOGGLE, accountAddress, network);
 
 /**
+ * @desc get open savings
+ * @param  {String}   [address]
+ * @param  {String}   [network]
+ * @return {Object}
+ */
+export const getSavingsToggle = (accountAddress, network) =>
+  getAccountLocal(SAVINGS_TOGGLE, accountAddress, network, false);
+
+/**
+ * @desc save small balance toggle
+ * @param  {String}   [address]
+ * @param  {Boolean}    [small balance toggle]
+ * @param  {String}   [network]
+ */
+export const saveSavingsToggle = (isOpen, accountAddress, network) =>
+  saveAccountLocal(SAVINGS_TOGGLE, isOpen, accountAddress, network);
+
+/**
+ * @desc remove small balance toggle
+ * @param  {String}   [address]
+ * @param  {String}   [network]
+ * @return {Object}
+ */
+export const removeSavingsToggle = (accountAddress, network) =>
+  removeAccountLocal(SAVINGS_TOGGLE, accountAddress, network);
+
+/**
  * @desc get open investment cards
  * @param  {String}   [address]
  * @param  {String}   [network]
@@ -295,3 +384,30 @@ export const saveOpenFamilies = (openFamilies, accountAddress, network) =>
  */
 export const removeOpenFamilies = (accountAddress, network) =>
   removeAccountLocal(OPEN_FAMILIES, accountAddress, network);
+
+/**
+ * @desc get profile info
+ * @param  {String}   [address]
+ * @param  {String}   [network]
+ * @return {Object}
+ */
+export const getAccountInfo = (accountAddress, network) =>
+  getAccountLocal(ACCOUNT_INFO, accountAddress, network, {});
+
+/**
+ * @desc save profile info
+ * @param  {String}   [address]
+ * @param  {Object}    [profile info]
+ * @param  {String}   [network]
+ */
+export const saveAccountInfo = (profileInfo, accountAddress, network) =>
+  saveAccountLocal(ACCOUNT_INFO, profileInfo, accountAddress, network);
+
+/**
+ * @desc remove profile info
+ * @param  {String}   [address]
+ * @param  {String}   [network]
+ * @return {Object}
+ */
+export const removeAccountInfo = (accountAddress, network) =>
+  removeAccountLocal(ACCOUNT_INFO, accountAddress, network);

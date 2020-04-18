@@ -12,15 +12,45 @@
 #import <React/RCTLinkingManager.h>
 #import <React/RCTRootView.h>
 #import <RNCPushNotificationIOS.h>
+#import <Sentry/Sentry.h>
 #import "RNSplashScreen.h"
+
+#if DEBUG
+#import <FlipperKit/FlipperClient.h>
+#import <FlipperKitLayoutPlugin/FlipperKitLayoutPlugin.h>
+#import <FlipperKitUserDefaultsPlugin/FKUserDefaultsPlugin.h>
+#import <FlipperKitNetworkPlugin/FlipperKitNetworkPlugin.h>
+#import <SKIOSNetworkPlugin/SKIOSNetworkAdapter.h>
+#import <FlipperKitReactPlugin/FlipperKitReactPlugin.h>
+
+static void InitializeFlipper(UIApplication *application) {
+  FlipperClient *client = [FlipperClient sharedClient];
+  SKDescriptorMapper *layoutDescriptorMapper = [[SKDescriptorMapper alloc] initWithDefaults];
+  [client addPlugin:[[FlipperKitLayoutPlugin alloc] initWithRootNode:application withDescriptorMapper:layoutDescriptorMapper]];
+  [client addPlugin:[[FKUserDefaultsPlugin alloc] initWithSuiteName:nil]];
+  [client addPlugin:[FlipperKitReactPlugin new]];
+  [client addPlugin:[[FlipperKitNetworkPlugin alloc] initWithNetworkAdapter:[SKIOSNetworkAdapter new]]];
+  [client start];
+}
+#endif
+
 
 @implementation AppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
+  #if DEBUG
+    InitializeFlipper(application);
+  #endif
+  
   [FIRApp configure];
   [application registerForRemoteNotifications];
-   
+  // Define UNUserNotificationCenter
+  UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+  center.delegate = self;
+  
+  
+
   // React Native - Defaults
   RCTBridge *bridge = [[RCTBridge alloc] initWithDelegate:self launchOptions:launchOptions];
   RCTRootView *rootView = [[RCTRootView alloc] initWithBridge:bridge
@@ -34,10 +64,28 @@
   rootViewController.view = rootView;
   self.window.rootViewController = rootViewController;
   [self.window makeKeyAndVisible];
-
+  
+  [[NSNotificationCenter defaultCenter] addObserver:self
+  selector:@selector(handleRapInProgress:)
+      name:@"rapInProgress"
+    object:nil];
+  
+  [[NSNotificationCenter defaultCenter] addObserver:self
+  selector:@selector(handleRapComplete:)
+      name:@"rapCompleted"
+    object:nil];
+  
   // Splashscreen - react-native-splash-screen
   [RNSplashScreen show];
   return YES;
+}
+
+- (void)handleRapInProgress:(NSNotification *)notification {
+  self.isRapRunning = YES;
+}
+
+- (void)handleRapComplete:(NSNotification *)notification {
+  self.isRapRunning = NO;
 }
 
 - (NSURL *)sourceURLForBridge:(RCTBridge *)bridge
@@ -47,6 +95,23 @@
   #else
     return [[NSBundle mainBundle] URLForResource:@"main" withExtension:@"jsbundle"];
   #endif
+}
+
+//Called when a notification is delivered to a foreground app.
+-(void)userNotificationCenter:(UNUserNotificationCenter *)center willPresentNotification:(UNNotification *)notification withCompletionHandler:(void (^)(UNNotificationPresentationOptions options))completionHandler
+{
+  completionHandler(UNAuthorizationOptionSound | UNAuthorizationOptionAlert | UNAuthorizationOptionBadge);
+}
+
+// Required to register for notifications
+-(void)application:(UIApplication *)application didRegisterUserNotificationSettings:(UIUserNotificationSettings *)notificationSettings
+{
+  [RNCPushNotificationIOS didRegisterUserNotificationSettings:notificationSettings];
+}
+// Required for the register event.
+-(void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken
+{
+  [RNCPushNotificationIOS didRegisterForRemoteNotificationsWithDeviceToken:deviceToken];
 }
 
 // Required for the notification event. You must call the completion handler after handling the remote notification.
@@ -77,5 +142,25 @@ sourceApplication:(NSString *)sourceApplication annotation:(id)annotation
                   continueUserActivity:userActivity
 										restorationHandler:restorationHandler];
 }
+
+
+- (void)applicationWillTerminate:(UIApplication *)application {
+  
+  if(self.isRapRunning){
+  
+    NSDictionary *event = @{@"message": @"applicationWillTerminate was called"};
+    
+    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:event
+                                                       options:0
+                                                         error:nil];
+
+    SentryEvent *sentryEvent = [[SentryEvent alloc] initWithJSON:jsonData];
+    [SentryClient.sharedClient sendEvent:sentryEvent withCompletionHandler:^(NSError * _Nullable error) {
+      NSLog((@"ApplicationWillTerminate was called"));
+    }];
+  }
+  
+}
+
 
 @end

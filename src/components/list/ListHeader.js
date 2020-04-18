@@ -10,7 +10,7 @@ import ContextMenu from '../ContextMenu';
 import Divider from '../Divider';
 import { deviceUtils } from '../../utils';
 
-const height = 42;
+const height = 44;
 
 const ListHeader = pure(
   ({
@@ -23,7 +23,11 @@ const ListHeader = pure(
   }) => (
     <Fragment>
       <LinearGradient
-        colors={['#ffffffff', '#ffffff80', '#ffffff00']}
+        colors={[
+          colors.listHeaders.firstGradient,
+          colors.listHeaders.secondGradient,
+          colors.listHeaders.thirdGradient,
+        ]}
         end={{ x: 0, y: 0 }}
         pointerEvents="none"
         start={{ x: 0, y: 0.5 }}
@@ -32,7 +36,7 @@ const ListHeader = pure(
       <Row
         align="center"
         backgroundColor={isSticky ? colors.white : colors.transparent}
-        css={padding(0, 19, 3, 19)}
+        css={padding(0, 19, 2, 19)}
         height={height}
         justify="space-between"
         width="100%"

@@ -1,11 +1,12 @@
 import AnimateNumber from '@bankify/react-native-animate-number';
-import analytics from '@segment/analytics-react-native';
 import { get } from 'lodash';
 import PropTypes from 'prop-types';
-import React, { PureComponent } from 'react';
+import React, { useCallback } from 'react';
 import { LayoutAnimation } from 'react-native';
-import { compose, mapProps, onlyUpdateForKeys, withProps } from 'recompact';
-import { withAccountSettings, withGas } from '../../hoc';
+import { useDispatch } from 'react-redux';
+import { withProps } from 'recompact';
+import ExchangeModalTypes from '../../helpers/exchangeModalTypes';
+import { useAccountSettings, useGas } from '../../hooks';
 import { colors, padding } from '../../styles';
 import { gasUtils } from '../../utils';
 import { ButtonPressAnimation } from '../animations';
@@ -14,7 +15,7 @@ import { Text } from '../text';
 import GasSpeedLabelPager from './GasSpeedLabelPager';
 
 const Label = withProps({
-  color: colors.alpha(colors.white, 0.4),
+  color: colors.alpha(colors.white, 0.5),
   size: 'smedium',
   weight: 'medium',
 })(Text);
@@ -24,29 +25,48 @@ const renderEstimatedTimeText = animatedNumber => (
 );
 
 const renderGasPriceText = animatedNumber => (
-  <Text color="white" letterSpacing="tight" size="lmedium" weight="semibold">
+  <Text
+    color="white"
+    letterSpacing="roundedTight"
+    size="lmedium"
+    weight="semibold"
+  >
     {animatedNumber}
   </Text>
 );
 
-class GasSpeedButton extends PureComponent {
-  static propTypes = {
-    estimatedTimeUnit: PropTypes.string,
-    estimatedTimeValue: PropTypes.string,
-    gasPrices: PropTypes.object,
-    gasUpdateGasPriceOption: PropTypes.func,
-    nativeCurrencySymbol: PropTypes.string,
-    price: PropTypes.string,
-    selectedGasPriceOption: PropTypes.oneOf(gasUtils.GasSpeedOrder),
-  };
+const getActionLabel = type => {
+  switch (type) {
+    case ExchangeModalTypes.deposit:
+      return 'Deposits in';
+    case ExchangeModalTypes.withdrawal:
+      return 'Withdraws in';
+    default:
+      return 'Swaps in';
+  }
+};
 
-  handlePress = () => {
-    const {
-      gasPrices,
-      gasUpdateGasPriceOption,
-      selectedGasPriceOption,
-    } = this.props;
+const GasSpeedButton = ({ type }) => {
+  const dispatch = useDispatch();
+  const { nativeCurrencySymbol } = useAccountSettings();
+  const {
+    gasUpdateGasPriceOption,
+    selectedGasPrice,
+    selectedGasPriceOption,
+  } = useGas();
 
+  const estimatedTime = get(
+    selectedGasPrice,
+    'estimatedTime.display',
+    ''
+  ).split(' ');
+
+  const gasPrice = get(selectedGasPrice, 'txFee.native.value.amount');
+  const estimatedTimeUnit = estimatedTime[1] || 'min';
+  const estimatedTimeValue = estimatedTime[0] || 0;
+  const price = isNaN(gasPrice) ? '0.00' : gasPrice;
+
+  const handlePress = useCallback(() => {
     LayoutAnimation.easeInEaseOut();
 
     const currentSpeedIndex = gasUtils.GasSpeedOrder.indexOf(
@@ -56,80 +76,64 @@ class GasSpeedButton extends PureComponent {
       (currentSpeedIndex + 1) % gasUtils.GasSpeedOrder.length;
 
     const nextSpeed = gasUtils.GasSpeedOrder[nextSpeedIndex];
-    const nextSpeedGweiValue = get(gasPrices, `[${nextSpeed}].value.display`);
 
-    gasUpdateGasPriceOption(nextSpeed);
-    analytics.track('Updated Gas Price', { gasPrice: nextSpeedGweiValue });
-  };
+    dispatch(gasUpdateGasPriceOption(nextSpeed));
+  }, [dispatch, gasUpdateGasPriceOption, selectedGasPriceOption]);
 
-  formatAnimatedGasPrice = animatedPrice => {
-    const formattedPrice = parseFloat(animatedPrice).toFixed(3);
-    return `${this.props.nativeCurrencySymbol}${formattedPrice}`;
-  };
+  const formatAnimatedGasPrice = useCallback(
+    animatedPrice => {
+      const formattedPrice = parseFloat(animatedPrice).toFixed(3);
+      return `${nativeCurrencySymbol}${formattedPrice}`;
+    },
+    [nativeCurrencySymbol]
+  );
 
-  formatAnimatedEstimatedTime = estimatedTime => {
-    const time = parseFloat(estimatedTime || 0).toFixed(0);
-    return `Swaps in ~ ${time} ${this.props.estimatedTimeUnit}`;
-  };
+  const formatAnimatedEstimatedTime = useCallback(
+    estimatedTime => {
+      const actionLabel = getActionLabel(type);
+      const time = parseFloat(estimatedTime || 0).toFixed(0);
+      return `${actionLabel} ~ ${time} ${estimatedTimeUnit}`;
+    },
+    [estimatedTimeUnit, type]
+  );
 
-  render = () => (
+  return (
     <ButtonPressAnimation
       hapticType="impactHeavy"
-      onPress={this.handlePress}
-      scaleTo={0.99999}
+      onPress={handlePress}
+      scaleTo={0.99}
       width="100%"
     >
-      <Column css={padding(14, 19, 0)} width="100%">
+      <Column css={padding(15, 19, 0)} width="100%">
         <Row align="center" justify="space-between">
           <AnimateNumber
-            formatter={this.formatAnimatedGasPrice}
+            formatter={formatAnimatedGasPrice}
             interval={6}
             renderContent={renderGasPriceText}
             steps={6}
             timing="linear"
-            value={this.props.price}
+            value={price}
           />
-          <GasSpeedLabelPager label={this.props.selectedGasPriceOption} />
+          <GasSpeedLabelPager label={selectedGasPriceOption} />
         </Row>
         <Row align="center" justify="space-between">
           <Label>Fee</Label>
           <AnimateNumber
-            formatter={this.formatAnimatedEstimatedTime}
+            formatter={formatAnimatedEstimatedTime}
             interval={1}
             renderContent={renderEstimatedTimeText}
             steps={6}
             timing="linear"
-            value={this.props.estimatedTimeValue}
+            value={estimatedTimeValue}
           />
         </Row>
       </Column>
     </ButtonPressAnimation>
   );
-}
+};
 
-export default compose(
-  withAccountSettings,
-  withGas,
-  mapProps(({ selectedGasPrice, ...props }) => {
-    const estimatedTime = get(
-      selectedGasPrice,
-      'estimatedTime.display',
-      ''
-    ).split(' ');
+GasSpeedButton.propTypes = {
+  type: PropTypes.oneOf(Object.values(ExchangeModalTypes)),
+};
 
-    const gasPrice = get(selectedGasPrice, 'txFee.native.value.amount');
-
-    return {
-      estimatedTimeUnit: estimatedTime[1] || 'min',
-      estimatedTimeValue: estimatedTime[0] || 0,
-      price: isNaN(gasPrice) ? '0.00' : gasPrice,
-      ...props,
-    };
-  }),
-  onlyUpdateForKeys([
-    'estimatedTimeUnit',
-    'estimatedTimeValue',
-    'price',
-    'selectedGasPriceOption',
-  ])
-)(GasSpeedButton);
+export default GasSpeedButton;

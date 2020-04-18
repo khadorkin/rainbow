@@ -1,15 +1,75 @@
-import { mapKeys, mapValues, toLower } from 'lodash';
+import { keys, mapKeys, mapValues, toLower } from 'lodash';
+import savingAssets from './compound/saving-assets.json';
 import tokenOverridesFallback from './token-overrides.json';
-import uniswapAssetsFallback from './uniswap-pairs.json';
+import uniswapAssetsFallback from './uniswap/uniswap-pairs.json';
+import { supportedCountries } from './wyre/supportedCountries';
 
-export const DefaultUniswapFavorites = [
-  // Ethereum
-  'eth',
-  // DAI
-  '0x6b175474e89094c44da98b954eedeac495271d0f',
-  // SOCKS
-  '0x23B608675a2B2fB1890d3ABBd85c5775c51691d5',
-];
+export { default as compoundCERC20ABI } from './compound/compound-cerc20-abi.json';
+export { default as compoundCETHABI } from './compound/compound-ceth-abi.json';
+export { default as erc20ABI } from './erc20-abi.json';
+export { default as ethUnits } from './ethereum-units.json';
+export { default as exchangeABI } from './uniswap/uniswap-exchange-abi.json';
+export { default as uniswapTestnetAssets } from './uniswap/uniswap-pairs-testnet.json';
+
+export const CDAI_CONTRACT = '0x5d3a536e4d6dbd6114cc1ead35777bab948e3643';
+export const SAI_ADDRESS = '0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359';
+export const DAI_ADDRESS = '0x6b175474e89094c44da98b954eedeac495271d0f';
+export const USDC_ADDRESS = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
+const SOCKS_ADDRESS = '0x23B608675a2B2fB1890d3ABBd85c5775c51691d5';
+
+export const TRANSFER_EVENT_TOPIC_LENGTH = 3;
+export const TRANSFER_EVENT_KECCAK =
+  '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+
+export const WYRE_SUPPORTED_COUNTRIES_ISO = keys(supportedCountries);
+
+export const AddCashCurrencies = {
+  kovan: {
+    DAI: '0xc4375b7de8af5a38a93548eb8453a498222c4ff2',
+    ETH: 'eth',
+  },
+  mainnet: {
+    DAI: '0x6b175474e89094c44da98b954eedeac495271d0f',
+    ETH: 'eth',
+  },
+};
+
+export const AddCashCurrencyInfo = {
+  kovan: {
+    '0xc4375b7de8af5a38a93548eb8453a498222c4ff2': {
+      decimals: 18,
+      name: 'Dai',
+      symbol: 'DAI',
+    },
+    eth: {
+      decimals: 18,
+      name: 'Ethereum',
+      symbol: 'ETH',
+    },
+  },
+  mainnet: {
+    '0x6b175474e89094c44da98b954eedeac495271d0f': {
+      decimals: 18,
+      name: 'Dai',
+      symbol: 'DAI',
+    },
+    eth: {
+      decimals: 18,
+      name: 'Ethereum',
+      symbol: 'ETH',
+    },
+  },
+};
+
+export const DefaultUniswapFavorites = {
+  mainnet: ['eth', DAI_ADDRESS, SOCKS_ADDRESS],
+  rinkeby: [
+    // Ethereum
+    'eth',
+    // DAI
+    '0x5592ec0cfb4dbc12d3ab100b257153436a1f0fea',
+  ],
+};
 
 export const loweredTokenOverridesFallback = mapKeys(
   tokenOverridesFallback,
@@ -28,3 +88,29 @@ export const cleanUniswapAssetsFallback = mapValues(
     ...loweredTokenOverridesFallback[key],
   })
 );
+
+export const savingsAssetsList = savingAssets;
+
+export const savingsAssetsListByUnderlying = mapValues(
+  savingAssets,
+  assetsByNetwork =>
+    mapKeys(
+      mapValues(assetsByNetwork, (assetByContract, contractAddress) => ({
+        ...assetByContract,
+        contractAddress,
+      })),
+      value => value.address
+    )
+);
+
+export const shitcoinBlacklist = {
+  goerli: [],
+  kovan: [],
+  mainnet: [
+    '0xc12d1c73ee7dc3615ba4e37e4abfdbddfa38907e', // KickToken (KICK)
+    '0xdbadabe39b91f2069e27291add14a1d95e3ff54f', // betbeb.com空投1万个ETH (BEB)
+    '0xf222ba8af81d799c565241b0d3eedf9bdc4fc462', // betbeb.com空投1万个ETH (BEB)
+  ],
+  rinkeby: [],
+  ropsten: [],
+};

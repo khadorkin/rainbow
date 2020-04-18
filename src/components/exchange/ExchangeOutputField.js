@@ -1,12 +1,12 @@
-import React, { PureComponent } from 'react';
+import React, { useRef } from 'react';
 import PropTypes from 'prop-types';
+import ShadowStack from 'react-native-shadow-stack';
 import { withNeverRerender } from '../../hoc';
-import { colors, padding } from '../../styles';
-import { CoolButton } from '../buttons';
+import { colors, fonts, padding } from '../../styles';
+import { TokenSelectionButton } from '../buttons';
 import { CoinIcon } from '../coin-icon';
 import { EnDash } from '../html-entities';
 import { Row, RowWithMargins } from '../layout';
-import { ShadowStack } from '../shadow-stack';
 import ExchangeInput from './ExchangeInput';
 
 const paddingValue = 15;
@@ -31,89 +31,95 @@ const FakeNotchThing = withNeverRerender(() => (
   />
 ));
 
-export default class ExchangeOutputField extends PureComponent {
-  static propTypes = {
-    bottomRadius: PropTypes.number,
-    onBlur: PropTypes.func,
-    onFocus: PropTypes.func,
-    onPressSelectOutputCurrency: PropTypes.func,
-    outputAmount: PropTypes.string,
-    outputCurrency: PropTypes.string,
-    outputFieldRef: PropTypes.func.isRequired,
-    setOutputAmount: PropTypes.func,
-  };
+const skeletonColor = colors.alpha(colors.blueGreyDark, 0.1);
 
-  outputFieldRef = null;
+const ExchangeOutputField = ({
+  assignOutputFieldRef,
+  bottomRadius,
+  onBlur,
+  onFocus,
+  onPressSelectOutputCurrency,
+  outputAmount,
+  outputCurrencyAddress,
+  outputCurrencySymbol,
+  setOutputAmount,
+}) => {
+  const outputFieldRef = useRef(null);
 
-  handleFocusInput = () => {
-    if (this.outputFieldRef) {
-      this.outputFieldRef.focus();
+  const handleFocusInput = () => {
+    if (outputFieldRef && outputFieldRef.current) {
+      outputFieldRef.current.focus();
     }
   };
 
-  handleOutputFieldRef = ref => {
-    this.outputFieldRef = ref;
-    this.props.outputFieldRef(ref);
+  const handleOutputFieldRef = ref => {
+    outputFieldRef.current = ref;
+    assignOutputFieldRef(ref);
   };
 
-  render = () => {
-    const {
-      bottomRadius,
-      onBlur,
-      onFocus,
-      onPressSelectOutputCurrency,
-      outputAmount,
-      outputCurrency,
-      setOutputAmount,
-    } = this.props;
-
-    const skeletonColor = colors.alpha(colors.blueGreyDark, 0.1);
-
-    return (
-      <Row
+  return (
+    <Row
+      align="center"
+      flex={0}
+      width="100%"
+      css={`
+        ${padding(24 + paddingValue, 0, 26)};
+        background-color: ${colors.white};
+        overflow: hidden;
+        border-bottom-left-radius: ${bottomRadius}px;
+        border-bottom-right-radius: ${bottomRadius}px;
+      `}
+    >
+      <FakeNotchThing />
+      <RowWithMargins
         align="center"
-        flex={0}
-        width="100%"
-        css={`
-          ${padding(24 + paddingValue, 0, 26)};
-          background-color: ${colors.white};
-          overflow: hidden;
-          border-bottom-left-radius: ${bottomRadius}px;
-          border-bottom-right-radius: ${bottomRadius}px;
-        `}
+        flex={1}
+        margin={10}
+        onPress={handleFocusInput}
+        paddingLeft={paddingValue}
       >
-        <FakeNotchThing />
-        <RowWithMargins
-          align="center"
-          flex={1}
-          margin={10}
-          onPress={this.handleFocusInput}
-          paddingLeft={paddingValue}
-        >
-          <CoinIcon
-            bgColor={outputCurrency ? undefined : skeletonColor}
-            flex={0}
-            size={40}
-            symbol={outputCurrency}
-          />
-          <ExchangeInput
-            editable={!!outputCurrency}
-            onBlur={onBlur}
-            onChangeText={setOutputAmount}
-            onFocus={onFocus}
-            placeholder={outputCurrency ? '0' : EnDash.unicode}
-            placeholderTextColor={outputCurrency ? undefined : skeletonColor}
-            refInput={this.props.outputFieldRef}
-            value={outputAmount}
-          />
-        </RowWithMargins>
-        <CoolButton
-          color={outputCurrency ? colors.dark : colors.appleBlue}
-          onPress={onPressSelectOutputCurrency}
-        >
-          {outputCurrency || 'Choose a Coin'}
-        </CoolButton>
-      </Row>
-    );
-  };
-}
+        <CoinIcon
+          bgColor={outputCurrencySymbol ? undefined : skeletonColor}
+          flex={0}
+          size={40}
+          address={outputCurrencyAddress}
+          symbol={outputCurrencySymbol}
+        />
+        <ExchangeInput
+          disableTabularNums
+          editable={!!outputCurrencySymbol}
+          fontFamily={fonts.family.SFProRounded}
+          height={40}
+          letterSpacing={fonts.letterSpacing.roundedTightest}
+          onBlur={onBlur}
+          onChangeText={setOutputAmount}
+          onFocus={onFocus}
+          placeholder={outputCurrencySymbol ? '0' : EnDash.unicode}
+          placeholderTextColor={
+            outputCurrencySymbol ? undefined : skeletonColor
+          }
+          refInput={handleOutputFieldRef}
+          value={outputAmount}
+        />
+      </RowWithMargins>
+      <TokenSelectionButton
+        onPress={onPressSelectOutputCurrency}
+        symbol={outputCurrencySymbol}
+      />
+    </Row>
+  );
+};
+
+ExchangeOutputField.propTypes = {
+  assignOutputFieldRef: PropTypes.func.isRequired,
+  bottomRadius: PropTypes.number,
+  onBlur: PropTypes.func,
+  onFocus: PropTypes.func,
+  onPressSelectOutputCurrency: PropTypes.func,
+  outputAmount: PropTypes.string,
+  outputCurrencyAddress: PropTypes.string,
+  outputCurrencySymbol: PropTypes.string,
+  setOutputAmount: PropTypes.func,
+};
+
+export default ExchangeOutputField;

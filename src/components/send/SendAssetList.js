@@ -1,8 +1,12 @@
 import React, { Fragment } from 'react';
-import { compose, onlyUpdateForKeys, withHandlers } from 'recompact';
+import { onlyUpdateForKeys } from 'recompact';
 import { deviceUtils } from '../../utils';
 import { FlyInAnimation } from '../animations';
-import { CollectiblesSendRow, SendCoinRow } from '../coin-row';
+import {
+  CollectiblesSendRow,
+  SendCoinRow,
+  SendSavingsCoinRow,
+} from '../coin-row';
 import { View } from 'react-primitives';
 import {
   DataProvider,
@@ -10,6 +14,7 @@ import {
   RecyclerListView,
 } from 'recyclerlistview';
 import { LayoutAnimation } from 'react-native';
+import SavingsListHeader from '../savings/SavingsListHeader';
 import TokenFamilyHeader from '../token-family/TokenFamilyHeader';
 import { sheetVerticalOffset } from '../../navigation/transitions/effects';
 import FastImage from 'react-native-fast-image';
@@ -28,17 +33,27 @@ const Divider = styled.View`
 `;
 
 class SendAssetList extends React.Component {
-  constructor(args) {
-    super(args);
+  constructor(props) {
+    super(props);
+
+    const { allAssets, savings, uniqueTokens } = props;
+    this.data = allAssets;
+    if (savings && savings.length > 0) {
+      this.data = this.data.concat([{ data: savings, name: 'Savings' }]);
+    }
+    if (uniqueTokens && uniqueTokens.length > 0) {
+      this.data = this.data.concat(uniqueTokens);
+    }
     this.state = {
       dataProvider: new DataProvider((r1, r2) => {
         return r1 !== r2;
-      }).cloneWithRows(this.props.allAssets.concat(this.props.uniqueTokens)),
+      }).cloneWithRows(this.data),
       openCards: [],
+      openSavings: true,
     };
 
     const imageTokens = [];
-    this.props.uniqueTokens.forEach(family => {
+    uniqueTokens.forEach(family => {
       family.data.forEach(token => {
         if (token.image_thumbnail_url) {
           imageTokens.push({
@@ -52,20 +67,28 @@ class SendAssetList extends React.Component {
 
     this._layoutProvider = new LayoutProvider(
       i => {
-        if (i < this.props.allAssets.length - 1) {
+        if (i < allAssets.length - 1) {
           return 'COIN_ROW';
-        } else if (i === this.props.allAssets.length - 1) {
-          return 'COIN_ROW_LAST';
+        } else if (i === allAssets.length - 1) {
+          return savings && savings.length !== 0 ? 'COIN_ROW' : 'COIN_ROW_LAST';
+        } else if (i === allAssets.length && savings && savings.length > 0) {
+          return {
+            size: this.state.openSavings ? rowHeight * savings.length : 0,
+            type: 'SAVINGS_ROW',
+          };
         } else {
           if (
             this.state.openCards[
-              this.props.uniqueTokens[i - this.props.allAssets.length].familyId
+              uniqueTokens[
+                i - allAssets.length - (savings && savings.length > 0 ? 1 : 0)
+              ].familyId
             ]
           ) {
             return {
               size:
-                this.props.uniqueTokens[i - this.props.allAssets.length].data
-                  .length + 1,
+                uniqueTokens[
+                  i - allAssets.length - (savings && savings.length > 0 ? 1 : 0)
+                ].data.length + 1,
               type: 'COLLECTIBLE_ROW',
             };
           } else {
@@ -74,40 +97,24 @@ class SendAssetList extends React.Component {
         }
       },
       (type, dim) => {
+        dim.width = deviceUtils.dimensions.width;
         if (type === 'COIN_ROW') {
-          dim.width = deviceUtils.dimensions.width;
           dim.height = rowHeight;
         } else if (type === 'COIN_ROW_LAST') {
-          dim.width = deviceUtils.dimensions.width;
           dim.height = rowHeight + dividerHeight;
+        } else if (type.type === 'SAVINGS_ROW') {
+          dim.height = type.size + familyHeaderHeight + dividerHeight;
         } else if (type.type === 'COLLECTIBLE_ROW') {
-          dim.width = deviceUtils.dimensions.width;
           dim.height = type.size * familyHeaderHeight;
         } else if (type === 'COLLECTIBLE_ROW_CLOSED') {
-          dim.width = deviceUtils.dimensions.width;
           dim.height = familyHeaderHeight;
         } else {
-          dim.width = 0;
           dim.height = 0;
         }
       }
     );
     this._renderRow = this._renderRow.bind(this);
   }
-
-  enhanceRenderItem = compose(
-    withHandlers({
-      onPress: itemInfo => () => {
-        return this.props.onSelectAsset(
-          itemInfo.item ? itemInfo.item : itemInfo
-        );
-      },
-    })
-  );
-
-  TokenItem = React.memo(this.enhanceRenderItem(SendCoinRow));
-
-  UniqueTokenItem = React.memo(this.enhanceRenderItem(CollectiblesSendRow));
 
   rlv = React.createRef();
 
@@ -160,48 +167,105 @@ class SendAssetList extends React.Component {
     }
   };
 
+  changeOpenSavings = () => {
+    const { openSavings } = this.state;
+    LayoutAnimation.configureNext(
+      LayoutAnimation.create(200, 'easeInEaseOut', 'opacity')
+    );
+    const newOpenSavings = !openSavings;
+    this.setState({ openSavings: newOpenSavings });
+  };
+
   mapTokens = collectibles => {
     const items = collectibles.map(collectible => {
-      const newItem = {};
-      newItem.item = collectible;
-      return <this.UniqueTokenItem key={collectible.id} {...newItem} />;
+      const onPress = () => {
+        this.props.onSelectAsset(collectible);
+      };
+      return (
+        <CollectiblesSendRow
+          key={collectible.id}
+          item={collectible}
+          onPress={onPress}
+        />
+      );
     });
     return items;
   };
 
-  balancesRenderItem = item => <this.TokenItem {...item} />;
+  balancesRenderItem = item => {
+    const onPress = () => {
+      this.props.onSelectAsset(item);
+    };
+    return <SendCoinRow {...item} onPress={onPress} />;
+  };
 
-  balancesRenderLastItem = item => (
-    <Fragment>
-      <this.TokenItem {...item} />
-      <Divider />
-    </Fragment>
-  );
+  mapSavings = savings => {
+    const items = savings.map(token => {
+      const onPress = () => {
+        this.props.onSelectAsset(token);
+      };
+      return (
+        <SendSavingsCoinRow
+          key={token.address}
+          item={token}
+          onPress={onPress}
+        />
+      );
+    });
+    return items;
+  };
+
+  balancesRenderLastItem = item => {
+    const onPress = () => {
+      this.props.onSelectAsset(item);
+    };
+    return (
+      <Fragment>
+        <SendCoinRow {...item} onPress={onPress} />
+        <Divider />
+      </Fragment>
+    );
+  };
 
   collectiblesRenderItem = item => {
     return (
       <View>
         <TokenFamilyHeader
-          isCoinRow
-          familyName={item.name}
-          familyImage={item.familyImage}
           childrenAmount={item.data.length}
+          familyImage={item.familyImage}
+          isCoinRow
           isOpen={this.state.openCards[item.familyId]}
-          onHeaderPress={() => {
+          onPress={() => {
             this.changeOpenTab(item.familyId);
           }}
+          title={item.name}
         />
         {this.state.openCards[item.familyId] && this.mapTokens(item.data)}
       </View>
     );
   };
 
+  savingsRenderItem = item => (
+    <View marginTop={10}>
+      <SavingsListHeader
+        childrenAmount={item.data.length}
+        isOpen={this.state.openSavings}
+        onPress={() => {
+          this.changeOpenSavings();
+        }}
+      />
+      {this.state.openSavings && this.mapSavings(item.data)}
+      <Divider />
+    </View>
+  );
+
   _renderRow(type, data) {
     if (type === 'COIN_ROW') {
       return this.balancesRenderItem(data);
-    }
-    if (type === 'COIN_ROW_LAST') {
+    } else if (type === 'COIN_ROW_LAST') {
       return this.balancesRenderLastItem(data);
+    } else if (type.type === 'SAVINGS_ROW') {
+      return this.savingsRenderItem(data);
     } else if (type.type === 'COLLECTIBLE_ROW') {
       return this.collectiblesRenderItem(data);
     } else if (type === 'COLLECTIBLE_ROW_CLOSED') {
@@ -227,6 +291,7 @@ class SendAssetList extends React.Component {
             this.componentHeight = event.nativeEvent.layoutMeasurement.height;
             this.position = event.nativeEvent.contentOffset.y;
           }}
+          style={{ minHeight: 1 }}
         />
       </FlyInAnimation>
     );

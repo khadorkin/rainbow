@@ -94,15 +94,21 @@ class ExchangeNativeField extends Component {
     return (
       <TouchableWithoutFeedback flex={0} onPress={this.focusNativeField}>
         <Row align="center" flex={1} height={height}>
-          <Text flex={0} size="large" style={{ color }} weight="regular">
+          <Text
+            flex={0}
+            size="large"
+            style={{ color, marginBottom: 0.5 }}
+            weight="regular"
+          >
             {symbol}
           </Text>
           <ExchangeInput
             color={color}
             disableTabularNums
-            fontFamily={fonts.family.SFProText}
+            fontFamily={fonts.family.SFProRounded}
             fontSize={fonts.size.large}
             fontWeight={fonts.weight.regular}
+            letterSpacing={fonts.letterSpacing.roundedTight}
             mask={mask}
             onBlur={this.handleBlur}
             onChangeText={setNativeAmount}

@@ -21,16 +21,26 @@ import {
   SendTransactionSpeed,
 } from '../components/send';
 import { createSignableTransaction, estimateGasLimit } from '../handlers/web3';
+import AssetTypes from '../helpers/assetTypes';
+import isNativeStackAvailable from '../helpers/isNativeStackAvailable';
 import {
   convertAmountAndPriceToNativeDisplay,
   convertAmountFromNativeValue,
   formatInputDecimals,
 } from '../helpers/utilities';
 import { checkIsValidAddress } from '../helpers/validators';
+import {
+  useAccountAssets,
+  useAccountSettings,
+  useGas,
+  usePrevious,
+  useRefreshAccountData,
+  useSendableUniqueTokens,
+  useSendSavingsAccount,
+} from '../hooks';
 import { sendTransaction } from '../model/wallet';
 import { borders, colors } from '../styles';
 import { deviceUtils, ethereumUtils, gasUtils } from '../utils';
-import isNativeStackAvailable from '../helpers/isNativeStackAvailable';
 
 const sheetHeight = deviceUtils.dimensions.height - 10;
 
@@ -54,11 +64,8 @@ const SheetContainer = isNativeStackAvailable
     `;
 
 const SendSheet = ({
-  accountAddress,
-  allAssets,
   contacts,
   dataAddNewTransaction,
-  fetchData,
   gasLimit,
   gasPrices,
   gasPricesStartPolling,
@@ -67,16 +74,24 @@ const SendSheet = ({
   gasUpdateGasPriceOption,
   gasUpdateTxFee,
   isSufficientGas,
-  nativeCurrency,
-  nativeCurrencySymbol,
   removeContact,
-  selectedGasPrice,
-  sendableUniqueTokens,
   setAppearListener,
   sortedContacts,
   txFees,
   ...props
 }) => {
+  const { allAssets } = useAccountAssets();
+  const { selectedGasPrice } = useGas();
+  const { sendableUniqueTokens } = useSendableUniqueTokens();
+  const {
+    accountAddress,
+    nativeCurrency,
+    nativeCurrencySymbol,
+  } = useAccountSettings();
+
+  const savings = useSendSavingsAccount();
+  const fetchData = useRefreshAccountData();
+
   const { navigate } = useNavigation();
   const [amountDetails, setAmountDetails] = useState({
     assetAmount: '',
@@ -98,13 +113,15 @@ const SendSheet = ({
       gasPricesStartPolling();
     });
     return () => {
-      gasPricesStopPolling();
+      InteractionManager.runAfterInteractions(() => {
+        gasPricesStopPolling();
+      });
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const sendUpdateAssetAmount = useCallback(
-    newAssetAmount => {
+    async newAssetAmount => {
       const _assetAmount = newAssetAmount.replace(/[^0-9.]/g, '');
       let _nativeAmount = '';
       if (_assetAmount.length) {
@@ -121,9 +138,11 @@ const SendSheet = ({
           _assetAmount
         );
       }
-      const balanceAmount = ethereumUtils.getBalanceAmount(
+      const balanceAmount = await ethereumUtils.getBalanceAmount(
         selectedGasPrice,
-        selected
+        selected,
+        true,
+        accountAddress
       );
       const _isSufficientBalance =
         Number(_assetAmount) <= Number(balanceAmount);
@@ -133,12 +152,12 @@ const SendSheet = ({
         nativeAmount: _nativeAmount,
       });
     },
-    [nativeCurrency, selected, selectedGasPrice]
+    [accountAddress, nativeCurrency, selected, selectedGasPrice]
   );
 
   const sendUpdateSelected = useCallback(
     newSelected => {
-      if (get(newSelected, 'isNft')) {
+      if (get(newSelected, 'type') === AssetTypes.nft) {
         setAmountDetails({
           assetAmount: '1',
           isSufficientBalance: true,
@@ -150,10 +169,10 @@ const SendSheet = ({
         });
       } else {
         setSelected(newSelected);
-        sendUpdateAssetAmount(amountDetails.assetAmount);
+        sendUpdateAssetAmount('');
       }
     },
-    [amountDetails.assetAmount, sendUpdateAssetAmount]
+    [sendUpdateAssetAmount]
   );
 
   const sendUpdateRecipient = useCallback(newRecipient => {
@@ -161,7 +180,7 @@ const SendSheet = ({
   }, []);
 
   const onChangeNativeAmount = useCallback(
-    newNativeAmount => {
+    async newNativeAmount => {
       if (!isString(newNativeAmount)) return;
       const _nativeAmount = newNativeAmount.replace(/[^0-9.]/g, '');
       let _assetAmount = '';
@@ -175,9 +194,11 @@ const SendSheet = ({
         _assetAmount = formatInputDecimals(convertedAssetAmount, _nativeAmount);
       }
 
-      const balanceAmount = ethereumUtils.getBalanceAmount(
+      const balanceAmount = await ethereumUtils.getBalanceAmount(
         selectedGasPrice,
-        selected
+        selected,
+        true,
+        accountAddress
       );
       const _isSufficientBalance =
         Number(_assetAmount) <= Number(balanceAmount);
@@ -189,16 +210,18 @@ const SendSheet = ({
       });
       analytics.track('Changed native currency input in Send flow');
     },
-    [selected, selectedGasPrice]
+    [accountAddress, selected, selectedGasPrice]
   );
 
-  const sendMaxBalance = useCallback(() => {
-    const balanceAmount = ethereumUtils.getBalanceAmount(
+  const sendMaxBalance = useCallback(async () => {
+    const balanceAmount = await ethereumUtils.getBalanceAmount(
       selectedGasPrice,
-      selected
+      selected,
+      true,
+      accountAddress
     );
     sendUpdateAssetAmount(balanceAmount);
-  }, [selected, selectedGasPrice, sendUpdateAssetAmount]);
+  }, [accountAddress, selected, selectedGasPrice, sendUpdateAssetAmount]);
 
   const onChangeAssetAmount = useCallback(
     newAssetAmount => {
@@ -217,6 +240,7 @@ const SendSheet = ({
       return false;
 
     let submitSuccess = false;
+
     const txDetails = {
       amount: amountDetails.assetAmount,
       asset: selected,
@@ -263,7 +287,7 @@ const SendSheet = ({
       const submitSuccessful = await onSubmit();
       analytics.track('Sent transaction', {
         assetName: selected.name,
-        assetType: selected.isNft ? 'unique_token' : 'token',
+        assetType: selected.type,
         isRecepientENS: toLower(recipient.slice(-4)) === '.eth',
       });
       if (submitSuccessful) {
@@ -277,8 +301,8 @@ const SendSheet = ({
     navigate,
     onSubmit,
     recipient,
-    selected.isNft,
     selected.name,
+    selected.type,
   ]);
 
   const onPressTransactionSpeed = useCallback(
@@ -318,18 +342,19 @@ const SendSheet = ({
   }, [gasUpdateDefaultGasLimit]);
 
   useEffect(() => {
-    if (isValidAddress) {
+    if (isValidAddress && showAssetList) {
       Keyboard.dismiss();
     }
-  }, [isValidAddress]);
+  }, [isValidAddress, showAssetList]);
 
   const assetOverride = useNavigationParam('asset');
+  const prevAssetOverride = usePrevious(assetOverride);
 
   useEffect(() => {
-    if (isValidAddress && assetOverride) {
+    if (assetOverride && assetOverride !== prevAssetOverride) {
       sendUpdateSelected(assetOverride);
     }
-  }, [assetOverride, isValidAddress, sendUpdateSelected]);
+  }, [assetOverride, prevAssetOverride, sendUpdateSelected]);
 
   const recipientOverride = useNavigationParam('address');
 
@@ -400,6 +425,7 @@ const SendSheet = ({
               allAssets={allAssets}
               fetchData={fetchData}
               onSelectAsset={sendUpdateSelected}
+              savings={savings}
               uniqueTokens={sendableUniqueTokens}
             />
           )}
@@ -442,21 +468,14 @@ const SendSheet = ({
 };
 
 SendSheet.propTypes = {
-  accountAddress: PropTypes.string.isRequired,
-  allAssets: PropTypes.array,
   dataAddNewTransaction: PropTypes.func.isRequired,
-  fetchData: PropTypes.func.isRequired,
   gasLimit: PropTypes.number,
   gasPrices: PropTypes.object,
   gasUpdateDefaultGasLimit: PropTypes.func.isRequired,
   gasUpdateGasPriceOption: PropTypes.func.isRequired,
   gasUpdateTxFee: PropTypes.func.isRequired,
   isSufficientGas: PropTypes.bool.isRequired,
-  nativeCurrency: PropTypes.string.isRequired,
-  nativeCurrencySymbol: PropTypes.string.isRequired,
   removeContact: PropTypes.func.isRequired,
-  selectedGasPrice: PropTypes.object,
-  sendableUniqueTokens: PropTypes.arrayOf(PropTypes.object),
   setAppearListener: PropTypes.func,
   sortedContacts: PropTypes.array,
   txFees: PropTypes.object.isRequired,
@@ -465,7 +484,6 @@ SendSheet.propTypes = {
 const arePropsEqual = (prev, next) =>
   prev.isSufficientGas === next.isSufficientGas &&
   prev.gasLimit === next.gasLimit &&
-  prev.selectedGasPrice === next.selectedGasPrice &&
   prev.txFees === next.txFees &&
   prev.gasPrices === next.gasPrices &&
   prev.allAssets === next.allAssets;

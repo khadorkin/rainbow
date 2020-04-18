@@ -3,7 +3,7 @@ import React from 'react';
 // import Animated from 'react-native-reanimated';
 import { withNavigation } from 'react-navigation';
 import { compose, onlyUpdateForKeys, withHandlers } from 'recompact';
-import { withFabSelection } from '../../hoc';
+import { withFabSelection, withTransitionProps } from '../../hoc';
 import { colors } from '../../styles';
 import { Icon } from '../icons';
 import { Centered } from '../layout';
@@ -12,6 +12,11 @@ import FloatingActionButton from './FloatingActionButton';
 // import MovableFabWrapper from './MovableFabWrapper';
 
 const FloatingActionButtonWithDisabled = withFabSelection(FloatingActionButton);
+
+const FabShadow = [
+  [0, 10, 30, colors.dark, 0.4],
+  [0, 5, 15, colors.paleBlue, 0.5],
+];
 
 const SendFab = ({
   //areas,
@@ -40,6 +45,7 @@ const SendFab = ({
       disabled={disabled}
       onPress={onPress}
       scaleTo={scaleTo}
+      shadows={FabShadow}
       tapRef={tapRef}
     >
       <Icon height={22} marginBottom={4} name="send" width={23} />
@@ -68,6 +74,7 @@ SendFab.defaultProps = {
 
 export default compose(
   withNavigation,
+  withTransitionProps,
   withHandlers({
     onPress: ({ navigation }) => () => navigation.navigate('SendSheet'),
   }),

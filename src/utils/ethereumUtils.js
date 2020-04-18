@@ -1,28 +1,65 @@
-import { find, get, replace, toLower } from 'lodash';
-import chains from '../references/chains.json';
+import { captureException } from '@sentry/react-native';
+import { ethers } from 'ethers';
+import { addHexPrefix, isValidAddress } from 'ethereumjs-util';
+import { find, get, isEmpty, replace, toLower } from 'lodash';
+import { web3Provider } from '../handlers/web3';
+import networkTypes from '../helpers/networkTypes';
 import {
   add,
   convertNumberToString,
   fromWei,
   greaterThan,
   subtract,
+  convertRawAmountToDecimalFormat,
 } from '../helpers/utilities';
+import { erc20ABI, chains } from '../references';
 
 const getEthPriceUnit = assets => {
   const ethAsset = getAsset(assets);
   return get(ethAsset, 'price.value', 0);
 };
 
-const getBalanceAmount = (selectedGasPrice, selected) => {
+const getOnChainBalance = async (selected, accountAddress) => {
+  try {
+    let onChainBalance = 0;
+    if (selected.address === 'eth') {
+      onChainBalance = await web3Provider.getBalance(accountAddress);
+    } else {
+      const tokenContract = new ethers.Contract(
+        selected.address,
+        erc20ABI,
+        web3Provider
+      );
+      onChainBalance = await tokenContract.balanceOf(accountAddress);
+    }
+    return convertRawAmountToDecimalFormat(onChainBalance, selected.decimals);
+  } catch (e) {
+    // Default to current balance
+    // if something goes wrong
+    captureException(e);
+    return get(selected, 'balance.amount', 0);
+  }
+};
+
+const getBalanceAmount = async (
+  selectedGasPrice,
+  selected,
+  onchain = false,
+  accountAddress = null
+) => {
   let amount = '';
-  if (selected.address === 'eth') {
-    const balanceAmount = get(selected, 'balance.amount', 0);
-    const txFeeRaw = get(selectedGasPrice, 'txFee.value.amount');
-    const txFeeAmount = fromWei(txFeeRaw);
-    const remaining = subtract(balanceAmount, txFeeAmount);
-    amount = convertNumberToString(greaterThan(remaining, 0) ? remaining : 0);
+  if (onchain && selected && selected.address) {
+    amount = await getOnChainBalance(selected, accountAddress);
   } else {
     amount = get(selected, 'balance.amount', 0);
+  }
+  if (selected && selected.address === 'eth') {
+    if (!isEmpty(selectedGasPrice)) {
+      const txFeeRaw = get(selectedGasPrice, 'txFee.value.amount');
+      const txFeeAmount = fromWei(txFeeRaw);
+      const remaining = subtract(amount, txFeeAmount);
+      amount = convertNumberToString(greaterThan(remaining, 0) ? remaining : 0);
+    }
   }
   return amount;
 };
@@ -69,7 +106,7 @@ const getDataString = (func, arrVals) => {
  */
 const getNetworkFromChainId = chainId => {
   const networkData = find(chains, ['chain_id', chainId]);
-  return get(networkData, 'network', 'mainnet');
+  return get(networkData, 'network', networkTypes.mainnet);
 };
 
 /**
@@ -79,6 +116,19 @@ const getNetworkFromChainId = chainId => {
 const getChainIdFromNetwork = network => {
   const chainData = find(chains, ['network', network]);
   return get(chainData, 'chain_id', 1);
+};
+
+/**
+ * @desc get etherscan host from network string
+ * @param  {String} network
+ */
+const getEtherscanHostFromNetwork = network => {
+  const base_host = 'etherscan.io';
+  if (network === networkTypes.mainnet) {
+    return base_host;
+  } else {
+    return `${network}.${base_host}`;
+  }
 };
 
 /**
@@ -104,13 +154,26 @@ const transactionData = (assets, assetAmount, gasPrice) => {
   };
 };
 
+/**
+ * @desc Checks if a string is a valid ethereum address
+ * @param  {String} str
+ * @return {Boolean}
+ */
+const isEthAddress = str => {
+  const withHexPrefix = addHexPrefix(str);
+  return isValidAddress(withHexPrefix);
+};
+
 export default {
   getAsset,
   getBalanceAmount,
   getChainIdFromNetwork,
   getDataString,
+  getEtherscanHostFromNetwork,
   getEthPriceUnit,
   getNetworkFromChainId,
+  isEthAddress,
+  padLeft,
   removeHexPrefix,
   transactionData,
 };

@@ -13,7 +13,7 @@ class MyBoundedLabel: UILabel {
   }
 }
 
-class TransactionListViewCell: UITableViewCell {
+class TransactionListViewCell: TransactionListBaseCell {
   
   @IBOutlet weak var transactionType: UILabel!
   @IBOutlet weak var transactionIcon: UIImageView!
@@ -22,49 +22,81 @@ class TransactionListViewCell: UITableViewCell {
   @IBOutlet weak var nativeDisplay: UILabel!
   @IBOutlet weak var coinImage: UIImageView!
   
+  override func awakeFromNib() {
+    super.awakeFromNib()
+    addShadowLayer(coinImage)
+  }
+  
   func set(transaction: Transaction) {
     transactionType.text = transaction.status
     coinName.text = transaction.coinName
     nativeDisplay.text = transaction.nativeDisplay
     balanceDisplay.text = transaction.balanceDisplay
     
-    transactionIcon.image = UIImage.init(named: transaction.status.lowercased())
-    transactionIcon.tintAdjustmentMode = .normal
-    
+   
     setStatusColor(transaction)
     setCellColors(transaction)
-    
+    setText(transaction)
+    setIcon(transaction)
+
     if transaction.symbol != nil {
       if let img = UIImage.init(named: transaction.symbol.lowercased()) {
         coinImage.image = img
       } else {
-        coinImage.image = generateCoinImage(transaction.symbol)
+        coinImage.image = generateTextImage(transaction.symbol)
         coinImage.layer.cornerRadius = coinImage.frame.width * 0.5
       }
     }
   }
   
-  fileprivate func setStatusColor(_ transaction: Transaction) {
+  private func setIcon(_ transaction: Transaction) {
+    if (transaction.pending) {
+       transactionIcon.image = UIImage.init(named: "spinner");
+       transactionIcon.image!.accessibilityIdentifier = "spinner"
+       transactionIcon.rotate()
+     } else if let image = UIImage.init(named: transaction.status.lowercased()) {
+       if (transactionIcon.image != nil && transactionIcon.image?.accessibilityIdentifier == "spinner") {
+         transactionIcon.stopRotating()
+       }
+       transactionIcon.image = image
+       transactionIcon.image!.accessibilityIdentifier = "static";
+     }
+
+    // Savings Overrides
+    if (transaction.status.lowercased() ==  "deposited" || transaction.status.lowercased() == "withdrew") {
+      transactionIcon.image = UIImage.init(named: "sunflower")
+    }
+    
+    // Swap Overrides
+    if transaction.type.lowercased() == "trade" && transaction.status.lowercased() == "sent" {
+        transactionIcon.image = UIImage.init(named: "swapped")
+    }
+    
+    // Authorize Overrides
+    if transaction.type.lowercased() == "authorize" && transaction.status.lowercased() == "approved" {
+      transactionIcon.image = UIImage.init(named: "self")
+    }
+    
+    transactionIcon.tintAdjustmentMode = .normal
+
+  }
+  
+  private func setStatusColor(_ transaction: Transaction) {
     let transactionColors = UIColor.RainbowTheme.Transactions.self
     var color = transactionColors.blueGreyMediumLight
     
     if transaction.pending {
       color = transactionColors.primaryBlue
-    } else if transaction.type == "trade" {
-      if transaction.status.lowercased() == "received" {
-        color = transactionColors.dodgerBlue
-      } else if transaction.status.lowercased() == "sent" {
-        color = transactionColors.dodgerBlue
-        transactionIcon.image = UIImage.init(named: "swapped")
-        transactionType.text = "Swapped"
-      }
+    } else if transaction.type == "trade"  && transaction.status.lowercased() == "sent" {
+      color = transactionColors.swapPurple
+      transactionType.text = "Swapped"
     }
     
     transactionIcon.tintColor = color
     transactionType.textColor = color
   }
   
-  fileprivate func setCellColors(_ transaction: Transaction) {
+  private func setCellColors(_ transaction: Transaction) {
     coinName.alpha = 1.0
     nativeDisplay.alpha = 1.0
     
@@ -76,34 +108,33 @@ class TransactionListViewCell: UITableViewCell {
     }
     
     switch transaction.status {
-    case "Sent":
-      nativeDisplay.textColor = UIColor.RainbowTheme.Transactions.dark
-      nativeDisplay.text = "- " + transaction.nativeDisplay
-      break
-    case "Received":
-      nativeDisplay.textColor = UIColor.RainbowTheme.Transactions.limeGreen
-      break
-    default:
-      break
+      case "Sent":
+        nativeDisplay.textColor = UIColor.RainbowTheme.Transactions.dark
+        nativeDisplay.text = "- " + transaction.nativeDisplay
+        break
+      case "Received":
+        nativeDisplay.textColor = UIColor.RainbowTheme.Transactions.green
+        break
+      default:
+        break
     }
   }
   
-  fileprivate func generateCoinImage(_ coinCode: String) -> UIImage? {
-    let frame = CGRect(x: 0, y: 0, width: 40, height: 40)
-    
-    let nameLabel = MyBoundedLabel(frame: frame)
-    nameLabel.textAlignment = .center
-    nameLabel.backgroundColor = UIColor(red: 0.23, green: 0.24, blue: 0.32, alpha: 1.0)
-    nameLabel.textColor = .white
-    nameLabel.font = .systemFont(ofSize: 14, weight: .regular)
-    nameLabel.text = coinCode
-    nameLabel.adjustsFontSizeToFitWidth = true
-    
-    UIGraphicsBeginImageContext(frame.size)
-    if let currentContext = UIGraphicsGetCurrentContext() {
-      nameLabel.layer.render(in: currentContext)
-      return UIGraphicsGetImageFromCurrentImageContext()
+  private func setText(_ transaction: Transaction) {
+    if let type = transaction.type {
+      if (type.lowercased() == "deposit" || type.lowercased() == "withdraw") {
+        if let status = transaction.status {
+          if (status.lowercased() == "depositing" || status.lowercased() == "withdrawing" || status.lowercased() == "sending") {
+            transactionType.text = " \(status.capitalized)";
+            coinName.text = "\(transaction.symbol!)";
+          } else if (status.lowercased() == "deposited" || status.lowercased() == "withdrew") {
+            transactionType.text = " Savings";
+            coinName.text = "\(status.capitalized) \(transaction.symbol!)";
+          } else if (transaction.status.lowercased() == "failed") {
+            coinName.text = "\(type.lowercased() == "withdraw" ? "Withdrew" : "Deposited") \(transaction.symbol!)";
+          }
+        }
+      }
     }
-    return nil
   }
 }

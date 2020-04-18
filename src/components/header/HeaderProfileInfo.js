@@ -1,7 +1,6 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import styled from 'styled-components/primitives';
-import { compose, shouldUpdate } from 'recompact';
 import FastImage from 'react-native-fast-image';
 import { View, Text } from 'react-native';
 import GraphemeSplitter from 'grapheme-splitter';
@@ -121,8 +120,4 @@ HeaderProfileInfo.propTypes = {
   onPress: PropTypes.func.isRequired,
 };
 
-export default compose(
-  shouldUpdate((props, nextProps) => {
-    return nextProps.shouldUpdate;
-  })
-)(HeaderProfileInfo);
+export default HeaderProfileInfo;

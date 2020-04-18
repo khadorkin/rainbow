@@ -1,4 +1,5 @@
 import PushNotificationIOS from '@react-native-community/push-notification-ios';
+import messaging from '@react-native-firebase/messaging';
 import analytics from '@segment/analytics-react-native';
 import { init as initSentry, setRelease } from '@sentry/react-native';
 import { get, last } from 'lodash';
@@ -23,18 +24,24 @@ import RNIOS11DeviceCheck from 'react-native-ios11-devicecheck';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 // eslint-disable-next-line import/no-unresolved
 import { enableScreens } from 'react-native-screens';
+import VersionNumber from 'react-native-version-number';
 import { connect, Provider } from 'react-redux';
 import { compose, withProps } from 'recompact';
 import { FlexItem } from './components/layout';
-import OfflineBadge from './components/OfflineBadge';
+import { OfflineToast, TestnetToast } from './components/toasts';
 import {
   reactNativeDisableYellowBox,
   reactNativeEnableLogbox,
   showNetworkRequests,
   showNetworkResponses,
 } from './config/debug';
+
 import monitorNetwork from './debugging/network';
-import { withDeepLink, withWalletConnectOnSessionRequest } from './hoc';
+import {
+  withDeepLink,
+  withWalletConnectOnSessionRequest,
+  withAccountSettings,
+} from './hoc';
 import { registerTokenRefreshListener, saveFCMToken } from './model/firebase';
 import * as keychain from './model/keychain';
 import { Navigation } from './navigation';
@@ -43,7 +50,8 @@ import { requestsForTopic } from './redux/requests';
 import Routes from './screens/Routes';
 import { parseQueryParams } from './utils';
 
-// eslint-disable-next-line no-undef
+const WALLETCONNECT_SYNC_DELAY = 500;
+
 if (__DEV__) {
   console.disableYellowBox = reactNativeDisableYellowBox;
   reactNativeEnableLogbox && unstable_enableLogBox();
@@ -55,7 +63,9 @@ if (__DEV__) {
 
 CodePush.getUpdateMetadata().then(update => {
   if (update) {
-    setRelease(update.appVersion + '-codepush:' + update.label);
+    setRelease(`me.rainbow-${update.appVersion}-codepush:${update.label}`);
+  } else {
+    setRelease(`me.rainbow-${VersionNumber.appVersion}`);
   }
 });
 
@@ -76,29 +86,37 @@ class App extends Component {
     await this.handleInitializeAnalytics();
     saveFCMToken();
     this.onTokenRefreshListener = registerTokenRefreshListener();
-    PushNotificationIOS.addEventListener(
-      'notification',
+
+    this.foregroundNotificationListener = messaging().onMessage(
       this.onRemoteNotification
+    );
+
+    this.backgroundNotificationListener = messaging().onNotificationOpenedApp(
+      remoteMessage => {
+        setTimeout(() => {
+          const topic = get(remoteMessage, 'data.topic');
+          this.onPushNotificationOpened(topic, true);
+        }, WALLETCONNECT_SYNC_DELAY);
+      }
     );
   }
 
   componentWillUnmount() {
     AppState.removeEventListener('change', this.handleAppStateChange);
     Linking.removeEventListener('url', this.handleOpenLinkingURL);
-    PushNotificationIOS.removeEventListener(
-      'notification',
-      this.onRemoteNotification
-    );
     this.onTokenRefreshListener();
+    this.foregroundNotificationListener();
+    this.backgroundNotificationListener();
   }
 
   onRemoteNotification = notification => {
     const { appState } = this.state;
-    const topic = get(notification, '_data.topic');
-    notification.finish(PushNotificationIOS.FetchResult.NoData);
-    const shouldOpenAutomatically =
-      appState === 'active' || appState === 'inactive';
-    this.onPushNotificationOpened(topic, shouldOpenAutomatically);
+    const topic = get(notification, 'data.topic');
+    setTimeout(() => {
+      const shouldOpenAutomatically =
+        appState === 'active' || appState === 'inactive';
+      this.onPushNotificationOpened(topic, shouldOpenAutomatically);
+    }, WALLETCONNECT_SYNC_DELAY);
   };
 
   handleOpenLinkingURL = ({ url }) => {
@@ -140,6 +158,8 @@ class App extends Component {
   };
 
   handleInitializeAnalytics = async () => {
+    // Comment the line below to debug analytics
+    if (__DEV__) return false;
     const storedIdentifier = await keychain.loadString(
       'analyticsUserIdentifier'
     );
@@ -165,7 +185,13 @@ class App extends Component {
     if (nextAppState === 'active') {
       PushNotificationIOS.removeAllDeliveredNotifications();
     }
+
     this.setState({ appState: nextAppState });
+
+    analytics.track('State change', {
+      category: 'app state',
+      label: nextAppState,
+    });
   };
 
   handleNavigatorRef = navigatorRef =>
@@ -176,7 +202,8 @@ class App extends Component {
       <Provider store={store}>
         <FlexItem>
           <Routes ref={this.handleNavigatorRef} />
-          <OfflineBadge />
+          <OfflineToast />
+          <TestnetToast network={this.props.network} />
         </FlexItem>
       </Provider>
     </SafeAreaProvider>
@@ -186,6 +213,7 @@ class App extends Component {
 const AppWithRedux = compose(
   withProps({ store }),
   withDeepLink,
+  withAccountSettings,
   withWalletConnectOnSessionRequest,
   connect(null, {
     requestsForTopic,

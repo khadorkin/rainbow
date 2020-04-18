@@ -1,43 +1,39 @@
+import { get } from 'lodash';
 import PropTypes from 'prop-types';
-import React, { memo, useState } from 'react';
-import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
-import { css } from 'styled-components/primitives';
+import React, { useState } from 'react';
+import { InteractionManager } from 'react-native';
+import { useDimensions } from '../../hooks';
+import { haptics } from '../../utils';
 import { ButtonPressAnimation } from '../animations';
+import { CoinIcon } from '../coin-icon';
+import { FloatingEmojis } from '../floating-emojis';
+import { Centered, ColumnWithMargins } from '../layout';
+import BalanceText from './BalanceText';
 import BottomRowText from './BottomRowText';
 import CoinName from './CoinName';
 import CoinRow from './CoinRow';
 import CoinRowFavoriteButton from './CoinRowFavoriteButton';
 
-const containerStyles = css`
-  padding-left: 15;
-  padding-right: 0;
-`;
+const CoinRowPaddingTop = 11;
+const CoinRowPaddingBottom = 11;
 
-const BottomRow = ({ balance, native, showBalance, symbol }) => {
-  let text = symbol;
-  if (showBalance && native) {
-    text = `${balance.display} ≈ ${native.balance.display}`;
-  } else if (showBalance) {
-    text = `${balance.display}`;
-  }
-  return <BottomRowText>{text}</BottomRowText>;
-};
-
-const balanceShape = {
-  balance: PropTypes.shape({ display: PropTypes.string }),
-};
+const BottomRow = ({ showBalance, symbol }) =>
+  showBalance ? null : <BottomRowText>{symbol}</BottomRowText>;
 
 BottomRow.propTypes = {
-  ...balanceShape,
-  native: PropTypes.shape(balanceShape),
   showBalance: PropTypes.bool,
   symbol: PropTypes.string,
 };
 
-const TopRow = ({ name }) => <CoinName>{name}</CoinName>;
+const TopRow = ({ name, showBalance }) => (
+  <Centered height={showBalance ? CoinIcon.size : null}>
+    <CoinName>{name}</CoinName>
+  </Centered>
+);
 
 TopRow.propTypes = {
   name: PropTypes.string,
+  showBalance: PropTypes.bool,
 };
 
 const ExchangeCoinRow = ({
@@ -48,32 +44,73 @@ const ExchangeCoinRow = ({
   showFavoriteButton,
   ...props
 }) => {
+  const { width } = useDimensions();
   const [localFavorite, setLocalFavorite] = useState(!!item.favorite);
 
   return (
     <ButtonPressAnimation
       {...props}
-      height={CoinRow.height}
+      height={CoinIcon.size + CoinRowPaddingTop + CoinRowPaddingBottom}
       onPress={() => onPress(item)}
-      scaleTo={0.98}
+      scaleTo={0.96}
     >
       <CoinRow
         {...item}
         bottomRowRender={BottomRow}
-        containerStyles={containerStyles}
+        containerStyles={{
+          paddingBottom: CoinRowPaddingBottom,
+          paddingLeft: 15,
+          paddingRight: showFavoriteButton ? 38 : 0,
+          paddingTop: CoinRowPaddingTop,
+        }}
         showBalance={showBalance}
         topRowRender={TopRow}
       >
+        {showBalance && (
+          <ColumnWithMargins align="end" margin={4} paddingRight={19}>
+            <BalanceText>
+              {get(item, 'native.balance.display', '–')}
+            </BalanceText>
+            <BottomRowText>{get(item, 'balance.display', '')}</BottomRowText>
+          </ColumnWithMargins>
+        )}
         {showFavoriteButton && (
-          <CoinRowFavoriteButton
-            isFavorited={localFavorite}
-            onPress={() => {
-              const newLocalFavorite = !localFavorite;
-              setLocalFavorite(newLocalFavorite);
-              onFavoriteAsset(item.address, newLocalFavorite);
-              ReactNativeHapticFeedback.trigger('selection');
-            }}
-          />
+          <FloatingEmojis
+            centerVertically
+            emojis={['star2']}
+            disableHorizontalMovement
+            disableVerticalMovement
+            distance={70}
+            duration={400}
+            fadeOut={false}
+            left={width - 46}
+            marginTop={11}
+            position="absolute"
+            range={[0, 0]}
+            right={0}
+            scaleTo={0}
+            size={32}
+            top={0}
+            wiggleFactor={0}
+            zIndex={100}
+          >
+            {({ onNewEmoji }) => (
+              <CoinRowFavoriteButton
+                isFavorited={localFavorite}
+                onPress={() => {
+                  const newLocalFavorite = !localFavorite;
+                  if (newLocalFavorite) {
+                    haptics.impactMedium();
+                    InteractionManager.runAfterInteractions(() => {
+                      onNewEmoji();
+                    });
+                  }
+                  setLocalFavorite(newLocalFavorite);
+                  onFavoriteAsset(item.address, newLocalFavorite);
+                }}
+              />
+            )}
+          </FloatingEmojis>
         )}
       </CoinRow>
     </ButtonPressAnimation>
@@ -93,5 +130,4 @@ ExchangeCoinRow.propTypes = {
 };
 
 const neverRerender = () => true;
-
-export default memo(ExchangeCoinRow, neverRerender);
+export default React.memo(ExchangeCoinRow, neverRerender);

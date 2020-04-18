@@ -1,11 +1,12 @@
 import { withSafeTimeout } from '@hocs/safe-timers';
+import { isEmulatorSync } from 'react-native-device-info';
 import analytics from '@segment/analytics-react-native';
 import lang from 'i18n-js';
 import { get } from 'lodash';
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
-import { Vibration } from 'react-native';
-import Permissions from 'react-native-permissions';
+import { Platform, Vibration } from 'react-native';
+import { request, PERMISSIONS } from 'react-native-permissions';
 import { withNavigationFocus } from 'react-navigation';
 import { compose } from 'recompact';
 import { Alert, Prompt } from '../components/alerts';
@@ -16,7 +17,6 @@ import {
 } from '../hoc';
 import { addressUtils } from '../utils';
 import QRScannerScreen from './QRScannerScreen';
-import withStatusBarStyle from '../hoc/withStatusBarStyle';
 
 class QRScannerScreenWithData extends Component {
   static propTypes = {
@@ -30,21 +30,29 @@ class QRScannerScreenWithData extends Component {
   state = {
     enableScanning: true,
     isCameraAuthorized: true,
+    isFocused: false,
     sheetHeight: 240,
   };
 
-  componentDidUpdate = (prevProps, prevState) => {
-    if (this.props.isFocused && !prevProps.isFocused) {
-      Permissions.request('camera').then(permission => {
-        const isCameraAuthorized = permission === 'authorized';
+  static getDerivedStateFromProps(props, state) {
+    const isFocused = props.navigation.isFocused();
+    return { ...state, isFocused };
+  }
 
+  componentDidUpdate = (prevProps, prevState) => {
+    const wasFocused = prevState.isFocused;
+    const isFocused = this.state.isFocused;
+
+    if (isFocused && !wasFocused && Platform.OS === 'ios') {
+      request(PERMISSIONS.IOS.CAMERA).then(permission => {
+        const isCameraAuthorized = permission === 'granted';
         if (prevState.isCameraAuthorized !== isCameraAuthorized) {
           this.setState({ isCameraAuthorized });
         }
       });
 
       // eslint-disable-next-line react/no-did-update-set-state
-      this.setState({ enableScanning: true });
+      !this.state.enableScanning && this.setState({ enableScanning: true });
     }
   };
 
@@ -76,7 +84,9 @@ class QRScannerScreenWithData extends Component {
 
     if (!data) return null;
     this.setState({ enableScanning: false });
-    Vibration.vibrate();
+    if (!isEmulatorSync()) {
+      Vibration.vibrate();
+    }
 
     const address = await addressUtils.getEthereumAddressFromQRCodeData(data);
 
@@ -103,17 +113,20 @@ class QRScannerScreenWithData extends Component {
     });
   };
 
-  render = () => (
-    <QRScannerScreen
-      {...this.props}
-      {...this.state}
-      enableScanning={this.state.enableScanning && this.props.isFocused}
-      onPressBackButton={this.handlePressBackButton}
-      onPressPasteSessionUri={this.handlePressPasteSessionUri}
-      onScanSuccess={this.handleScanSuccess}
-      onSheetLayout={this.handleSheetLayout}
-    />
-  );
+  render() {
+    return (
+      <QRScannerScreen
+        {...this.props}
+        {...this.state}
+        isFocused={this.state.isFocused}
+        enableScanning={this.state.enableScanning && this.state.isFocused}
+        onPressBackButton={this.handlePressBackButton}
+        onPressPasteSessionUri={this.handlePressPasteSessionUri}
+        onScanSuccess={this.handleScanSuccess}
+        onSheetLayout={this.handleSheetLayout}
+      />
+    );
+  }
 }
 
 export default compose(
@@ -121,6 +134,5 @@ export default compose(
   withWalletConnectOnSessionRequest,
   withAccountAddress,
   withSafeTimeout,
-  withWalletConnectConnections,
-  withStatusBarStyle('light-content')
+  withWalletConnectConnections
 )(QRScannerScreenWithData);

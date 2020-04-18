@@ -27,6 +27,14 @@ export const convertAmountToRawAmount = (value, decimals) =>
 export const isZero = value => BigNumber(value).isZero();
 
 /**
+ * @desc to fixed decimals
+ * @param  {Number}  value
+ * @return {String}
+ */
+export const toFixedDecimals = (value, decimals) =>
+  BigNumber(`${value}`).toFixed(decimals);
+
+/**
  * @desc convert from number to string
  * @param  {Number}  value
  * @return {String}
@@ -40,7 +48,7 @@ export const convertNumberToString = value => BigNumber(`${value}`).toFixed();
  * @return {String}
  */
 export const greaterThan = (numberOne, numberTwo) =>
-  BigNumber(`${numberOne}`).gt(BigNumber(`${numberTwo}`));
+  BigNumber(`${numberOne}`).gt(numberTwo);
 
 /**
  * @desc compares if numberOne is greater than or equal to numberTwo
@@ -49,7 +57,16 @@ export const greaterThan = (numberOne, numberTwo) =>
  * @return {String}
  */
 export const greaterThanOrEqualTo = (numberOne, numberTwo) =>
-  BigNumber(`${numberOne}`).gte(BigNumber(`${numberTwo}`));
+  BigNumber(`${numberOne}`).gte(numberTwo);
+
+/**
+ * @desc compares if numberOne is equal to numberTwo
+ * @param  {Number}   numberOne
+ * @param  {Number}   numberTwo
+ * @return {String}
+ */
+export const isEqual = (numberOne, numberTwo) =>
+  BigNumber(`${numberOne}`).eq(numberTwo);
 
 /**
  * @desc format fixed number of decimals
@@ -76,13 +93,19 @@ export const mod = (numberOne, numberTwo) =>
     .toFixed();
 
 /**
- * @desc compares if numberOne is greater than or equal to numberTwo
- * @param  {Number}   numberOne
- * @param  {Number}   numberTwo
- * @return {String}
+ * @desc calculate the fee for a given amount, percent fee, and fixed fee
+ * @param  {Number}   amount (base amount to calculate fee off of)
+ * @param  {Number}   percent fee (4% would just be 4)
+ * @param  {Number}   fixed fee (flat rate to add)
+ * @return {String}   fixed format to 2 decimals with ROUND_HALF_UP
  */
-export const greaterThanOrEqual = (numberOne, numberTwo) =>
-  BigNumber(`${numberOne}`).comparedTo(BigNumber(`${numberTwo}`)) >= 0;
+export const feeCalculation = (amount, percentFee, fixedFee) =>
+  BigNumber(amount)
+    .times(percentFee)
+    .dividedBy(100)
+    .plus(fixedFee)
+    .toFixed(2, BigNumber.ROUND_HALF_UP);
+
 /**
  * @desc real floor divides two numbers
  * @param  {Number}   numberOne
@@ -225,7 +248,7 @@ export const convertStringToNumber = value => BigNumber(`${value}`).toNumber();
  * @return {String}
  */
 export const smallerThan = (numberOne, numberTwo) =>
-  BigNumber(`${numberOne}`).comparedTo(BigNumber(`${numberTwo}`)) === -1;
+  BigNumber(`${numberOne}`).lt(numberTwo);
 
 /**
  * @desc handle signficant decimals
@@ -347,7 +370,7 @@ export const convertRawAmountToBalance = (value, asset, buffer) => {
 export const convertAmountToBalanceDisplay = (value, asset, buffer) => {
   const decimals = get(asset, 'decimals', 18);
   const display = handleSignificantDecimals(value, decimals, buffer);
-  return `${display} ${asset.symbol}`;
+  return `${display} ${get(asset, 'symbol', '')}`;
 };
 
 /**

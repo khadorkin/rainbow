@@ -7,6 +7,7 @@ import { compose, withProps } from 'recompact';
 import { withAccountSettings, withOpenBalances } from '../../hoc';
 import { OpacityToggler } from '../animations';
 import CoinDivider from './CoinDivider';
+import { convertAmountToNativeDisplay } from '../../helpers/utilities';
 
 class SmallBalancesWrapper extends PureComponent {
   static propTypes = {
@@ -31,15 +32,15 @@ class SmallBalancesWrapper extends PureComponent {
           onPress={this.handlePress}
           openSmallBalances={openSmallBalances}
         />
-        <OpacityToggler
-          endingOpacity={1}
-          isVisible={openSmallBalances}
-          startingOpacity={0}
-        >
-          <View pointerEvents={openSmallBalances ? 'auto' : 'none'}>
+        <View pointerEvents={openSmallBalances ? 'auto' : 'none'}>
+          <OpacityToggler
+            endingOpacity={1}
+            isVisible={openSmallBalances}
+            startingOpacity={0}
+          >
             {assets}
-          </View>
-        </OpacityToggler>
+          </OpacityToggler>
+        </View>
       </Fragment>
     );
   };
@@ -59,10 +60,15 @@ export default compose(
   withAccountSettings,
   withOpenBalances,
   withSafeTimeout,
-  withProps(({ assets, nativeCurrencySymbol }) => {
+  withProps(({ assets, nativeCurrency }) => {
     const balance = assets.reduce(reduceBalances, 0);
     return isNumber(balance)
-      ? { balancesSum: `${nativeCurrencySymbol}${balance.toFixed(2)}` }
+      ? {
+          balancesSum: `${convertAmountToNativeDisplay(
+            balance,
+            nativeCurrency
+          )}`,
+        }
       : {};
   })
 )(SmallBalancesWrapper);

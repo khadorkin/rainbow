@@ -1,19 +1,19 @@
 import PropTypes from 'prop-types';
 import React, { Fragment, PureComponent } from 'react';
+import { Keyboard } from 'react-native';
 import {
   LongPressGestureHandler,
   State,
   TapGestureHandler,
 } from 'react-native-gesture-handler';
 import Animated, { Easing } from 'react-native-reanimated';
+import ShadowStack from 'react-native-shadow-stack';
 import { withProps } from 'recompact';
 import styled from 'styled-components/primitives';
 import { useBiometryType, BiometryTypes } from '../../../hooks';
 import { colors, padding } from '../../../styles';
 import { haptics } from '../../../utils';
-import InnerBorder from '../../InnerBorder';
-import { Centered } from '../../layout';
-import { ShadowStack } from '../../shadow-stack';
+import { Centered, InnerBorder } from '../../layout';
 import { Text } from '../../text';
 import HoldToAuthorizeButtonIcon from './HoldToAuthorizeButtonIcon';
 
@@ -25,7 +25,7 @@ const ButtonBorderRadius = 30;
 const ButtonHeight = 59;
 
 const ButtonDisabledBgColor = {
-  dark: colors.darkGrey, // blueGreyLighter,
+  dark: colors.darkGrey,
   light: colors.lightGrey,
 };
 
@@ -55,8 +55,8 @@ const Content = styled(Centered)`
 
 const Title = withProps({
   color: 'white',
-  size: 'large',
-  style: { marginBottom: 2 },
+  size: 'larger',
+  style: { marginBottom: 4 },
   weight: 'semibold',
 })(Text);
 
@@ -79,6 +79,7 @@ class HoldToAuthorizeButton extends PureComponent {
     disabled: PropTypes.bool,
     disabledBackgroundColor: PropTypes.string,
     hideBiometricIcon: PropTypes.bool,
+    hideInnerBorder: PropTypes.bool,
     isAuthorizing: PropTypes.bool,
     label: PropTypes.string,
     onLongPress: PropTypes.func.isRequired,
@@ -127,6 +128,7 @@ class HoldToAuthorizeButton extends PureComponent {
 
     if (state === ACTIVE && !disabled && enableLongPress) {
       haptics.notificationSuccess();
+      Keyboard.dismiss();
 
       animate(this.buttonScale, {
         toValue: 1,
@@ -140,9 +142,9 @@ class HoldToAuthorizeButton extends PureComponent {
     const { disabled, enableLongPress } = this.props;
 
     if (disabled) {
-      if (state === BEGAN) {
-        animate(this.buttonScale, { toValue: 0.99 }).start(() => {
-          haptics.notificationWarning();
+      if (state === END) {
+        haptics.notificationWarning();
+        animate(this.buttonScale, { toValue: 1.02 }).start(() => {
           animate(this.buttonScale, { toValue: 1 }).start();
         });
       }
@@ -180,6 +182,7 @@ class HoldToAuthorizeButton extends PureComponent {
       disabledBackgroundColor,
       enableLongPress,
       hideBiometricIcon,
+      hideInnerBorder,
       label,
       shadows,
       style,
@@ -226,7 +229,9 @@ class HoldToAuthorizeButton extends PureComponent {
                     <Title>{isAuthorizing ? 'Authorizing' : label}</Title>
                   </Fragment>
                 )}
-                <InnerBorder radius={ButtonBorderRadius} />
+                {!hideInnerBorder && (
+                  <InnerBorder radius={ButtonBorderRadius} />
+                )}
               </Content>
             </ShadowStack>
           </Animated.View>

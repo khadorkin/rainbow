@@ -3,6 +3,8 @@ import { toHex, web3Provider } from '../handlers/web3';
 import { convertRawAmountToDecimalFormat } from '../helpers/utilities';
 import { loadWallet } from '../model/wallet';
 import erc20ABI from '../references/erc20-abi.json';
+import { ethUnits } from '../references';
+import { logger } from '../utils';
 
 const estimateApproveWithExchange = async (spender, exchange) => {
   try {
@@ -10,10 +12,10 @@ const estimateApproveWithExchange = async (spender, exchange) => {
       spender,
       ethers.constants.MaxUint256
     );
-    return gasLimit ? gasLimit.toString() : null;
+    return gasLimit ? gasLimit.toString() : ethUnits.basic_approval;
   } catch (error) {
-    console.log('error estimating approval', error);
-    return null;
+    logger.log('error estimating approval', error);
+    return ethUnits.basic_approval;
   }
 };
 
@@ -22,11 +24,16 @@ const estimateApprove = (tokenAddress, spender) => {
   return estimateApproveWithExchange(spender, exchange);
 };
 
-const approve = async (tokenAddress, spender, gasLimit, gasPrice) => {
-  const wallet = await loadWallet();
-  if (!wallet) return null;
-  const exchange = new ethers.Contract(tokenAddress, erc20ABI, wallet);
-  const creationTimestamp = Date.now();
+const approve = async (
+  tokenAddress,
+  spender,
+  gasLimit,
+  gasPrice,
+  wallet = null
+) => {
+  const walletToUse = wallet || (await loadWallet());
+  if (!walletToUse) return null;
+  const exchange = new ethers.Contract(tokenAddress, erc20ABI, walletToUse);
   const approval = await exchange.approve(
     spender,
     ethers.constants.MaxUint256,
@@ -37,7 +44,7 @@ const approve = async (tokenAddress, spender, gasLimit, gasPrice) => {
   );
   return {
     approval,
-    creationTimestamp,
+    creationTimestamp: Date.now(),
   };
 };
 

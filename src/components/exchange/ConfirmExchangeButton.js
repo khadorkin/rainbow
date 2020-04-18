@@ -1,7 +1,8 @@
 import PropTypes from 'prop-types';
 import React from 'react';
+import ExchangeModalTypes from '../../helpers/exchangeModalTypes';
 import { colors } from '../../styles';
-import { HoldToAuthorizeButton, UnlockingSpinner } from '../buttons';
+import { HoldToAuthorizeButton } from '../buttons';
 import { SlippageWarningTheshold } from './SlippageWarning';
 
 const ConfirmExchangeButtonShadows = [
@@ -12,62 +13,57 @@ const ConfirmExchangeButtonShadows = [
 
 const ConfirmExchangeButton = ({
   disabled,
-  inputCurrencyName,
-  isAssetApproved,
   isAuthorizing,
   isSufficientBalance,
-  isUnlockingAsset,
+  isSufficientGas,
   onSubmit,
-  onUnlockAsset,
   slippage,
-  timeRemaining,
+  type,
   ...props
 }) => {
-  let label = 'Hold to Swap';
-  if (!isAssetApproved) {
-    label = `Tap to Unlock ${inputCurrencyName}`;
-  } else if (!isSufficientBalance) {
+  let label =
+    type === ExchangeModalTypes.deposit
+      ? 'Hold to Deposit'
+      : type === ExchangeModalTypes.withdrawal
+      ? 'Hold to Withdraw '
+      : 'Hold to Swap';
+  if (!isSufficientBalance) {
     label = 'Insufficient Funds';
+  } else if (!isSufficientGas) {
+    label = 'Insufficient Gas';
   } else if (slippage > SlippageWarningTheshold) {
     label = 'Swap Anyway';
   } else if (disabled) {
     label = 'Enter an Amount';
   }
 
+  const isDisabled = disabled || !isSufficientBalance || !isSufficientGas;
+
   return (
     <HoldToAuthorizeButton
-      disabled={
-        disabled ||
-        // only consider isSufficientBalance for approved assets.
-        (isAssetApproved && !isSufficientBalance) ||
-        isUnlockingAsset
-      }
+      disabled={isDisabled}
       disabledBackgroundColor={colors.grey20}
       flex={1}
-      hideBiometricIcon={isUnlockingAsset || !isAssetApproved}
+      hideInnerBorder
       isAuthorizing={isAuthorizing}
       label={label}
-      onLongPress={isAssetApproved ? onSubmit : onUnlockAsset}
+      onLongPress={onSubmit}
       shadows={ConfirmExchangeButtonShadows}
       theme="dark"
       {...props}
-    >
-      {isUnlockingAsset && <UnlockingSpinner timeRemaining={timeRemaining} />}
-    </HoldToAuthorizeButton>
+    />
   );
 };
 
 ConfirmExchangeButton.propTypes = {
   disabled: PropTypes.bool,
-  inputCurrencyName: PropTypes.string,
-  isAssetApproved: PropTypes.bool,
   isAuthorizing: PropTypes.bool,
+  isDeposit: PropTypes.bool,
   isSufficientBalance: PropTypes.bool,
-  isUnlockingAsset: PropTypes.bool,
+  isSufficientGas: PropTypes.bool,
   onSubmit: PropTypes.func,
-  onUnlockAsset: PropTypes.func,
   slippage: PropTypes.number,
-  timeRemaining: PropTypes.string,
+  type: PropTypes.oneOf(Object.values(ExchangeModalTypes)),
 };
 
 export default React.memo(ConfirmExchangeButton);

@@ -4,14 +4,13 @@ import React from 'react';
 import styled from 'styled-components/primitives';
 import { colors, padding } from '../../../styles';
 import { ButtonPressAnimation } from '../../animations';
-import InnerBorder from '../../InnerBorder';
-import { Centered } from '../../layout';
+import { InnerBorder, Centered } from '../../layout';
 import { Text } from '../../text';
 
 const ButtonSizeTypes = {
   default: {
-    fontSize: 'h5',
-    padding: [12, 16, 15],
+    fontSize: 'large',
+    padding: [12, 15, 16],
   },
   small: {
     fontSize: 'medium',
@@ -25,7 +24,7 @@ const ButtonShapeTypes = {
 };
 
 const shadowStyles = `
-  shadow-color: ${colors.blueGreyLight};
+  shadow-color: ${colors.alpha(colors.blueGreyDark, 0.5)};
   shadow-offset: 0px 4px;
   shadow-opacity: 0.2;
   shadow-radius: 6;

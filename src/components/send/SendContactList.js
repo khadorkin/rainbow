@@ -68,11 +68,9 @@ class SendContactList extends Component {
   }
 
   static getDerivedStateFromProps(props, state) {
-    const newAssets = filterList(
-      props.allAssets,
-      props.currentInput,
-      'nickname'
-    );
+    const newAssets = filterList(props.allAssets, props.currentInput, [
+      'nickname',
+    ]);
     if (newAssets !== state.contacts) {
       return { ...state, contacts: newAssets };
     }
@@ -157,6 +155,7 @@ class SendContactList extends Component {
             keyboardShouldPersistTaps: 'always',
           }}
           rowRenderer={this.renderItem}
+          style={{ minHeight: 1 }}
         />
       )}
     </FlyInAnimation>

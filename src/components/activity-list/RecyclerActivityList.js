@@ -1,4 +1,4 @@
-import { get, times } from 'lodash';
+import { get } from 'lodash';
 import PropTypes from 'prop-types';
 import React, { PureComponent } from 'react';
 import {
@@ -9,28 +9,29 @@ import {
 import StickyContainer from 'recyclerlistview/dist/reactnative/core/StickyContainer';
 import styled from 'styled-components/primitives/dist/styled-components-primitives.esm';
 import { buildTransactionUniqueIdentifier } from '../../helpers/transactions';
-import { colors } from '../../styles';
 import {
   deviceUtils,
   isNewValueForPath,
   safeAreaInsetValues,
 } from '../../utils';
-import { AssetListItemSkeleton } from '../asset-list';
 import {
   ContractInteractionCoinRow,
   RequestCoinRow,
   TransactionCoinRow,
 } from '../coin-row';
-import ActivityIndicator from '../ActivityIndicator';
-import { Centered, Column } from '../layout';
 import ListFooter from '../list/ListFooter';
 import ActivityListHeader from './ActivityListHeader';
+import transactionTypes from '../../helpers/transactionTypes';
+import transactionStatusTypes from '../../helpers/transactionStatusTypes';
+import { ProfileMasthead } from '../profile';
+import LoadingState from './LoadingState';
 
 const ViewTypes = {
   COMPONENT_HEADER: 0,
   FOOTER: 1,
   HEADER: 2,
   ROW: 3,
+  SWAPPED_ROW: 4,
 };
 
 const Wrapper = styled.View`
@@ -38,25 +39,6 @@ const Wrapper = styled.View`
   overflow: hidden;
   width: 100%;
 `;
-
-const LoadingState = ({ children }) => (
-  <Column flex={1}>
-    {children}
-    <Column flex={1}>
-      <Centered
-        style={{ paddingTop: 200, position: 'absolute', width: '100%' }}
-      >
-        <ActivityIndicator
-          color={colors.alpha(colors.blueGreyLight, 0.666)}
-          size={32}
-        />
-      </Centered>
-      {times(11, index => (
-        <AssetListItemSkeleton key={`activitySkeleton${index}`} />
-      ))}
-    </Column>
-  </Column>
-);
 
 const hasRowChanged = (r1, r2) => {
   if (
@@ -81,6 +63,7 @@ const hasRowChanged = (r1, r2) => {
 
 export default class RecyclerActivityList extends PureComponent {
   static propTypes = {
+    addCashAvailable: PropTypes.bool,
     header: PropTypes.node,
     isLoading: PropTypes.bool,
     sections: PropTypes.arrayOf(
@@ -91,12 +74,13 @@ export default class RecyclerActivityList extends PureComponent {
     ),
   };
 
-  constructor(args) {
-    super(args);
+  constructor(props) {
+    super(props);
 
     this.state = {
       dataProvider: new DataProvider(hasRowChanged, this.getStableId),
       headersIndices: [],
+      swappedIndices: [],
     };
 
     this.layoutProvider = new LayoutProvider(
@@ -113,21 +97,29 @@ export default class RecyclerActivityList extends PureComponent {
           return ViewTypes.FOOTER;
         }
 
+        if (this.state.swappedIndices.includes(index)) {
+          return ViewTypes.SWAPPED_ROW;
+        }
+
         return ViewTypes.ROW;
       },
       (type, dim) => {
         // This values has been hardcoded for omitting imports' cycle
         dim.width = deviceUtils.dimensions.width;
         if (type === ViewTypes.ROW) {
-          dim.height = 64;
+          dim.height = 70;
+        } else if (type === ViewTypes.SWAPPED_ROW) {
+          dim.height = 52;
         } else if (type === ViewTypes.FOOTER) {
-          dim.height = 27;
+          dim.height = 19;
         } else if (type === ViewTypes.HEADER) {
-          dim.height = 35;
+          dim.height = 39;
         } else {
           dim.height = this.props.isLoading
             ? deviceUtils.dimensions.height
-            : 204;
+            : this.props.addCashAvailable
+            ? 278
+            : 203;
         }
       }
     );
@@ -135,8 +127,20 @@ export default class RecyclerActivityList extends PureComponent {
 
   static getDerivedStateFromProps(props, state) {
     const headersIndices = [];
+    const swappedIndices = [];
+    let index = 1;
     const items = props.sections.reduce(
       (ctx, section) => {
+        section.data.forEach(asset => {
+          if (
+            asset.type === transactionTypes.trade &&
+            asset.status === transactionStatusTypes.sent
+          ) {
+            swappedIndices.push(index);
+          }
+          index++;
+        });
+        index = index + 2;
         headersIndices.push(ctx.length);
         return ctx
           .concat([
@@ -156,6 +160,7 @@ export default class RecyclerActivityList extends PureComponent {
     return {
       dataProvider: state.dataProvider.cloneWithRows(items),
       headersIndices,
+      swappedIndices,
     };
   }
 
@@ -164,12 +169,27 @@ export default class RecyclerActivityList extends PureComponent {
     return buildTransactionUniqueIdentifier(row);
   };
 
+  handleListRef = ref => {
+    this.rlv = ref;
+  };
+
   rowRenderer = (type, data) => {
     if (type === ViewTypes.COMPONENT_HEADER) {
+      const header = (
+        <ProfileMasthead
+          accountAddress={this.props.accountAddress}
+          accountColor={this.props.accountColor}
+          accountName={this.props.accountName}
+          addCashAvailable={this.props.addCashAvailable}
+          navigation={this.props.navigation}
+          showBottomDivider={!this.props.isEmpty}
+          recyclerListRef={this.rlv}
+        />
+      );
       return this.props.isLoading ? (
-        <LoadingState>{data.header}</LoadingState>
+        <LoadingState>{header}</LoadingState>
       ) : (
-        data.header
+        header
       );
     }
     if (type === ViewTypes.HEADER) return <ActivityListHeader {...data} />;
@@ -188,12 +208,14 @@ export default class RecyclerActivityList extends PureComponent {
         <RecyclerListView
           dataProvider={this.state.dataProvider}
           layoutProvider={this.layoutProvider}
+          ref={this.handleListRef}
           renderAheadOffset={deviceUtils.dimensions.height}
           rowRenderer={this.rowRenderer}
           scrollEnabled={!this.props.isLoading}
           scrollIndicatorInsets={{
             bottom: safeAreaInsetValues.bottom,
           }}
+          style={{ minHeight: 1 }}
         />
       </StickyContainer>
     </Wrapper>

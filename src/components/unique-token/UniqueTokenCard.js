@@ -6,8 +6,8 @@ import { compose, onlyUpdateForKeys, withHandlers, withProps } from 'recompact';
 import { withFabSendAction } from '../../hoc';
 import { colors } from '../../styles';
 import { ButtonPressAnimation } from '../animations';
+import { InnerBorder } from '../layout';
 import Highlight from '../Highlight';
-import InnerBorder from '../InnerBorder';
 import UniqueTokenImage from './UniqueTokenImage';
 
 const UniqueTokenCardBorderRadius = 18;
@@ -15,24 +15,24 @@ const UniqueTokenCardBorderRadius = 18;
 const UniqueTokenCard = ({
   borderEnabled,
   disabled,
+  enableHapticFeedback,
   height,
+  highlight,
   item: { background, image_preview_url, ...item },
   onPress,
-  onPressSend,
-  highlight,
   resizeMode,
+  scaleTo,
   shadowStyle,
   style,
   width,
   ...props
 }) => {
-  const backgroundColor = background || colors.lightestGrey;
   return (
     <ButtonPressAnimation
       disabled={disabled}
+      enableHapticFeedback={enableHapticFeedback}
       onPress={onPress}
-      onPressSend={onPressSend}
-      scaleTo={0.96}
+      scaleTo={scaleTo}
       style={{
         shadowColor: colors.dark,
         shadowOffset: { height: 2, width: 0 },
@@ -50,10 +50,10 @@ const UniqueTokenCard = ({
         width={width}
       >
         <UniqueTokenImage
-          backgroundColor={backgroundColor}
-          resizeMode={resizeMode}
+          backgroundColor={background || colors.lightestGrey}
           imageUrl={image_preview_url}
           item={item}
+          resizeMode={resizeMode}
         />
         {borderEnabled && (
           <InnerBorder
@@ -74,6 +74,7 @@ const UniqueTokenCard = ({
 UniqueTokenCard.propTypes = {
   borderEnabled: PropTypes.bool,
   disabled: PropTypes.bool,
+  enableHapticFeedback: PropTypes.bool,
   height: PropTypes.number,
   highlight: PropTypes.bool,
   item: PropTypes.shape({
@@ -81,8 +82,8 @@ UniqueTokenCard.propTypes = {
     image_preview_url: PropTypes.string,
   }),
   onPress: PropTypes.func,
-  onPressSend: PropTypes.func,
   resizeMode: UniqueTokenImage.propTypes.resizeMode,
+  scaleTo: PropTypes.number,
   shadowStyle: stylePropType,
   size: PropTypes.number,
   style: stylePropType,
@@ -91,22 +92,19 @@ UniqueTokenCard.propTypes = {
 
 UniqueTokenCard.defaultProps = {
   borderEnabled: true,
+  enableHapticFeedback: true,
+  scaleTo: 0.96,
 };
 
 export default compose(
+  withFabSendAction,
   withHandlers({
     onPress: ({ item, onPress }) => () => {
       if (onPress) {
         onPress(item);
       }
     },
-    onPressSend: ({ item, onPressSend }) => () => {
-      if (onPressSend) {
-        onPressSend(item);
-      }
-    },
   }),
   withProps(({ item: { uniqueId } }) => ({ uniqueId })),
-  withFabSendAction,
-  onlyUpdateForKeys(['height', 'style', 'uniqueId', 'width', 'highlight'])
+  onlyUpdateForKeys(['height', 'highlight', 'style', 'uniqueId', 'width'])
 )(UniqueTokenCard);

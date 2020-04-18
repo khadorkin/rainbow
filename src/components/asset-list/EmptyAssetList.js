@@ -15,6 +15,7 @@ const InterstitialOffset = AssetListHeader.height + FabWrapper.bottomPosition;
 const EmptyAssetList = ({
   hideHeader,
   isWalletEthZero,
+  network,
   skeletonCount,
   style,
   ...props
@@ -32,10 +33,12 @@ const EmptyAssetList = ({
           />
         ))}
       </Column>
-      <AddFundsInterstitial
-        isEmpty={isWalletEthZero}
-        offsetY={InterstitialOffset * -1}
-      />
+      {isWalletEthZero && (
+        <AddFundsInterstitial
+          offsetY={InterstitialOffset * -1}
+          network={network}
+        />
+      )}
     </Centered>
   </Column>
 );

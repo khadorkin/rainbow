@@ -2,20 +2,21 @@ import { withSafeTimeout } from '@hocs/safe-timers';
 import { isFunction } from 'lodash';
 import PropTypes from 'prop-types';
 import React, { PureComponent } from 'react';
-import { InteractionManager, StyleSheet } from 'react-native';
+import { Dimensions, InteractionManager, StyleSheet } from 'react-native';
 import ReactNativeQRCodeScanner from 'react-native-qrcode-scanner';
 import { position } from '../../styles';
-import { deviceUtils } from '../../utils';
+import { logger } from '../../utils';
 import QRCodeScannerNeedsAuthorization from './QRCodeScannerNeedsAuthorization';
 
-const styles = StyleSheet.create({
+const sx = StyleSheet.create({
   disableSection: {
     flex: 0,
     height: 0,
   },
   fullscreen: {
-    ...deviceUtils.dimensions,
     ...position.coverAsObject,
+    height: Dimensions.get('window').height,
+    width: Dimensions.get('window').width,
   },
 });
 
@@ -43,7 +44,7 @@ class QRCodeScannerCamera extends PureComponent {
 
     InteractionManager.runAfterInteractions(() => {
       const isScannerEnabled =
-        this.scannerRef && !this.scannerRef.state.disablingByUser;
+        this.scannerRef && !this.scannerRef.state.scanning;
 
       if (enableScanning && !isScannerEnabled) {
         this.handleEnableScanner();
@@ -55,14 +56,14 @@ class QRCodeScannerCamera extends PureComponent {
 
   handleDisableScanner = () => {
     if (this.scannerRef && isFunction(this.scannerRef.disable)) {
-      console.log('📠🚫 Disabling QR Code Scanner');
+      logger.log('📠🚫 Disabling QR Code Scanner');
       this.scannerRef.disable();
     }
   };
 
   handleEnableScanner = () => {
     if (this.scannerRef && isFunction(this.scannerRef.enable)) {
-      console.log('📠✅ Enabling QR Code Scanner');
+      logger.log('📠✅ Enabling QR Code Scanner');
       this.scannerRef.enable();
     }
   };
@@ -81,21 +82,21 @@ class QRCodeScannerCamera extends PureComponent {
 
   render = () => (
     <ReactNativeQRCodeScanner
-      bottomViewStyle={styles.disableSection}
+      bottomViewStyle={sx.disableSection}
       cameraProps={{
         captureAudio: false,
         onCameraReady: this.props.onCameraReady,
         onMountError: this.props.onMountError,
       }}
-      cameraStyle={styles.fullscreen}
-      containerStyle={styles.fullscreen}
+      cameraStyle={sx.fullscreen}
+      containerStyle={sx.fullscreen}
       notAuthorizedView={this.renderAuthorizationView()}
       onRead={this.props.onSuccess}
       pendingAuthorizationView={this.renderAuthorizationView()}
       reactivate
       reactivateTimeout={1000}
       ref={this.handleScannerRef}
-      topViewStyle={styles.disableSection}
+      topViewStyle={sx.disableSection}
       vibrate={false}
     />
   );

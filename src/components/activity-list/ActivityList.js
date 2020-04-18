@@ -1,31 +1,53 @@
 import PropTypes from 'prop-types';
 import React from 'react';
-import {
-  compose,
-  mapProps,
-  onlyUpdateForKeys,
-  withProps,
-  shouldUpdate,
-} from 'recompact';
+import { withNavigationFocus } from 'react-navigation';
+import { compose, onlyUpdateForKeys, withProps } from 'recompact';
+import networkTypes from '../../helpers/networkTypes';
 import { buildTransactionsSectionsSelector } from '../../helpers/transactions';
 import {
   withAccountSettings,
   withAccountTransactions,
   withContacts,
+  withRequests,
 } from '../../hoc';
 import RecyclerActivityList from './RecyclerActivityList';
+import TestnetEmptyState from './TestnetEmptyState';
 
-const ActivityList = ({ header, isEmpty, sections }) => (
-  <RecyclerActivityList
-    header={header}
-    isLoading={!isEmpty && !sections.length}
-    sections={sections}
-  />
-);
+const ActivityList = ({
+  accountAddress,
+  accountColor,
+  accountName,
+  addCashAvailable,
+  header,
+  isEmpty,
+  navigation,
+  sections,
+  network,
+}) =>
+  network === networkTypes.mainnet || sections.length ? (
+    <RecyclerActivityList
+      accountAddress={accountAddress}
+      accountColor={accountColor}
+      accountName={accountName}
+      addCashAvailable={addCashAvailable}
+      navigation={navigation}
+      isEmpty={isEmpty}
+      header={header}
+      isLoading={!isEmpty && !sections.length}
+      sections={sections}
+    />
+  ) : (
+    <TestnetEmptyState>{header}</TestnetEmptyState>
+  );
 
 ActivityList.propTypes = {
+  accountAddress: PropTypes.string,
+  accountColor: PropTypes.number,
+  accountName: PropTypes.string,
+  addCashAvailable: PropTypes.bool,
   header: PropTypes.node,
   isEmpty: PropTypes.bool,
+  navigation: PropTypes.object,
   sections: PropTypes.arrayOf(
     PropTypes.shape({
       data: PropTypes.array,
@@ -37,34 +59,23 @@ ActivityList.propTypes = {
 
 export default compose(
   withAccountSettings,
+  withAccountSettings,
   withAccountTransactions,
   withContacts,
+  withNavigationFocus,
+  withRequests,
   withProps(buildTransactionsSectionsSelector),
-  mapProps(({ nativeCurrency, requests, sections, ...props }) => {
-    let pendingTransactionsCount = 0;
-
-    const pendingTxSection = sections[requests.length ? 1 : 0];
-
-    if (pendingTxSection && pendingTxSection.title === 'Pending') {
-      pendingTransactionsCount = pendingTxSection.data.length;
-    }
-
-    return {
-      ...props,
-      nativeCurrency,
-      pendingTransactionsCount,
-      sections,
-    };
-  }),
   onlyUpdateForKeys([
+    'initialized',
+    'isFocused',
+    'network',
     'contacts',
     'isEmpty',
     'nativeCurrency',
     'pendingTransactionsCount',
     'sections',
+    'accountName',
+    'accountColor',
     'header',
-  ]),
-  shouldUpdate((props, nextProps) => {
-    return nextProps.shouldUpdate;
-  })
+  ])
 )(ActivityList);

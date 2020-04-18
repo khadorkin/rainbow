@@ -7,8 +7,9 @@ import { withNavigation } from 'react-navigation';
 import { css } from 'styled-components/primitives';
 import TransactionStatusTypes from '../../helpers/transactionStatusTypes';
 import TransactionTypes from '../../helpers/transactionTypes';
+import { withAccountSettings } from '../../hoc';
 import { colors } from '../../styles';
-import { abbreviations } from '../../utils';
+import { abbreviations, ethereumUtils } from '../../utils';
 import { showActionSheetWithOptions } from '../../utils/actionsheet';
 import { ButtonPressAnimation } from '../animations';
 import { FlexItem, Row, RowWithMargins } from '../layout';
@@ -19,23 +20,49 @@ import CoinRow from './CoinRow';
 import TransactionStatusBadge from './TransactionStatusBadge';
 
 const containerStyles = css`
-  padding-left: 15;
+  padding-left: 19;
 `;
 
 const rowRenderPropTypes = {
   status: PropTypes.oneOf(Object.values(TransactionStatusTypes)),
 };
 
+const getDisplayAction = (type, status, name) => {
+  switch (type) {
+    case TransactionTypes.deposit:
+      return status === TransactionStatusTypes.depositing
+        ? name
+        : `Deposited ${name}`;
+    case TransactionTypes.withdraw:
+      return status === TransactionStatusTypes.withdrawing
+        ? name
+        : `Withdrew ${name}`;
+    default:
+      return name;
+  }
+};
+
 const BottomRow = ({ name, native, status, type }) => {
   const isFailed = status === TransactionStatusTypes.failed;
-  const isReceived = status === TransactionStatusTypes.received;
+  const isReceived =
+    status === TransactionStatusTypes.received ||
+    status === TransactionStatusTypes.purchased;
   const isSent = status === TransactionStatusTypes.sent;
-  const isSwapped =
-    status === TransactionStatusTypes.sent && type === TransactionTypes.trade;
 
-  let balanceTextColor = colors.blueGreyLight;
-  if (isReceived) balanceTextColor = colors.limeGreen;
-  if (isSent) balanceTextColor = colors.blueGreyDark;
+  const isOutgoingSwap =
+    status === TransactionStatusTypes.sent && type === TransactionTypes.trade;
+  const isIncomingSwap =
+    status === TransactionStatusTypes.received &&
+    type === TransactionTypes.trade;
+
+  let coinNameColor = colors.dark;
+  if (isOutgoingSwap) coinNameColor = colors.alpha(colors.blueGreyDark, 0.5);
+
+  let balanceTextColor = colors.alpha(colors.blueGreyDark, 0.5);
+  if (isReceived) balanceTextColor = colors.green;
+  if (isSent) balanceTextColor = colors.dark;
+  if (isIncomingSwap) balanceTextColor = colors.swapPurple;
+  if (isOutgoingSwap) balanceTextColor = colors.dark;
 
   const nativeDisplay = get(native, 'display');
   const balanceText = nativeDisplay
@@ -43,12 +70,19 @@ const BottomRow = ({ name, native, status, type }) => {
     : '';
 
   return (
-    <Row align="center" justify="space-between" opacity={isSwapped ? 0.5 : 1}>
+    <Row align="center" justify="space-between">
       <FlexItem flex={1}>
-        <CoinName>{name}</CoinName>
+        <CoinName color={coinNameColor}>
+          {getDisplayAction(type, status, name)}
+        </CoinName>
       </FlexItem>
       <FlexItem flex={0}>
-        <BalanceText color={balanceTextColor}>{balanceText}</BalanceText>
+        <BalanceText
+          color={balanceTextColor}
+          weight={isReceived ? 'medium' : null}
+        >
+          {balanceText}
+        </BalanceText>
       </FlexItem>
     </Row>
   );
@@ -68,7 +102,7 @@ const TopRow = ({ balance, pending, status, type }) => (
 TopRow.propTypes = rowRenderPropTypes;
 
 const TransactionCoinRow = ({ item, onPressTransaction, ...props }) => (
-  <ButtonPressAnimation onPress={onPressTransaction} scaleTo={0.98}>
+  <ButtonPressAnimation onPress={onPressTransaction} scaleTo={0.96}>
     <CoinRow
       {...item}
       {...props}
@@ -94,8 +128,15 @@ export default compose(
     })
   ),
   withNavigation,
+  withAccountSettings,
   withHandlers({
-    onPressTransaction: ({ contact, hash, item, navigation }) => async () => {
+    onPressTransaction: ({
+      contact,
+      hash,
+      item,
+      navigation,
+      network,
+    }) => async () => {
       const { from, to, status } = item;
       const isSent = status === TransactionStatusTypes.sent;
       const headerInfo = {
@@ -137,7 +178,10 @@ export default compose(
               });
             } else if (buttonIndex === 1) {
               const normalizedHash = hash.replace(/-.*/g, '');
-              Linking.openURL(`https://etherscan.io/tx/${normalizedHash}`);
+              const etherscanHost = ethereumUtils.getEtherscanHostFromNetwork(
+                network
+              );
+              Linking.openURL(`https://${etherscanHost}/tx/${normalizedHash}`);
             }
           }
         );

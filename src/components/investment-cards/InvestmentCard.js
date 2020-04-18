@@ -5,14 +5,13 @@ import { View } from 'react-native';
 import { compose, withHandlers } from 'recompact';
 import { withOpenInvestmentCards } from '../../hoc';
 import { colors, position } from '../../styles';
-import InnerBorder from '../InnerBorder';
-import { Column } from '../layout';
 import { ButtonPressAnimation, SizeToggler } from '../animations';
+import { Column, InnerBorder } from '../layout';
+import InvestmentCardWrap from './InvestmentCard';
 import InvestmentCardHeader from './InvestmentCardHeader';
 import UniswapInvestmentCard from './UniswapInvestmentCard';
-import InvestmentCardWrap from './InvestmentCard';
 
-const InvestmentCardBorderRadius = 18;
+const InvestmentCardBorderRadius = 24.5;
 
 const InvestmentCardMargin = {
   horizontal: 19,
@@ -93,7 +92,7 @@ const InvestmentCard = enhance(
               <ButtonPressAnimation
                 disabled={!headerProps.isCollapsible}
                 onPress={onPress}
-                scaleTo={0.98}
+                scaleTo={1.03}
               >
                 <InvestmentCardHeader {...headerProps} collapsed={collapsed} />
               </ButtonPressAnimation>
