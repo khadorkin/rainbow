@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
 import React from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import {
   RecyclerListView,
   LayoutProvider,
@@ -8,7 +8,6 @@ import {
 } from 'recyclerlistview';
 import { withNavigation } from 'react-navigation';
 import { compose } from 'recompact';
-import styled from 'styled-components/primitives';
 import { deviceUtils } from '../../utils';
 import { removeFirstEmojiFromString } from '../../helpers/emojiHandler';
 import ProfileRow from './ProfileRow';
@@ -23,9 +22,11 @@ let position = 0;
 const WALLET_ROW = 1;
 const WALLET_LAST_ROW = 2;
 
-const Container = styled.View`
-  padding-top: 2px;
-`;
+const sx = StyleSheet.create({
+  container: {
+    paddingTop: 2,
+  },
+});
 
 class ProfileList extends React.Component {
   static propTypes = {
@@ -79,28 +80,28 @@ class ProfileList extends React.Component {
     if (this.props.isInitializationOver !== props.isInitializationOver) {
       this.isInitalized = true;
     }
-    const newAssets = Object.assign([], props.allProfiles || []);
-    for (let i = 0; i < newAssets.length; i++) {
-      if (this.props.accountAddress === newAssets[i].address.toLowerCase()) {
-        newAssets.splice(i, 1);
+    const newItems = Object.assign([], props.allProfiles || []);
+    for (let i = 0; i < newItems.length; i++) {
+      if (this.props.accountAddress === newItems[i].address.toLowerCase()) {
+        newItems.splice(i, 1);
         break;
       }
     }
-    newAssets.push({
+    newItems.push({
       icon: 'plus',
       isOption: true,
       label: 'Create a Wallet',
       onPress: this.props.onPressCreateWallet,
     });
-    newAssets.push({
+    newItems.push({
       icon: 'arrowBack',
       isOption: true,
       label: 'Import a Wallet',
       onPress: this.props.onPressImportSeedPhrase,
     });
 
-    if (newAssets !== this.state.profiles) {
-      this.setState({ profiles: newAssets });
+    if (newItems !== this.state.profiles) {
+      this.setState({ profiles: newItems });
     }
   };
 
@@ -202,7 +203,7 @@ class ProfileList extends React.Component {
       isInitializationOver,
     } = this.props;
     return (
-      <Container>
+      <View style={sx.container}>
         {currentProfile && (
           <ProfileRow
             accountName={currentProfile.name}
@@ -265,7 +266,7 @@ class ProfileList extends React.Component {
             optimizeForInsertDeleteAnimations
           />
         </View>
-      </Container>
+      </View>
     );
   }
 }

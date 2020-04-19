@@ -1,7 +1,7 @@
+/* eslint-disable sort-keys */
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
-import styled from 'styled-components/primitives';
-import { View, Animated, Text } from 'react-native';
+import { Animated, StyleSheet, View, Text } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import GraphemeSplitter from 'grapheme-splitter';
 import { abbreviations } from '../../utils';
@@ -11,69 +11,59 @@ import { ButtonPressAnimation } from '../animations';
 import { Icon } from '../icons';
 import { removeFirstEmojiFromString } from '../../helpers/emojiHandler';
 
-const Container = styled.View`
-  align-items: center;
-  flex-direction: row;
-  padding-left: 7.5px;
-  padding-right: 15px;
-  justify-content: space-between;
-`;
-
-const Nickname = styled.Text`
-  font-family: ${fonts.family.SFProText};
-  font-weight: ${fonts.weight.medium};
-  font-size: ${fonts.size.smedium};
-  color: ${colors.dark};
-`;
-
-const AddressAbbreviation = styled(TruncatedAddress).attrs({
-  firstSectionLength: abbreviations.defaultNumCharsPerSection,
-  size: 'smaller',
-  truncationLength: 4,
-  weight: 'medium',
-})`
-  font-family: ${fonts.family.SFProText};
-  width: 100%;
-  opacity: 0.5;
-  text-transform: lowercase;
-`;
-
-const Address = styled(Text)`
-  font-family: ${fonts.family.SFProText};
-  font-size: ${fonts.size.smaller}
-  font-weight: ${fonts.weight.medium}
-  width: 100%;
-  opacity: 0.5;
-  text-transform: lowercase;
-`;
-
-const IconWrapper = styled.View`
-  height: 30px
-  width: 30px;
-  border-radius: 14px;
-  background-color: ${colors.skeleton};
-  justify-content: center;
-  align-items: center;
-  margin-right: 19px;
-`;
-
-const AvatarCircle = styled(View)`
-  border-radius: 20px;
-  margin-left: 8px;
-  margin-right: 9px;
-  justify-content: center;
-  align-items: center;
-`;
-
-const FirstLetter = styled(Text)`
-  text-align: center;
-  color: #fff;
-  font-weight: 600;
-`;
-
-const LeftSide = styled(View)`
-  flex-direction: row;
-`;
+const sx = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingLeft: 7.5,
+    paddingRight: 15,
+  },
+  nickname: {
+    color: colors.dark,
+    fontFamily: fonts.family.SFProText,
+    fontSize: Number(fonts.size.smedium.replace('px', '')),
+    fontWeight: fonts.weight.medium,
+  },
+  addressAbbreviation: {
+    fontFamily: fonts.family.SFProText,
+    opacity: 0.5,
+    textTransform: 'lowercase',
+    width: '100%',
+  },
+  address: {
+    fontFamily: fonts.family.SFProText,
+    fontSize: Number(fonts.size.smaller.replace('px', '')),
+    fontWeight: fonts.weight.medium,
+    width: '100%',
+    opacity: 0.5,
+    textTransform: 'lowercase',
+  },
+  iconWrapper: {
+    height: 30,
+    width: 30,
+    borderRadius: 14,
+    backgroundColor: colors.skeleton,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 19,
+  },
+  avatarCircle: {
+    borderRadius: 20,
+    marginLeft: 8,
+    marginRight: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  firstLetter: {
+    textAlign: 'center',
+    color: colors.white,
+    fontWeight: '600',
+  },
+  leftSide: {
+    flexDirection: 'row',
+  },
+});
 
 // const MoneyAmountWrapper = styled(View)`
 //   background-color: ${colors.lightGreen};
@@ -84,8 +74,8 @@ const LeftSide = styled(View)`
 
 // const MoneyAmount = styled(Text)`
 //   line-height: 16px;
-//   color: ${colors.moneyGreen};
-//   font-weight: ${fonts.weight.semibold};
+//   color: colors.moneyGreen,
+//   fontWeight: fonts.weight.semibold,
 // `;
 
 export default class ProfileRow extends Component {
@@ -134,14 +124,14 @@ export default class ProfileRow extends Component {
         }}
       >
         <ButtonPressAnimation onPress={onPress} scaleTo={0.9}>
-          <IconWrapper>
+          <View style={sx.iconWrapper}>
             <Icon
-              color={colors.blueGreyMedium}
+              color={colors.blueGreyDark50}
               height={15}
               width={15}
               name="gear"
             />
-          </IconWrapper>
+          </View>
         </ButtonPressAnimation>
       </Animated.View>
     );
@@ -191,70 +181,91 @@ export default class ProfileRow extends Component {
           }}
           onLongPress={this.onLongPress}
         >
-          <Container style={{ padding: isHeader ? 15 : 10 }}>
-            <LeftSide>
-              <AvatarCircle
-                style={{
-                  backgroundColor: colors.avatarColor[accountColor],
-                  height: avatarSize,
-                  width: avatarSize,
-                }}
+          <View style={[sx.container, { padding: isHeader ? 15 : 10 }]}>
+            <View style={sx.leftSide}>
+              <View
+                style={[
+                  sx.avatarCircle,
+                  {
+                    backgroundColor:
+                      colors.avatarColor[accountColor] || colors.white,
+                    height: avatarSize,
+                    width: avatarSize,
+                  },
+                ]}
               >
-                <FirstLetter
-                  style={{
-                    fontSize: isHeader ? 18 : 16,
-                    lineHeight: isHeader ? 31 : 30.5,
-                    marginLeft: isHeader ? 0.5 : 0.2,
-                  }}
+                <Text
+                  style={[
+                    sx.firstLetter,
+                    {
+                      fontSize: isHeader ? 18 : 16,
+                      lineHeight: isHeader ? 31 : 30.5,
+                      marginLeft: isHeader ? 0.5 : 0.2,
+                    },
+                  ]}
                 >
                   {new GraphemeSplitter().splitGraphemes(accountName)[0]}
-                </FirstLetter>
-              </AvatarCircle>
-              <View>
-                <Nickname>{name}</Nickname>
-                <AddressAbbreviation address={accountAddress} />
+                </Text>
               </View>
-            </LeftSide>
+              <View>
+                <Text style={sx.nickname}>{name}</Text>
+                <TruncatedAddress
+                  firstSectionLength={abbreviations.defaultNumCharsPerSection}
+                  size="smaller"
+                  truncationLength={4}
+                  weight="medium"
+                  address={accountAddress}
+                  style={sx.addressAbbreviation}
+                />
+              </View>
+            </View>
             {/* <MoneyAmountWrapper>
               <MoneyAmount>
                 $829.24
               </MoneyAmount>
             </MoneyAmountWrapper> */}
-          </Container>
+          </View>
         </ButtonPressAnimation>
       </Swipeable>
     ) : (
-      <Container style={{ padding: isHeader ? 15 : 10 }}>
-        <LeftSide>
-          <AvatarCircle
-            style={{
-              backgroundColor: colors.avatarColor[accountColor],
-              height: avatarSize,
-              width: avatarSize,
-            }}
+      <View style={[sx.container, { padding: isHeader ? 15 : 10 }]}>
+        <View style={sx.leftSide}>
+          <View
+            style={[
+              sx.avatarCircle,
+              {
+                backgroundColor:
+                  colors.avatarColor[accountColor] || colors.white,
+                height: avatarSize,
+                width: avatarSize,
+              },
+            ]}
           >
-            <FirstLetter
-              style={{
-                fontSize: isHeader ? 18 : 16,
-                lineHeight: isHeader ? 31 : 30.5,
-                marginLeft: isHeader ? 0.5 : 0.2,
-              }}
+            <Text
+              style={[
+                sx.firstLetter,
+                {
+                  fontSize: isHeader ? 18 : 16,
+                  lineHeight: isHeader ? 31 : 30.5,
+                  marginLeft: isHeader ? 0.5 : 0.2,
+                },
+              ]}
             >
               {new GraphemeSplitter().splitGraphemes(accountName)[0]}
-            </FirstLetter>
-          </AvatarCircle>
+            </Text>
+          </View>
           <View>
-            <Nickname>{name}</Nickname>
-            <Address>
+            <Text style={sx.nickname}>{name}</Text>
+            <Text style={sx.address}>
               {abbreviations.address(
                 accountAddress,
                 4,
                 abbreviations.defaultNumCharsPerSection
               )}
-            </Address>
+            </Text>
           </View>
-        </LeftSide>
-      </Container>
+        </View>
+      </View>
     );
   }
 }

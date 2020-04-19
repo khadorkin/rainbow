@@ -1,66 +1,66 @@
 import PropTypes from 'prop-types';
 import React from 'react';
-import styled from 'styled-components/primitives';
-import { View } from 'react-native';
+import { Text, StyleSheet, View } from 'react-native';
 import { fonts, colors } from '../../styles';
 import { ButtonPressAnimation } from '../animations';
 import { Icon } from '../icons';
 
-const Container = styled.View`
-  align-items: center;
-  flex-direction: row;
-  padding: 10px 7.5px;
-`;
-
-const IconWrapper = styled.View`
-  height: 30px
-  width: 30px;
-  border-radius: 14px;
-  background-color: ${colors.skeleton};
-  justify-content: center;
-  align-items: center;
-  margin-left: 8;
-  margin-right: 9px;
-`;
-
-const Nickname = styled.Text`
-  font-family: ${fonts.family.SFProText};
-  font-weight: ${fonts.weight.medium};
-  font-size: ${fonts.size.smedium};
-  color: ${colors.dark};
-`;
+const sx = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    paddingHorizontal: 7.5,
+    paddingVertical: 10,
+  },
+  iconWrapper: {
+    alignItems: 'center',
+    backgroundColor: colors.skeleton,
+    borderRadius: 14,
+    height: 30,
+    justifyContent: 'center',
+    marginLeft: 8,
+    marginRight: 9,
+    width: 30,
+  },
+  nickname: {
+    color: colors.dark,
+    fontFamily: fonts.family.SFProText,
+    fontSize: Number(fonts.size.smedium.replace('px', '')),
+    fontWeight: fonts.weight.medium,
+  },
+});
 
 const ProfileOption = ({ icon, isInitializationOver, label, onPress }) =>
   isInitializationOver ? (
     <ButtonPressAnimation scaleTo={0.96} onPress={onPress}>
-      <Container>
-        <IconWrapper>
+      <View style={sx.container}>
+        <View style={sx.iconWrapper}>
           <Icon
-            color={colors.blueGreyMedium}
+            color={colors.blueGreyDark50}
             height={15}
             width={15}
             name={icon}
           />
-        </IconWrapper>
-        <View>
-          <Nickname>{label}</Nickname>
         </View>
-      </Container>
+        <View>
+          <Text style={sx.nickname}>{label}</Text>
+        </View>
+      </View>
     </ButtonPressAnimation>
   ) : (
-    <Container>
-      <IconWrapper>
+    <View style={sx.container}>
+      <View style={sx.iconWrapper}>
         <Icon
-          color={colors.blueGreyMedium}
+          color={colors.blueGreyDark50}
           height={15}
           width={15}
           name={icon}
         />
-      </IconWrapper>
-      <View>
-        <Nickname>{label}</Nickname>
       </View>
-    </Container>
+      <View>
+        <Text style={sx.nickname}>{label}</Text>
+      </View>
+    </View>
   );
 
 ProfileOption.propTypes = {

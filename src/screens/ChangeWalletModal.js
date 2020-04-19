@@ -1,19 +1,20 @@
 import PropTypes from 'prop-types';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, StatusBar } from 'react-native';
 import { orderBy } from 'lodash';
-import { compose, lifecycle, withHandlers, withState } from 'recompact';
+import { compose, withHandlers, withState } from 'recompact';
 import { withNavigation } from 'react-navigation';
 import { Modal, LoadingOverlay } from '../components/modal';
 import { withIsWalletImporting } from '../hoc';
 import ProfileList from '../components/change-wallet/ProfileList';
 import { removeFirstEmojiFromString } from '../helpers/emojiHandler';
-import { useAccountSettings, useProfiles } from '../hooks';
+import { useAccountSettings } from '../hooks';
 
 const headerHeight = 68;
 const profileRowHeight = 54;
 
 const ChangeWalletModal = ({
+  profiles,
   currentProfile,
   isCreatingWallet,
   isInitializationOver,
@@ -23,9 +24,34 @@ const ChangeWalletModal = ({
   onDeleteWallet,
   onPressCreateWallet,
   onPressImportSeedPhrase,
+  navigation,
+  setProfiles,
+  setCurrentProfile,
+  setIsInitializationOver,
 }) => {
-  const { profiles } = useProfiles();
   const { accountAddress } = useAccountSettings();
+
+  useEffect(() => {
+    const profiles = navigation.getParam('profiles', []);
+    setProfiles(profiles);
+    let currentProfile = false;
+    if (profiles) {
+      for (let i = 0; i < profiles.length; i++) {
+        if (
+          profiles[i].address.toLowerCase() === accountAddress.toLowerCase()
+        ) {
+          currentProfile = profiles[i];
+        }
+      }
+    }
+    setCurrentProfile(currentProfile);
+    console.log('current profile', currentProfile);
+    setTimeout(() => {
+      setIsInitializationOver(true);
+    }, 130);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const size = profiles ? profiles.length - 1 : 0;
   let listHeight = profileRowHeight * 2 + profileRowHeight * size;
   if (listHeight > 258) {
@@ -83,8 +109,6 @@ export default compose(
       navigation,
       setIsChangingWallet,
     }) => async profile => {
-      const setIsLoading = navigation.getParam('setIsLoading', () => null);
-      setIsLoading(false);
       await setIsChangingWallet(true);
       await initializeWalletWithProfile(true, false, profile);
       await navigation.goBack();
@@ -94,7 +118,6 @@ export default compose(
       }, 400);
       setTimeout(() => {
         StatusBar.setBarStyle('dark-content');
-        setIsLoading(true);
       }, 600);
       // // timeout prevent changing avatar during screen transition
     },
@@ -158,10 +181,6 @@ export default compose(
         isNewProfile: true,
         onCloseModal: isCanceled => {
           if (!isCanceled) {
-            const setIsLoading = navigation.getParam(
-              'setIsLoading',
-              () => null
-            );
             setIsCreatingWallet(true);
             setTimeout(async () => {
               await clearAccountData();
@@ -173,15 +192,10 @@ export default compose(
               setTimeout(() => {
                 navigation.navigate('WalletScreen');
               }, 200);
-              // timeout prevent changing avatar during screen transition
-              setTimeout(() => {
-                setIsLoading(true);
-              }, 400);
             }, 20);
           }
         },
         profile: {},
-        setIsLoading: navigation.getParam('setIsLoading', () => null),
         type: 'profile_creator',
       });
     },
@@ -194,24 +208,6 @@ export default compose(
     },
     setProfiles: ({ setProfiles }) => profiles => {
       setProfiles(profiles);
-    },
-  }),
-  lifecycle({
-    componentDidMount() {
-      const profiles = this.props.navigation.getParam('profiles', []);
-      this.props.setProfiles(profiles);
-      let currentProfile = false;
-      if (profiles) {
-        for (let i = 0; i < profiles.length; i++) {
-          if (profiles[i].address.toLowerCase() === this.props.accountAddress) {
-            currentProfile = profiles[i];
-          }
-        }
-      }
-      this.props.setCurrentProfile(currentProfile);
-      setTimeout(() => {
-        this.props.setIsInitializationOver(true);
-      }, 130);
     },
   })
 )(ChangeWalletModal);

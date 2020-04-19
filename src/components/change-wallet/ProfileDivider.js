@@ -1,22 +1,23 @@
 import React from 'react';
-import styled from 'styled-components/primitives';
+import { StyleSheet, View } from 'react-native';
 import { colors } from '../../styles';
 
-const DividerWrapper = styled.View`
-  padding-top: 2px;
-`;
-
-const Divider = styled.View`
-  opacity: 0.04;
-  height: 2px;
-  width: 100%;
-  background-color: ${colors.blueGreyLighter};
-`;
+const sx = StyleSheet.create({
+  divider: {
+    backgroundColor: colors.blueGreyLighter,
+    height: 2,
+    opacity: 0.04,
+    width: '100%',
+  },
+  dividerWrapper: {
+    paddingTop: 2,
+  },
+});
 
 const ProfileDivider = () => (
-  <DividerWrapper>
-    <Divider />
-  </DividerWrapper>
+  <View style={sx.dividerWrapper}>
+    <View style={sx.divider} />
+  </View>
 );
 
 export default ProfileDivider;

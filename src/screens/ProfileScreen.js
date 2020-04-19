@@ -7,11 +7,12 @@ import { BackButton, Header, HeaderButton } from '../components/header';
 import { Icon } from '../components/icons';
 import { FlexItem, Page } from '../components/layout';
 import { ProfileMasthead } from '../components/profile';
-// import HeaderProfileInfo from '../components/header/HeaderProfileInfo';
+import HeaderProfileInfo from '../components/header/HeaderProfileInfo';
 import TransactionList from '../components/transaction-list/TransactionList';
 import nativeTransactionListAvailable from '../helpers/isNativeTransactionListAvailable';
 import NetworkTypes from '../helpers/networkTypes';
 import { colors, position } from '../styles';
+import { loadUsersInfo } from '../model/wallet';
 
 const ACTIVITY_LIST_INITIALIZATION_DELAY = 5000;
 
@@ -28,6 +29,7 @@ const ProfileScreen = ({
   transactionsCount,
 }) => {
   const [activityListInitialized, setActivityListInitialized] = useState(false);
+
   useEffect(() => {
     setTimeout(() => {
       setActivityListInitialized(true);
@@ -36,11 +38,13 @@ const ProfileScreen = ({
 
   const onPressBackButton = () => navigation.navigate('WalletScreen');
   const onPressSettings = () => navigation.navigate('SettingsModal');
-  // const onPressProfileHeader = () => {
-  //   navigation.navigate('ChangeWalletModal', {
-  //     //setIsLoading: payload => setShouldUpdate(payload),
-  //   });
-  // };
+  const onPressProfileHeader = async () => {
+    const profiles = await loadUsersInfo();
+    console.log(profiles);
+    navigation.navigate('ChangeWalletModal', {
+      profiles,
+    });
+  };
   const addCashInDevNetworks =
     __DEV__ &&
     (network === NetworkTypes.kovan || network === NetworkTypes.mainnet);
@@ -53,14 +57,14 @@ const ProfileScreen = ({
         <HeaderButton onPress={onPressSettings}>
           <Icon color={colors.black} name="gear" />
         </HeaderButton>
-        {/* <HeaderProfileInfo
+        <HeaderProfileInfo
           accountAddress={accountAddress}
           accountColor={accountColor}
           accountName={accountName}
           onPress={onPressProfileHeader}
         >
           <Icon name="gear" />
-        </HeaderProfileInfo> */}
+        </HeaderProfileInfo>
         <BackButton
           color={colors.black}
           direction="right"

@@ -153,9 +153,9 @@ export const settingsChangeNativeCurrency = nativeCurrency => dispatch => {
 // -- Reducer --------------------------------------------------------------- //
 export const INITIAL_STATE = {
   accountAddress: '',
-  accountColor: 6,
+  accountColor: 0,
   accountENS: null,
-  accountName: '🤑',
+  accountName: '',
   chainId: 1,
   language: 'en',
   nativeCurrency: 'USD',

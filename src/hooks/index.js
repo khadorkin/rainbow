@@ -21,7 +21,6 @@ export { default as useLoadAccountData } from './useLoadAccountData';
 export { default as useMagicFocus } from './useMagicFocus';
 export { default as useOpenSavings } from './useOpenSavings';
 export { default as usePrevious } from './usePrevious';
-export { default as useProfiles } from './useProfiles';
 export { default as useRefreshAccountData } from './useRefreshAccountData';
 export { default as useSavingsAccount } from './useSavingsAccount';
 export { default as useSendSavingsAccount } from './useSendSavingsAccount';
