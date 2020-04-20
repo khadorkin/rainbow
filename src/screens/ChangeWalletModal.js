@@ -1,38 +1,34 @@
-import PropTypes from 'prop-types';
-import React, { useEffect } from 'react';
-import { View, StatusBar } from 'react-native';
+import React, { useEffect, useCallback, useState } from 'react';
+import { View, StatusBar, InteractionManager } from 'react-native';
 import { orderBy } from 'lodash';
-import { compose, withHandlers, withState } from 'recompact';
-import { withNavigation } from 'react-navigation';
 import { Modal, LoadingOverlay } from '../components/modal';
-import { withIsWalletImporting } from '../hoc';
 import ProfileList from '../components/change-wallet/ProfileList';
 import { removeFirstEmojiFromString } from '../helpers/emojiHandler';
-import { useAccountSettings } from '../hooks';
+import {
+  useAccountSettings,
+  useCreateWallet,
+  useDeleteWallet,
+  useSelectWallet,
+} from '../hooks';
+import { useNavigation } from 'react-navigation-hooks';
 
 const headerHeight = 68;
 const profileRowHeight = 54;
 
-const ChangeWalletModal = ({
-  profiles,
-  currentProfile,
-  isCreatingWallet,
-  isInitializationOver,
-  onChangeWallet,
-  onCloseEditProfileModal,
-  onCloseModal,
-  onDeleteWallet,
-  onPressCreateWallet,
-  onPressImportSeedPhrase,
-  navigation,
-  setProfiles,
-  setCurrentProfile,
-  setIsInitializationOver,
-}) => {
+const ChangeWalletModal = () => {
   const { accountAddress } = useAccountSettings();
+  const { goBack, navigate, getParam } = useNavigation();
+  const createNewWallet = useCreateWallet();
+  const deleteWallet = useDeleteWallet();
+  const selectWallet = useSelectWallet();
+  const [currentProfile, setCurrentProfile] = useState();
+  const [profiles, setProfiles] = useState();
+  const [isInitializationOver, setIsInitializationOver] = useState(false);
+  const [isCreatingWallet, setIsCreatingWallet] = useState(false);
+  //const [isChangingWallet, setIsChangingWallet] = useState(false);
 
   useEffect(() => {
-    const profiles = navigation.getParam('profiles', []);
+    const profiles = getParam('profiles', []);
     setProfiles(profiles);
     let currentProfile = false;
     if (profiles) {
@@ -57,76 +53,49 @@ const ChangeWalletModal = ({
   if (listHeight > 258) {
     listHeight = 258;
   }
-  return (
-    <View>
-      {isCreatingWallet && <LoadingOverlay title="Creating Wallet..." />}
-      <Modal
-        fixedToTop
-        height={headerHeight + listHeight}
-        onCloseModal={onCloseModal}
-        style={{ borderRadius: 18 }}
-      >
-        <ProfileList
-          currentProfile={currentProfile}
-          accountAddress={accountAddress}
-          allAssets={profiles}
-          height={listHeight}
-          onChangeWallet={onChangeWallet}
-          onCloseEditProfileModal={onCloseEditProfileModal}
-          onDeleteWallet={onDeleteWallet}
-          onPressCreateWallet={onPressCreateWallet}
-          onPressImportSeedPhrase={onPressImportSeedPhrase}
-          isInitializationOver={isInitializationOver}
-        />
-      </Modal>
-    </View>
-  );
-};
 
-ChangeWalletModal.propTypes = {
-  currentProfile: PropTypes.object,
-  isCreatingWallet: PropTypes.bool,
-  isInitializationOver: PropTypes.bool,
-  onChangeWallet: PropTypes.func,
-  onCloseEditProfileModal: PropTypes.func,
-  onCloseModal: PropTypes.func,
-  onDeleteWallet: PropTypes.func,
-  onPressCreateWallet: PropTypes.func,
-  onPressImportSeedPhrase: PropTypes.func,
-};
-
-export default compose(
-  withNavigation,
-  withIsWalletImporting,
-  withState('currentProfile', 'setCurrentProfile', undefined),
-  withState('profiles', 'setProfiles', undefined),
-  withState('isCreatingWallet', 'setIsCreatingWallet', false),
-  withState('isChangingWallet', 'setIsChangingWallet', false),
-  withState('isInitializationOver', 'setIsInitializationOver', false),
-  withHandlers({
-    onChangeWallet: ({
-      initializeWalletWithProfile,
-      navigation,
-      setIsChangingWallet,
-    }) => async profile => {
-      await setIsChangingWallet(true);
-      await initializeWalletWithProfile(true, false, profile);
-      await navigation.goBack();
-      // timeout to give time for modal to close
-      setTimeout(() => {
-        navigation.navigate('WalletScreen');
-      }, 400);
-      setTimeout(() => {
-        StatusBar.setBarStyle('dark-content');
-      }, 600);
-      // // timeout prevent changing avatar during screen transition
+  const onChangeWallet = useCallback(
+    async profile => {
+      await selectWallet(profile.address);
+      await goBack();
+      InteractionManager.runAfterInteractions(() => {
+        navigate('WalletScreen');
+        setTimeout(() => {
+          StatusBar.setBarStyle('dark-content');
+        }, 200);
+      });
     },
-    onCloseEditProfileModal: ({
-      setCurrentProfile,
-      setProfiles,
-      accountAddress,
-      profiles,
-    }) => async editedProfile => {
+    [goBack, navigate, selectWallet]
+  );
+
+  const onPressCreateWallet = useCallback(async () => {
+    navigate('ExpandedAssetScreen', {
+      actionType: 'Create',
+      address: undefined,
+      asset: [],
+      isCurrentProfile: false,
+      isNewProfile: true,
+      onCloseModal: isCanceled => {
+        if (!isCanceled) {
+          setIsCreatingWallet(true);
+          setTimeout(async () => {
+            // initializeWallet(TBD);
+            await createNewWallet();
+            goBack();
+            // timeout to give time for modal to close
+            setTimeout(() => {
+              navigate('WalletScreen');
+            }, 200);
+          }, 20);
+        }
+      },
+      profile: {},
+      type: 'profile_creator',
+    });
+  }, [createNewWallet, goBack, navigate]);
+
+  const onCloseEditProfileModal = useCallback(
+    async editedProfile => {
       let currentProfile = false;
       const newProfiles = profiles;
       let deleteIndex;
@@ -162,52 +131,45 @@ export default compose(
         )
       );
     },
-    onCloseModal: ({ navigation }) => () => navigation.goBack(),
-    onDeleteWallet: ({ deleteWallet }) => deleteAddress =>
-      deleteWallet(deleteAddress),
-    onPressCreateWallet: ({
-      createNewWallet,
-      navigation,
-      clearAccountData,
-      setIsCreatingWallet,
-      uniswapClearState,
-      uniqueTokensClearState,
-    }) => () => {
-      navigation.navigate('ExpandedAssetScreen', {
-        actionType: 'Create',
-        address: undefined,
-        asset: [],
-        isCurrentProfile: false,
-        isNewProfile: true,
-        onCloseModal: isCanceled => {
-          if (!isCanceled) {
-            setIsCreatingWallet(true);
-            setTimeout(async () => {
-              await clearAccountData();
-              await uniswapClearState();
-              await uniqueTokensClearState();
-              await createNewWallet();
-              navigation.goBack();
-              // timeout to give time for modal to close
-              setTimeout(() => {
-                navigation.navigate('WalletScreen');
-              }, 200);
-            }, 20);
-          }
-        },
-        profile: {},
-        type: 'profile_creator',
-      });
-    },
-    onPressImportSeedPhrase: ({ navigation }) => () => {
-      navigation.goBack();
-      navigation.navigate('ImportSeedPhraseSheet');
-    },
-    setCurrentProfile: ({ setCurrentProfile }) => currentProfile => {
-      setCurrentProfile(currentProfile);
-    },
-    setProfiles: ({ setProfiles }) => profiles => {
-      setProfiles(profiles);
-    },
-  })
-)(ChangeWalletModal);
+    [accountAddress, profiles, setCurrentProfile, setProfiles]
+  );
+
+  const onCloseModal = useCallback(() => goBack(), [goBack]);
+
+  const onDeleteWallet = useCallback(
+    deleteAddress => deleteWallet(deleteAddress),
+    [deleteWallet]
+  );
+
+  const onPressImportSeedPhrase = useCallback(() => {
+    goBack();
+    navigate('ImportSeedPhraseSheet');
+  }, [goBack, navigate]);
+
+  return (
+    <View>
+      {isCreatingWallet && <LoadingOverlay title="Creating Wallet..." />}
+      <Modal
+        fixedToTop
+        height={headerHeight + listHeight}
+        onCloseModal={onCloseModal}
+        style={{ borderRadius: 18 }}
+      >
+        <ProfileList
+          currentProfile={currentProfile}
+          accountAddress={accountAddress}
+          allAssets={profiles}
+          height={listHeight}
+          onChangeWallet={onChangeWallet}
+          onCloseEditProfileModal={onCloseEditProfileModal}
+          onDeleteWallet={onDeleteWallet}
+          onPressCreateWallet={onPressCreateWallet}
+          onPressImportSeedPhrase={onPressImportSeedPhrase}
+          isInitializationOver={isInitializationOver}
+        />
+      </Modal>
+    </View>
+  );
+};
+
+export default ChangeWalletModal;

@@ -1,10 +1,10 @@
 import { get } from 'lodash';
 import PropTypes from 'prop-types';
 import React, { PureComponent } from 'react';
+import { StyleSheet } from 'react-native';
 import { compose } from 'recompact';
-import styled from 'styled-components/primitives';
 import { withAccountData, withAccountSettings } from '../../hoc';
-import { colors, margin, padding } from '../../styles';
+import { colors, padding } from '../../styles';
 import { abbreviations, deviceUtils } from '../../utils';
 import { ButtonPressAnimation } from '../animations';
 import { Button } from '../buttons';
@@ -26,18 +26,15 @@ import {
   settingsUpdateAccountColor,
 } from '../../redux/settings';
 
-const AddressAbbreviation = styled(TruncatedAddress).attrs({
-  align: 'center',
-  color: colors.blueGreyDark,
-  firstSectionLength: abbreviations.defaultNumCharsPerSection,
-  size: 'lmedium',
-  truncationLength: 4,
-  weight: 'regular',
-})`
-  ${margin(9, 0, 5)};
-  opacity: 0.6;
-  width: 100%;
-`;
+const sx = StyleSheet.create({
+  addressAbbreviation: {
+    marginBottom: 5,
+    marginHorizontal: 0,
+    marginTop: 9,
+    opacity: 0.6,
+    width: '100%',
+  },
+});
 
 class AddContactState extends PureComponent {
   static propTypes = {
@@ -200,7 +197,7 @@ class AddContactState extends PureComponent {
               <Input
                 autoCapitalize
                 autoFocus
-                letterSpacing="tightest"
+                letterSpacing={0.2}
                 onChange={this.handleChange}
                 onSubmitEditing={acceptAction}
                 returnKeyType="done"
@@ -218,7 +215,16 @@ class AddContactState extends PureComponent {
                   textToCopy={address}
                   tooltipText="Copy Address"
                 >
-                  <AddressAbbreviation address={address} />
+                  <TruncatedAddress
+                    style={sx.addressAbbreviation}
+                    address={address}
+                    align="center"
+                    color={colors.blueGreyDark}
+                    firstSectionLength={abbreviations.defaultNumCharsPerSection}
+                    size="lmedium"
+                    truncationLength={4}
+                    weight="regular"
+                  />
                 </CopyTooltip>
               )}
               <Centered paddingVertical={19} width={93}>
