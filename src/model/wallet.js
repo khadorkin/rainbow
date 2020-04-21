@@ -1,4 +1,4 @@
-mport { captureException } from '@sentry/react-native';
+import { captureException } from '@sentry/react-native';
 import { toBuffer } from 'ethereumjs-util';
 import { ethers } from 'ethers';
 import { signTypedDataLegacy, signTypedData_v4 } from 'eth-sig-util';
@@ -24,6 +24,13 @@ import * as keychain from './keychain';
 const seedPhraseKey = 'rainbowSeedPhrase';
 const privateKeyKey = 'rainbowPrivateKey';
 const addressKey = 'rainbowAddressKey';
+const selectedWalletKey = 'rainbowSelectedWalletKey';
+const allWalletsKey = 'rainbowAllWalletsKey';
+
+const privateKeyVersion = 1.0;
+const seedPhraseVersion = 1.0;
+const selectedWalletVersion = 1.0;
+const allWalletsVersion = 1.0;
 
 export function generateSeedPhrase() {
   return ethers.utils.HDNode.entropyToMnemonic(ethers.utils.randomBytes(16));
@@ -300,4 +307,145 @@ const loadPrivateKey = async (
 
 const saveAddress = async (address, accessControlOptions = {}) => {
   await keychain.saveString(addressKey, address, accessControlOptions);
+};
+
+export const newSavePrivateKey = async (address, privateKey) => {
+  let privateAccessControlOptions = {};
+  const canAuthenticate = await canImplyAuthentication({
+    authenticationType: AUTHENTICATION_TYPE.DEVICE_PASSCODE_OR_BIOMETRICS,
+  });
+
+  let isSimulator = false;
+
+  if (canAuthenticate) {
+    isSimulator = __DEV__ && (await DeviceInfo.isEmulator());
+  }
+  if (canAuthenticate && !isSimulator) {
+    privateAccessControlOptions = {
+      accessControl: ACCESS_CONTROL.USER_PRESENCE,
+      accessible: ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+    };
+  }
+
+  const key = `${address}_${privateKeyKey}`;
+  const val = {
+    address,
+    privateKey,
+    version: privateKeyVersion,
+  };
+
+  await keychain.saveObject(key, val, privateAccessControlOptions);
+};
+
+export const newGetPrivateKey = async (
+  address,
+  authenticationPrompt = lang.t('wallet.authenticate.please')
+) => {
+  try {
+    const key = `${address}_${privateKeyKey}`;
+    return keychain.loadObject(key, {
+      authenticationPrompt,
+    });
+  } catch (error) {
+    captureException(error);
+    return null;
+  }
+};
+
+export const newSaveSeedPhrase = async (seedphrase, keychain_id = null) => {
+  let privateAccessControlOptions = {};
+  const canAuthenticate = await canImplyAuthentication({
+    authenticationType: AUTHENTICATION_TYPE.DEVICE_PASSCODE_OR_BIOMETRICS,
+  });
+
+  let isSimulator = false;
+
+  if (canAuthenticate) {
+    isSimulator = __DEV__ && (await DeviceInfo.isEmulator());
+  }
+  if (canAuthenticate && !isSimulator) {
+    privateAccessControlOptions = {
+      accessControl: ACCESS_CONTROL.USER_PRESENCE,
+      accessible: ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+    };
+  }
+
+  const id = keychain_id || new Date().getTime();
+
+  const key = `${id}_${seedPhraseKey}`;
+  const val = {
+    id,
+    seedphrase,
+    version: seedPhraseVersion,
+  };
+
+  await keychain.saveObject(key, val, privateAccessControlOptions);
+};
+
+export const newGetSeedPhrase = async (
+  id,
+  authenticationPrompt = lang.t('wallet.authenticate.please')
+) => {
+  try {
+    const key = `${id}_${seedPhraseKey}`;
+    return keychain.loadObject(key, {
+      authenticationPrompt,
+    });
+  } catch (error) {
+    captureException(error);
+    return null;
+  }
+};
+
+export const setSelectedWallet = async (id, address) => {
+  const publicAccessControlOptions = {
+    accessible: ACCESSIBLE.ALWAYS_THIS_DEVICE_ONLY,
+  };
+
+  const val = {
+    address,
+    id,
+    version: selectedWalletVersion,
+  };
+
+  await keychain.saveObject(selectedWalletKey, val, publicAccessControlOptions);
+};
+
+export const getSelectedWallet = async (
+  authenticationPrompt = lang.t('wallet.authenticate.please')
+) => {
+  try {
+    return keychain.loadObject(selectedWalletKey, {
+      authenticationPrompt,
+    });
+  } catch (error) {
+    captureException(error);
+    return null;
+  }
+};
+
+export const saveAllWallets = async wallets => {
+  const publicAccessControlOptions = {
+    accessible: ACCESSIBLE.ALWAYS_THIS_DEVICE_ONLY,
+  };
+
+  const val = {
+    version: allWalletsVersion,
+    wallets,
+  };
+
+  await keychain.saveObject(allWalletsKey, val, publicAccessControlOptions);
+};
+
+export const getAllWallets = async (
+  authenticationPrompt = lang.t('wallet.authenticate.please')
+) => {
+  try {
+    return keychain.loadObject(allWalletsKey, {
+      authenticationPrompt,
+    });
+  } catch (error) {
+    captureException(error);
+    return null;
+  }
 };
