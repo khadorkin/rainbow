@@ -1,15 +1,15 @@
 /* eslint-disable sort-keys */
+import GraphemeSplitter from 'grapheme-splitter';
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
-import { Animated, StyleSheet, View, Text } from 'react-native';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
-import GraphemeSplitter from 'grapheme-splitter';
 // import { abbreviations } from '../../utils';
 // import { TruncatedAddress } from '../text';
-import { fonts, colors } from '../../styles';
+import { removeFirstEmojiFromString } from '../../helpers/emojiHandler';
+import { colors, fonts } from '../../styles';
 import { ButtonPressAnimation } from '../animations';
 import { Icon } from '../icons';
-import { removeFirstEmojiFromString } from '../../helpers/emojiHandler';
 
 const sx = StyleSheet.create({
   container: {

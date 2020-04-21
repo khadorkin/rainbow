@@ -1,14 +1,14 @@
 /* eslint-disable sort-keys */
+import GraphemeSplitter from 'grapheme-splitter';
 import PropTypes from 'prop-types';
 import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import FastImage from 'react-native-fast-image';
-import { StyleSheet, View, Text } from 'react-native';
-import GraphemeSplitter from 'grapheme-splitter';
-import { ButtonPressAnimation } from '../animations';
-import { colors, fonts } from '../../styles';
 import Caret from '../../assets/family-dropdown-arrow.png';
-import { TruncatedAddress } from '../text';
 import { removeFirstEmojiFromString } from '../../helpers/emojiHandler';
+import { colors, fonts } from '../../styles';
+import { ButtonPressAnimation } from '../animations';
+import { TruncatedAddress } from '../text';
 
 const sx = StyleSheet.create({
   container: {

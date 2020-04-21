@@ -1,10 +1,10 @@
 import {
   getAllWallets,
-  saveAllWallets,
-  setSelectedWallet,
   getSelectedWallet,
   loadAddress,
   saveAddress,
+  saveAllWallets,
+  setSelectedWallet,
 } from '../model/wallet';
 
 // -- Constants --------------------------------------- //

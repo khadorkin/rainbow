@@ -1,11 +1,12 @@
 import PropTypes from 'prop-types';
 import { createElement } from 'react';
+import Emoji from 'react-native-emoji';
 import Flex from '../layout/Flex';
 
 import ApplePayIcon from './svg/ApplePayIcon';
+import ArrowBackIcon from './svg/ArrowBack';
 import ArrowCircledIcon from './svg/ArrowCircledIcon';
 import ArrowIcon from './svg/ArrowIcon';
-import ArrowBackIcon from './svg/ArrowBack';
 import AvatarIcon from './svg/AvatarIcon';
 import BackspaceIcon from './svg/BackspaceIcon';
 import CameraIcon from './svg/CameraIcon';
@@ -20,7 +21,6 @@ import CloseIcon from './svg/CloseIcon';
 import CompassIcon from './svg/CompassIcon';
 import CopyIcon from './svg/CopyIcon';
 import CrosshairIcon from './svg/CrosshairIcon';
-import PlusIcon from './svg/PlusIcon';
 import DotIcon from './svg/DotIcon';
 import DoubleCaretIcon from './svg/DoubleCaretIcon';
 import EmojiActivitiesIcon from './svg/EmojiActivitiesIcon';
@@ -44,6 +44,7 @@ import OfflineIcon from './svg/OfflineIcon';
 import PasscodeIcon from './svg/PasscodeIcon';
 import PinIcon from './svg/PinIcon';
 import PlusCircledIcon from './svg/PlusCircledIcon';
+import PlusIcon from './svg/PlusIcon';
 import ProgressIcon from './svg/ProgressIcon';
 import QRCodeIcon from './svg/QRCodeIcon';
 import SearchIcon from './svg/SearchIcon';
@@ -58,7 +59,6 @@ import ThreeDotsIcon from './svg/ThreeDotsIcon';
 import TouchIdIcon from './svg/TouchIdIcon';
 import WalletConnectIcon from './svg/WalletConnectIcon';
 import WarningIcon from './svg/WarningIcon';
-import Emoji from 'react-native-emoji';
 
 const Icon = ({ name, ...props }) =>
   createElement(Icon.IconTypes[name] || Flex, { name, ...props });

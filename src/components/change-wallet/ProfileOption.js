@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import React from 'react';
-import { Text, StyleSheet, View } from 'react-native';
-import { fonts, colors } from '../../styles';
+import { StyleSheet, Text, View } from 'react-native';
+import { colors, fonts } from '../../styles';
 import { ButtonPressAnimation } from '../animations';
 import { Icon } from '../icons';
 

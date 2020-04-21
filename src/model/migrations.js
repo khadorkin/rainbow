@@ -3,11 +3,11 @@ import {
   getMigrationVersion,
   setMigrationVersion,
 } from '../handlers/localstorage/migrations';
-import store from '../redux/store';
 import { loadAddress, saveAddress } from '../model/wallet';
+import store from '../redux/store';
 
+import { walletsSetSelected, walletsUpdate } from '../redux/wallets';
 import { logger } from '../utils';
-import { walletsUpdate, walletsSetSelected } from '../redux/wallets';
 
 export default async function runMigrations() {
   // console.log('setting migration to 0');

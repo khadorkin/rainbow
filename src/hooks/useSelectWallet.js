@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
-import { useInitializeWallet, useClearAccountData } from '../hooks';
 import { useDispatch } from 'react-redux';
+import { useClearAccountData, useInitializeWallet } from '../hooks';
 
 export default function useSelectWallet() {
   const clearAccountData = useClearAccountData();

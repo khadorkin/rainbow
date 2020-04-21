@@ -4,26 +4,25 @@ import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { getAccountInfo } from '../handlers/localstorage/accountLocal';
+import {
+  useAccountSettings,
+  useCheckEthBalance,
+  useClearAccountData,
+  useHideSplashScreen,
+  useInitializeAccountData,
+  useLoadAccountData,
+} from '../hooks';
 import runMigrations from '../model/migrations';
 import { walletInit } from '../model/wallet';
 import { setIsWalletEthZero } from '../redux/isWalletEthZero';
 import {
   settingsLoadNetwork,
   settingsUpdateAccountAddress,
-  settingsUpdateAccountName,
   settingsUpdateAccountColor,
+  settingsUpdateAccountName,
 } from '../redux/settings';
-import {
-  useClearAccountData,
-  useLoadAccountData,
-  useHideSplashScreen,
-  useInitializeAccountData,
-  useAccountSettings,
-  useCheckEthBalance,
-} from '../hooks';
-
-import { logger } from '../utils';
 import { walletsLoadState } from '../redux/wallets';
+import { logger } from '../utils';
 
 export default function useInitializeWallet() {
   const dispatch = useDispatch();

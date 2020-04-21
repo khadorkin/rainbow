@@ -1,18 +1,18 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import {
-  RecyclerListView,
-  LayoutProvider,
-  DataProvider,
-} from 'recyclerlistview';
 import { withNavigation } from 'react-navigation';
 import { compose } from 'recompact';
-import { deviceUtils } from '../../utils';
+import {
+  DataProvider,
+  LayoutProvider,
+  RecyclerListView,
+} from 'recyclerlistview';
 import { removeFirstEmojiFromString } from '../../helpers/emojiHandler';
-import ProfileRow from './ProfileRow';
-import ProfileOption from './ProfileOption';
+import { deviceUtils } from '../../utils';
 import ProfileDivider from './ProfileDivider';
+import ProfileOption from './ProfileOption';
+import ProfileRow from './ProfileRow';
 
 const rowHeight = 50;
 const lastRowPadding = 10;

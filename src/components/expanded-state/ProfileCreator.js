@@ -4,27 +4,27 @@ import React, { PureComponent } from 'react';
 import { StyleSheet } from 'react-native';
 import { compose } from 'recompact';
 import { withAccountData, withAccountSettings } from '../../hoc';
+import { deleteUserInfo, editUserInfo } from '../../model/wallet';
+import {
+  settingsUpdateAccountColor,
+  settingsUpdateAccountName,
+} from '../../redux/settings';
+import store from '../../redux/store';
 import { colors, padding } from '../../styles';
 import { abbreviations, deviceUtils } from '../../utils';
+import { showActionSheetWithOptions } from '../../utils/actionsheet';
+import Divider from '../Divider';
+import TouchableBackdrop from '../TouchableBackdrop';
 import { ButtonPressAnimation } from '../animations';
 import { Button } from '../buttons';
 import { ContactAvatar } from '../contacts';
-import { deleteUserInfo, editUserInfo } from '../../model/wallet';
 import CopyTooltip from '../copy-tooltip';
-import Divider from '../Divider';
 import { Input } from '../inputs';
 import { Centered, KeyboardFixedOpenLayout } from '../layout';
 import { Text, TruncatedAddress } from '../text';
-import TouchableBackdrop from '../TouchableBackdrop';
-import { showActionSheetWithOptions } from '../../utils/actionsheet';
-import { AssetPanel } from './asset-panel';
-import store from '../../redux/store';
-import FloatingPanels from './FloatingPanels';
 import PlaceholderText from '../text/PlaceholderText';
-import {
-  settingsUpdateAccountName,
-  settingsUpdateAccountColor,
-} from '../../redux/settings';
+import FloatingPanels from './FloatingPanels';
+import { AssetPanel } from './asset-panel';
 
 const sx = StyleSheet.create({
   addressAbbreviation: {

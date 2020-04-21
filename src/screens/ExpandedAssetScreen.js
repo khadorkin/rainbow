@@ -2,6 +2,7 @@ import PropTypes from 'prop-types';
 import React, { createElement } from 'react';
 import { StatusBar } from 'react-native';
 import { useSafeArea } from 'react-native-safe-area-context';
+import TouchableBackdrop from '../components/TouchableBackdrop';
 import {
   AddContactState,
   ChartExpandedState,
@@ -13,7 +14,6 @@ import {
   UniqueTokenExpandedState,
 } from '../components/expanded-state';
 import { Centered } from '../components/layout';
-import TouchableBackdrop from '../components/TouchableBackdrop';
 import { useDimensions } from '../hooks';
 import { padding } from '../styles';
 

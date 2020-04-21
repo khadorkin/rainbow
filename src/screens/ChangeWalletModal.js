@@ -1,11 +1,11 @@
 import React, { useCallback, useState } from 'react';
-import { View, StatusBar, InteractionManager } from 'react-native';
+import { InteractionManager, StatusBar, View } from 'react-native';
 // import { orderBy } from 'lodash';
-import { Modal, LoadingOverlay } from '../components/modal';
+import { useNavigation } from 'react-navigation-hooks';
 import ProfileList from '../components/change-wallet/ProfileList';
+import { LoadingOverlay, Modal } from '../components/modal';
 // import { removeFirstEmojiFromString } from '../helpers/emojiHandler';
 import { useCreateWallet, useSelectWallet, useWallets } from '../hooks';
-import { useNavigation } from 'react-navigation-hooks';
 
 const headerHeight = 68;
 const profileRowHeight = 54;
@@ -106,7 +106,7 @@ const ChangeWalletModal = () => {
       //   )
       // );
     },
-    [accountAddress]
+    []
   );
 
   const onCloseModal = useCallback(() => goBack(), [goBack]);
