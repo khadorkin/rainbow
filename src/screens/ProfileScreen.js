@@ -27,17 +27,17 @@ const ProfileScreen = ({
 }) => {
   const [activityListInitialized, setActivityListInitialized] = useState(false);
   const accountAddress = useAddress();
-  const {
-    selected: { wallet },
-  } = useWallets();
-
-  const { name: accountName, color: accountColor } = wallet;
+  const { selected } = useWallets();
   useEffect(() => {
     setTimeout(() => {
       setActivityListInitialized(true);
     }, ACTIVITY_LIST_INITIALIZATION_DELAY);
   }, []);
 
+  // Don't render before redux is ready
+  if (!selected || !selected.wallet) return null;
+
+  const { name: accountName, color: accountColor } = selected.wallet;
   const onPressBackButton = () => navigation.navigate('WalletScreen');
   const onPressSettings = () => navigation.navigate('SettingsModal');
   const onPressProfileHeader = async () => {

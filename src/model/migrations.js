@@ -10,8 +10,8 @@ import { logger } from '../utils';
 import { walletsUpdate, walletsSetSelected } from '../redux/wallets';
 
 export default async function runMigrations() {
-  console.log('setting migration to 0');
-  await setMigrationVersion(0);
+  // console.log('setting migration to 0');
+  // await setMigrationVersion(0);
   // get current version
   const currentVersion = Number(await getMigrationVersion());
   const migrations = [];
