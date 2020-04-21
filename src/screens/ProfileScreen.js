@@ -5,7 +5,7 @@ import AddFundsInterstitial from '../components/AddFundsInterstitial';
 import { ActivityList } from '../components/activity-list';
 import { BackButton, Header, HeaderButton } from '../components/header';
 import { Icon } from '../components/icons';
-import { FlexItem, Page } from '../components/layout';
+import { Page } from '../components/layout';
 import { ProfileMasthead } from '../components/profile';
 import TransactionList from '../components/transaction-list/TransactionList';
 import nativeTransactionListAvailable from '../helpers/isNativeTransactionListAvailable';
@@ -43,7 +43,7 @@ const ProfileScreen = ({
     Platform.OS === 'ios' && (addCashInDevNetworks || addCashInProdNetworks);
 
   return (
-    <Page component={FlexItem} style={position.sizeAsObject('100%')}>
+    <Page flex={1} style={position.sizeAsObject('100%')}>
       <Header justify="space-between">
         <HeaderButton onPress={onPressSettings}>
           <Icon color={colors.black} name="gear" />
