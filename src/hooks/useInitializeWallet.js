@@ -6,7 +6,6 @@ import { useDispatch } from 'react-redux';
 import { getAccountInfo } from '../handlers/localstorage/accountLocal';
 import runMigrations from '../model/migrations';
 import { walletInit } from '../model/wallet';
-import runMigrations from '../model/migrations';
 import { setIsWalletEthZero } from '../redux/isWalletEthZero';
 import {
   settingsLoadNetwork,
@@ -24,6 +23,7 @@ import {
 } from '../hooks';
 
 import { logger } from '../utils';
+import { walletsLoadState } from '../redux/wallets';
 
 export default function useInitializeWallet() {
   const dispatch = useDispatch();
@@ -40,6 +40,8 @@ export default function useInitializeWallet() {
     async seedPhrase => {
       try {
         logger.sentry('Start wallet setup');
+        await dispatch(walletsLoadState());
+        await runMigrations();
         // Load the network first
         await dispatch(settingsLoadNetwork());
 
@@ -71,7 +73,6 @@ export default function useInitializeWallet() {
         } else {
           await loadAccountData();
         }
-        await runMigrations();
         onHideSplashScreen();
         logger.log('Hide splash screen');
         initializeAccountData();

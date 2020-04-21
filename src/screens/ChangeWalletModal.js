@@ -4,12 +4,7 @@ import { orderBy } from 'lodash';
 import { Modal, LoadingOverlay } from '../components/modal';
 import ProfileList from '../components/change-wallet/ProfileList';
 import { removeFirstEmojiFromString } from '../helpers/emojiHandler';
-import {
-  useAccountSettings,
-  useCreateWallet,
-  useDeleteWallet,
-  useSelectWallet,
-} from '../hooks';
+import { useAccountSettings, useCreateWallet, useSelectWallet } from '../hooks';
 import { useNavigation } from 'react-navigation-hooks';
 
 const headerHeight = 68;
@@ -19,7 +14,6 @@ const ChangeWalletModal = () => {
   const { accountAddress } = useAccountSettings();
   const { goBack, navigate, getParam } = useNavigation();
   const createNewWallet = useCreateWallet();
-  const deleteWallet = useDeleteWallet();
   const selectWallet = useSelectWallet();
   const [currentProfile, setCurrentProfile] = useState();
   const [profiles, setProfiles] = useState();
@@ -137,8 +131,8 @@ const ChangeWalletModal = () => {
   const onCloseModal = useCallback(() => goBack(), [goBack]);
 
   const onDeleteWallet = useCallback(
-    deleteAddress => deleteWallet(deleteAddress),
-    [deleteWallet]
+    deleteAddress => console.log('TODO', deleteAddress),
+    []
   );
 
   const onPressImportSeedPhrase = useCallback(() => {

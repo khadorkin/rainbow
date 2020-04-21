@@ -10,7 +10,6 @@ export { default as useClipboard } from './useClipboard';
 export { default as useCoinListEdited } from './useCoinListEdited';
 export { default as useCoinListEditOptions } from './useCoinListEditOptions';
 export { default as useCreateWallet } from './useCreateWallet';
-export { default as useDeleteWallet } from './useDeleteWallet';
 export { default as useDimensions } from './useDimensions';
 export { default as useEmailRainbow } from './useEmailRainbow';
 export { default as useGas } from './useGas';

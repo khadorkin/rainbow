@@ -1,13 +1,6 @@
-import { useCallback } from 'react';
+import { useSelector } from 'react-redux';
 
 export default function useGetWallet() {
-  const getWallet = useCallback(() => {
-    try {
-        // TODO Get the current selected profile and return it
-    } catch (error) {
-      return null;
-    }
-  }, []);
-
-  return getWallet;
+  const selected = useSelector(({ wallets: { selected } }) => selected);
+  return selected;
 }

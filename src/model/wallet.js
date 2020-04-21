@@ -370,7 +370,7 @@ export const newSaveSeedPhrase = async (seedphrase, keychain_id = null) => {
     };
   }
 
-  const id = keychain_id || new Date().getTime();
+  const id = keychain_id || `wallet_${new Date().getTime()}`;
 
   const key = `${id}_${seedPhraseKey}`;
   const val = {

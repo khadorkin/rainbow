@@ -3,12 +3,15 @@ import {
   getMigrationVersion,
   setMigrationVersion,
 } from '../handlers/localstorage/migrations';
-
+import store from '../redux/store';
 import { loadAddress, saveAddress } from '../model/wallet';
 
 import { logger } from '../utils';
+import { walletsUpdate } from '../redux/wallets';
 
 export default async function runMigrations() {
+  console.log('setting migration to 0');
+  await setMigrationVersion(0);
   // get current version
   const currentVersion = Number(await getMigrationVersion());
   const migrations = [];
@@ -28,27 +31,33 @@ export default async function runMigrations() {
 
   /***** Migration v0 ends here  *****/
 
- /***** Migration v1 starts here  *****/
+  /***** Migration v1 starts here  *****/
   const v1 = async () => {
-    let profiles = await loadUsersInfo();
-    if (!profiles || profiles.length === 0) {
-      const wallet = await loadCurrentUserInfo();
+    const { selected } = store.getState().wallets;
+
+    if (!selected) {
+      // Read from the old wallet data
+      const wallet = await loadAddress();
+      const id = `wallet_${new Date().getTime()}`;
       const currentWallet = {
-        address: wallet.address,
+        addresses: [
+          {
+            address: wallet.address,
+            index: 0,
+            label: '',
+            visible: true,
+          },
+        ],
         color: 0,
+        imported: false,
         name: 'My Wallet',
-        privateKey: wallet.privateKey,
-        seedPhrase: wallet.seedPhrase,
+        type: 'normal',
       };
 
-      await saveWalletDetails(
-        currentWallet.name,
-        currentWallet.color,
-        currentWallet.seedPhrase,
-        currentWallet.privateKey,
-        currentWallet.address
-      );
-      profiles = [currentWallet];
+      const wallets = {};
+      wallets[id] = currentWallet;
+
+      store.dispatch(walletsUpdate(wallets));
     }
   };
 
