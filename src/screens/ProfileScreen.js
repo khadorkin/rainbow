@@ -12,14 +12,11 @@ import TransactionList from '../components/transaction-list/TransactionList';
 import nativeTransactionListAvailable from '../helpers/isNativeTransactionListAvailable';
 import NetworkTypes from '../helpers/networkTypes';
 import { colors, position } from '../styles';
-import { loadUsersInfo } from '../model/wallet';
+import { useAddress, useWallets } from '../hooks';
 
 const ACTIVITY_LIST_INITIALIZATION_DELAY = 5000;
 
 const ProfileScreen = ({
-  accountAddress,
-  accountColor,
-  accountName,
   isEmpty,
   nativeCurrency,
   navigation,
@@ -29,7 +26,12 @@ const ProfileScreen = ({
   transactionsCount,
 }) => {
   const [activityListInitialized, setActivityListInitialized] = useState(false);
+  const accountAddress = useAddress();
+  const {
+    selected: { wallet },
+  } = useWallets();
 
+  const { name: accountName, color: accountColor } = wallet;
   useEffect(() => {
     setTimeout(() => {
       setActivityListInitialized(true);
@@ -39,11 +41,7 @@ const ProfileScreen = ({
   const onPressBackButton = () => navigation.navigate('WalletScreen');
   const onPressSettings = () => navigation.navigate('SettingsModal');
   const onPressProfileHeader = async () => {
-    const profiles = await loadUsersInfo();
-    console.log(profiles);
-    navigation.navigate('ChangeWalletModal', {
-      profiles,
-    });
+    navigation.navigate('ChangeWalletModal');
   };
   const addCashInDevNetworks =
     __DEV__ &&
@@ -51,6 +49,7 @@ const ProfileScreen = ({
   const addCashInProdNetworks = !__DEV__ && network === NetworkTypes.mainnet;
   const addCashAvailable =
     Platform.OS === 'ios' && (addCashInDevNetworks || addCashInProdNetworks);
+
   return (
     <Page component={FlexItem} style={position.sizeAsObject('100%')}>
       <Header justify="space-between">
@@ -121,7 +120,6 @@ const ProfileScreen = ({
 };
 
 ProfileScreen.propTypes = {
-  accountAddress: PropTypes.string,
   isEmpty: PropTypes.bool,
   nativeCurrency: PropTypes.string,
   navigation: PropTypes.object,

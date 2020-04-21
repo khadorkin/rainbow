@@ -74,25 +74,23 @@ const HeaderProfileInfo = ({
   accountName,
   onPress,
 }) => {
-  const name = accountName || 'My Wallet';
-  const color = accountColor || 0;
   return (
     <ButtonPressAnimation onPress={onPress} scaleTo={0.9}>
       <View style={sx.container}>
         <View
           style={[
             sx.avatarCircle,
-            { backgroundColor: colors.avatarColor[color] },
+            { backgroundColor: colors.avatarColor[accountColor] },
           ]}
         >
           <Text style={sx.firstLetter}>
-            {new GraphemeSplitter().splitGraphemes(name)[0]}
+            {new GraphemeSplitter().splitGraphemes(accountName)[0]}
           </Text>
         </View>
         <View>
           <View style={sx.topRow}>
             <Text style={sx.nickname} numberOfLines={1}>
-              {removeFirstEmojiFromString(name)}
+              {removeFirstEmojiFromString(accountName)}
             </Text>
             <View style={sx.arrowWrapper}>
               <FastImage style={sx.settingsIcon} source={Caret} />
@@ -110,6 +108,12 @@ const HeaderProfileInfo = ({
       </View>
     </ButtonPressAnimation>
   );
+};
+
+HeaderProfileInfo.defaultProps = {
+  accountAddress: '',
+  accountColor: 0,
+  accountName: '',
 };
 
 HeaderProfileInfo.propTypes = {

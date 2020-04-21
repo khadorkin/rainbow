@@ -34,7 +34,6 @@ class ProfileList extends React.Component {
     allProfiles: PropTypes.array,
     currentProfile: PropTypes.object,
     height: PropTypes.number,
-    isInitializationOver: PropTypes.bool,
     navigation: PropTypes.object,
     onChangeWallet: PropTypes.func,
     onCloseEditProfileModal: PropTypes.func,
@@ -77,9 +76,6 @@ class ProfileList extends React.Component {
   }
 
   componentWillReceiveProps = props => {
-    if (this.props.isInitializationOver !== props.isInitializationOver) {
-      this.isInitalized = true;
-    }
     const newItems = Object.assign([], props.allProfiles || []);
     for (let i = 0; i < newItems.length; i++) {
       if (this.props.accountAddress === newItems[i].address.toLowerCase()) {
@@ -125,7 +121,6 @@ class ProfileList extends React.Component {
         icon={profile.icon}
         label={profile.label}
         onPress={profile.onPress}
-        isInitializationOver={this.props.isInitializationOver}
       />
     ) : (
       <ProfileRow
@@ -150,7 +145,6 @@ class ProfileList extends React.Component {
         onTouch={this.closeAllDifferentContacts}
         onTransitionEnd={this.changeCurrentlyUsedContact}
         currentlyOpenProfile={this.touchedContact}
-        isInitializationOver={this.props.isInitializationOver}
       />
     );
 
@@ -196,11 +190,11 @@ class ProfileList extends React.Component {
 
   render() {
     const {
+      accountAddress,
       currentProfile,
       height,
       navigation,
       onCloseEditProfileModal,
-      isInitializationOver,
     } = this.props;
     return (
       <View style={sx.container}>
@@ -208,7 +202,8 @@ class ProfileList extends React.Component {
           <ProfileRow
             accountName={currentProfile.name}
             accountColor={currentProfile.color}
-            accountAddress={currentProfile.address}
+            addresses={currentProfile.addresses}
+            selectedAddress={accountAddress}
             isHeader
             onPress={() => navigation.goBack()}
             onEditWallet={() =>
@@ -224,7 +219,7 @@ class ProfileList extends React.Component {
             }
             onTouch={this.closeAllDifferentContacts}
             onTransitionEnd={this.changeCurrentlyUsedContact}
-            isInitializationOver={isInitializationOver}
+            isInitializationOver
           />
         )}
         <ProfileDivider />

@@ -4,8 +4,8 @@ import React, { Component } from 'react';
 import { Animated, StyleSheet, View, Text } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import GraphemeSplitter from 'grapheme-splitter';
-import { abbreviations } from '../../utils';
-import { TruncatedAddress } from '../text';
+// import { abbreviations } from '../../utils';
+// import { TruncatedAddress } from '../text';
 import { fonts, colors } from '../../styles';
 import { ButtonPressAnimation } from '../animations';
 import { Icon } from '../icons';
@@ -25,20 +25,20 @@ const sx = StyleSheet.create({
     fontSize: Number(fonts.size.smedium.replace('px', '')),
     fontWeight: fonts.weight.medium,
   },
-  addressAbbreviation: {
-    fontFamily: fonts.family.SFProText,
-    opacity: 0.5,
-    textTransform: 'lowercase',
-    width: '100%',
-  },
-  address: {
-    fontFamily: fonts.family.SFProText,
-    fontSize: Number(fonts.size.smaller.replace('px', '')),
-    fontWeight: fonts.weight.medium,
-    width: '100%',
-    opacity: 0.5,
-    textTransform: 'lowercase',
-  },
+  // addressAbbreviation: {
+  //   fontFamily: fonts.family.SFProText,
+  //   opacity: 0.5,
+  //   textTransform: 'lowercase',
+  //   width: '100%',
+  // },
+  // address: {
+  //   fontFamily: fonts.family.SFProText,
+  //   fontSize: Number(fonts.size.smaller.replace('px', '')),
+  //   fontWeight: fonts.weight.medium,
+  //   width: '100%',
+  //   opacity: 0.5,
+  //   textTransform: 'lowercase',
+  // },
   iconWrapper: {
     height: 30,
     width: 30,
@@ -161,7 +161,7 @@ export default class ProfileRow extends Component {
     } = this.props;
     const avatarSize = isHeader ? 32 : 30;
     const name = accountName ? removeFirstEmojiFromString(accountName) : '';
-    return this.props.isInitializationOver ? (
+    return (
       <Swipeable
         ref={this.updateRef}
         friction={2}
@@ -209,14 +209,14 @@ export default class ProfileRow extends Component {
               </View>
               <View>
                 <Text style={sx.nickname}>{name}</Text>
-                <TruncatedAddress
+                {/* <TruncatedAddress
                   firstSectionLength={abbreviations.defaultNumCharsPerSection}
                   size="smaller"
                   truncationLength={4}
                   weight="medium"
                   address={accountAddress}
                   style={sx.addressAbbreviation}
-                />
+                /> */}
               </View>
             </View>
             {/* <MoneyAmountWrapper>
@@ -227,45 +227,6 @@ export default class ProfileRow extends Component {
           </View>
         </ButtonPressAnimation>
       </Swipeable>
-    ) : (
-      <View style={[sx.container, { padding: isHeader ? 15 : 10 }]}>
-        <View style={sx.leftSide}>
-          <View
-            style={[
-              sx.avatarCircle,
-              {
-                backgroundColor:
-                  colors.avatarColor[accountColor] || colors.white,
-                height: avatarSize,
-                width: avatarSize,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                sx.firstLetter,
-                {
-                  fontSize: isHeader ? 18 : 16,
-                  lineHeight: isHeader ? 31 : 30.5,
-                  marginLeft: isHeader ? 0.5 : 0.2,
-                },
-              ]}
-            >
-              {new GraphemeSplitter().splitGraphemes(accountName)[0]}
-            </Text>
-          </View>
-          <View>
-            <Text style={sx.nickname}>{name}</Text>
-            <Text style={sx.address}>
-              {abbreviations.address(
-                accountAddress,
-                4,
-                abbreviations.defaultNumCharsPerSection
-              )}
-            </Text>
-          </View>
-        </View>
-      </View>
     );
   }
 }

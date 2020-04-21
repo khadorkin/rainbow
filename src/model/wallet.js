@@ -397,15 +397,14 @@ export const newGetSeedPhrase = async (
   }
 };
 
-export const setSelectedWallet = async (id, address) => {
+export const setSelectedWallet = async wallet => {
   const publicAccessControlOptions = {
     accessible: ACCESSIBLE.ALWAYS_THIS_DEVICE_ONLY,
   };
 
   const val = {
-    address,
-    id,
     version: selectedWalletVersion,
+    wallet,
   };
 
   await keychain.saveObject(selectedWalletKey, val, publicAccessControlOptions);

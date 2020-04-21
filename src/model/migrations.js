@@ -7,7 +7,7 @@ import store from '../redux/store';
 import { loadAddress, saveAddress } from '../model/wallet';
 
 import { logger } from '../utils';
-import { walletsUpdate } from '../redux/wallets';
+import { walletsUpdate, walletsSetSelected } from '../redux/wallets';
 
 export default async function runMigrations() {
   console.log('setting migration to 0');
@@ -37,27 +37,28 @@ export default async function runMigrations() {
 
     if (!selected) {
       // Read from the old wallet data
-      const wallet = await loadAddress();
+      const address = await loadAddress();
       const id = `wallet_${new Date().getTime()}`;
       const currentWallet = {
         addresses: [
           {
-            address: wallet.address,
+            address,
             index: 0,
             label: '',
             visible: true,
           },
         ],
         color: 0,
+        id,
         imported: false,
         name: 'My Wallet',
         type: 'normal',
       };
 
-      const wallets = {};
-      wallets[id] = currentWallet;
+      const wallets = { [id]: currentWallet };
 
       store.dispatch(walletsUpdate(wallets));
+      store.dispatch(walletsSetSelected(currentWallet));
     }
   };
 
