@@ -2,13 +2,13 @@ import React, { useCallback, useState } from 'react';
 import { InteractionManager, StatusBar, View } from 'react-native';
 // import { orderBy } from 'lodash';
 import { useNavigation } from 'react-navigation-hooks';
-import ProfileList from '../components/change-wallet/ProfileList';
+import WalletList from '../components/change-wallet/WalletList';
 import { LoadingOverlay, Modal } from '../components/modal';
 // import { removeFirstEmojiFromString } from '../helpers/emojiHandler';
 import { useCreateWallet, useSelectWallet, useWallets } from '../hooks';
 
 const headerHeight = 68;
-const profileRowHeight = 54;
+const walletRowHeight = 54;
 
 const ChangeWalletModal = () => {
   const {
@@ -23,14 +23,14 @@ const ChangeWalletModal = () => {
   //const [isChangingWallet, setIsChangingWallet] = useState(false);
 
   const size = wallets ? Object.keys(wallets).length - 1 : 0;
-  let listHeight = profileRowHeight * 2 + profileRowHeight * size;
+  let listHeight = walletRowHeight * 2 + walletRowHeight * size;
   if (listHeight > 258) {
     listHeight = 258;
   }
 
   const onChangeWallet = useCallback(
-    async profile => {
-      await selectWallet(profile.address);
+    async wallet => {
+      await selectWallet(wallet.address);
       await goBack();
       InteractionManager.runAfterInteractions(() => {
         navigate('WalletScreen');
@@ -47,8 +47,8 @@ const ChangeWalletModal = () => {
       actionType: 'Create',
       address: undefined,
       asset: [],
-      isCurrentProfile: false,
-      isNewProfile: true,
+      isCurrentWallet: false,
+      isNewWallet: true,
       onCloseModal: isCanceled => {
         if (!isCanceled) {
           setIsCreatingWallet(true);
@@ -68,7 +68,7 @@ const ChangeWalletModal = () => {
     });
   }, [createNewWallet, goBack, navigate]);
 
-  const onCloseEditProfileModal = useCallback(
+  const onCloseEditWalletModal = useCallback(
     // eslint-disable-next-line no-unused-vars
     async editedProfile => {
       // let currentProfile = false;
@@ -130,13 +130,13 @@ const ChangeWalletModal = () => {
         onCloseModal={onCloseModal}
         style={{ borderRadius: 18 }}
       >
-        <ProfileList
-          currentProfile={selectedWallet}
+        <WalletList
+          currentWallet={selectedWallet}
           accountAddress={accountAddress}
           allAssets={wallets}
           height={listHeight}
           onChangeWallet={onChangeWallet}
-          onCloseEditProfileModal={onCloseEditProfileModal}
+          onCloseEditWalletModal={onCloseEditWalletModal}
           onDeleteWallet={onDeleteWallet}
           onPressCreateWallet={onPressCreateWallet}
           onPressImportSeedPhrase={onPressImportSeedPhrase}

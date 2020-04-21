@@ -14,10 +14,10 @@ const sx = StyleSheet.create({
   },
 });
 
-const ProfileDivider = () => (
+const WalletDivider = () => (
   <View style={sx.dividerWrapper}>
     <View style={sx.divider} />
   </View>
 );
 
-export default ProfileDivider;
+export default WalletDivider;

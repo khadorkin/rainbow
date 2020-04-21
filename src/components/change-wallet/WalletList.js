@@ -10,9 +10,9 @@ import {
 } from 'recyclerlistview';
 import { removeFirstEmojiFromString } from '../../helpers/emojiHandler';
 import { deviceUtils } from '../../utils';
-import ProfileDivider from './ProfileDivider';
-import ProfileOption from './ProfileOption';
-import ProfileRow from './ProfileRow';
+import WalletDivider from './WalletDivider';
+import WalletOption from './WalletOption';
+import WalletRow from './WalletRow';
 
 const rowHeight = 50;
 const lastRowPadding = 10;
@@ -28,17 +28,16 @@ const sx = StyleSheet.create({
   },
 });
 
-class ProfileList extends React.Component {
+class WalletList extends React.Component {
   static propTypes = {
     accountAddress: PropTypes.string,
-    allProfiles: PropTypes.array,
-    currentProfile: PropTypes.object,
+    allWallets: PropTypes.array,
+    currentWallet: PropTypes.object,
     height: PropTypes.number,
     navigation: PropTypes.object,
     onChangeWallet: PropTypes.func,
-    onCloseEditProfileModal: PropTypes.func,
+    onCloseEditWalletModal: PropTypes.func,
     onDeleteWallet: PropTypes.func,
-    onPressCreateWallet: PropTypes.func,
     onPressImportSeedPhrase: PropTypes.func,
   };
 
@@ -46,12 +45,12 @@ class ProfileList extends React.Component {
     super(args);
 
     this.state = {
-      profiles: [],
+      wallets: [],
     };
 
     this._layoutProvider = new LayoutProvider(
       i => {
-        if (this.props.allProfiles && i < this.props.allProfiles.length) {
+        if (this.props.allWallets && i < this.props.allWallets.length) {
           return WALLET_ROW;
         }
         return WALLET_LAST_ROW;
@@ -70,25 +69,20 @@ class ProfileList extends React.Component {
       }
     );
     this._renderRow = this._renderRow.bind(this);
-    this.currentlyOpenProfile = undefined;
+    this.currentlyOpenWallet = undefined;
     this.touchedContact = undefined;
     this.recentlyRendered = false;
   }
 
   componentWillReceiveProps = props => {
-    const newItems = Object.assign([], props.allProfiles || []);
+    const newItems = Object.assign([], props.allWallets || []);
     for (let i = 0; i < newItems.length; i++) {
       if (this.props.accountAddress === newItems[i].address.toLowerCase()) {
         newItems.splice(i, 1);
         break;
       }
     }
-    newItems.push({
-      icon: 'plus',
-      isOption: true,
-      label: 'Create a Wallet',
-      onPress: this.props.onPressCreateWallet,
-    });
+
     newItems.push({
       icon: 'arrowBack',
       isOption: true,
@@ -96,8 +90,8 @@ class ProfileList extends React.Component {
       onPress: this.props.onPressImportSeedPhrase,
     });
 
-    if (newItems !== this.state.profiles) {
-      this.setState({ profiles: newItems });
+    if (newItems !== this.state.wallets) {
+      this.setState({ wallets: newItems });
     }
   };
 
@@ -115,41 +109,41 @@ class ProfileList extends React.Component {
     this.setState({ touchedContact: address });
   };
 
-  balancesRenderItem = profile =>
-    profile.isOption ? (
-      <ProfileOption
-        icon={profile.icon}
-        label={profile.label}
-        onPress={profile.onPress}
+  renderItem = item =>
+    item.isOption ? (
+      <WalletOption
+        icon={item.icon}
+        label={item.label}
+        onPress={item.onPress}
       />
     ) : (
-      <ProfileRow
-        key={profile.address}
-        accountName={profile.name}
-        accountColor={profile.color}
-        accountAddress={profile.address}
-        onPress={() => this.props.onChangeWallet(profile)}
+      <WalletRow
+        key={item.address}
+        accountName={item.name}
+        accountColor={item.color}
+        accountAddress={item.address}
+        onPress={() => this.props.onChangeWallet(item)}
         onEditWallet={() =>
           this.props.navigation.navigate('ExpandedAssetScreen', {
-            address: profile.address,
+            address: item.address,
             asset: [],
-            isCurrentProfile: false,
-            onCloseModal: editedProfile => {
-              this.props.onCloseEditProfileModal(editedProfile);
-              this.props.onDeleteWallet(editedProfile.address);
+            isCurrentWallet: false,
+            item,
+            onCloseModal: editedWallet => {
+              this.props.onCloseEditWalletModal(editedWallet);
+              this.props.onDeleteWallet(editedWallet.address);
             },
-            profile,
             type: 'profile_creator',
           })
         }
         onTouch={this.closeAllDifferentContacts}
         onTransitionEnd={this.changeCurrentlyUsedContact}
-        currentlyOpenProfile={this.touchedContact}
+        currentlyOpenWallet={this.touchedContact}
       />
     );
 
   _renderRow(type, data) {
-    return this.balancesRenderItem(data);
+    return this.renderItem(data);
   }
 
   filterContactList = (
@@ -185,35 +179,35 @@ class ProfileList extends React.Component {
   };
 
   changeCurrentlyUsedContact = address => {
-    this.currentlyOpenProfile = address;
+    this.currentlyOpenWallet = address;
   };
 
   render() {
     const {
       accountAddress,
-      currentProfile,
+      currentWallet,
       height,
       navigation,
-      onCloseEditProfileModal,
+      onCloseEditWalletModal,
     } = this.props;
     return (
       <View style={sx.container}>
-        {currentProfile && (
-          <ProfileRow
-            accountName={currentProfile.name}
-            accountColor={currentProfile.color}
-            addresses={currentProfile.addresses}
+        {currentWallet && (
+          <WalletRow
+            accountName={currentWallet.name}
+            accountColor={currentWallet.color}
+            addresses={currentWallet.addresses}
             selectedAddress={accountAddress}
             isHeader
             onPress={() => navigation.goBack()}
             onEditWallet={() =>
               navigation.navigate('ExpandedAssetScreen', {
-                address: currentProfile.address,
+                address: currentWallet.address,
                 asset: [],
-                isCurrentProfile: true,
-                onCloseModal: editedProfile =>
-                  onCloseEditProfileModal(editedProfile),
-                profile: currentProfile,
+                isCurrentWallet: true,
+                onCloseModal: editedWallet =>
+                  onCloseEditWalletModal(editedWallet),
+                profile: currentWallet,
                 type: 'profile_creator',
               })
             }
@@ -222,15 +216,13 @@ class ProfileList extends React.Component {
             isInitializationOver
           />
         )}
-        <ProfileDivider />
+        <WalletDivider />
         <View style={{ height }}>
           <RecyclerListView
             rowRenderer={this._renderRow}
             dataProvider={new DataProvider((r1, r2) => {
               if (this.isInitalized) {
-                if (
-                  r2 === this.state.profiles[this.state.profiles.length - 2]
-                ) {
+                if (r2 === this.state.wallets[this.state.wallets.length - 2]) {
                   this.isInitalized = false;
                 }
                 return true;
@@ -238,13 +230,11 @@ class ProfileList extends React.Component {
               if (
                 this.touchedContact !== r2.address &&
                 this.lastTouchedContact === r2.address &&
-                this.currentlyOpenProfile &&
-                this.touchedContact !== this.currentlyOpenProfile &&
+                this.currentlyOpenWallet &&
+                this.touchedContact !== this.currentlyOpenWallet &&
                 !this.recentlyRendered
               ) {
-                if (
-                  r2 === this.state.profiles[this.state.profiles.length - 2]
-                ) {
+                if (r2 === this.state.wallets[this.state.wallets.length - 2]) {
                   this.recentlyRendered = true;
                 }
                 return true;
@@ -253,7 +243,7 @@ class ProfileList extends React.Component {
                 return true;
               }
               return false;
-            }).cloneWithRows(this.state.profiles)}
+            }).cloneWithRows(this.state.wallets)}
             layoutProvider={this._layoutProvider}
             onScroll={(event, _offsetX, offsetY) => {
               position = offsetY;
@@ -266,4 +256,4 @@ class ProfileList extends React.Component {
   }
 }
 
-export default compose(withNavigation)(ProfileList);
+export default compose(withNavigation)(WalletList);

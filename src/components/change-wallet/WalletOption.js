@@ -30,7 +30,7 @@ const sx = StyleSheet.create({
   },
 });
 
-const ProfileOption = ({ icon, isInitializationOver, label, onPress }) =>
+const WalletOption = ({ icon, isInitializationOver, label, onPress }) =>
   isInitializationOver ? (
     <ButtonPressAnimation scaleTo={0.96} onPress={onPress}>
       <View style={sx.container}>
@@ -63,11 +63,11 @@ const ProfileOption = ({ icon, isInitializationOver, label, onPress }) =>
     </View>
   );
 
-ProfileOption.propTypes = {
+WalletOption.propTypes = {
   icon: PropTypes.string,
   isInitializationOver: PropTypes.bool,
   label: PropTypes.string.isRequired,
   onPress: PropTypes.func,
 };
 
-export default ProfileOption;
+export default WalletOption;

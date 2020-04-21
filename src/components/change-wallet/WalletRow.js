@@ -4,12 +4,13 @@ import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
-// import { abbreviations } from '../../utils';
-// import { TruncatedAddress } from '../text';
 import { removeFirstEmojiFromString } from '../../helpers/emojiHandler';
 import { colors, fonts } from '../../styles';
+import { abbreviations } from '../../utils';
 import { ButtonPressAnimation } from '../animations';
 import { Icon } from '../icons';
+import { TruncatedAddress } from '../text';
+import WalletOption from './WalletOption';
 
 const sx = StyleSheet.create({
   container: {
@@ -78,7 +79,7 @@ const sx = StyleSheet.create({
 //   fontWeight: fonts.weight.semibold,
 // `;
 
-export default class ProfileRow extends Component {
+export default class WalletRow extends Component {
   static propTypes = {
     accountAddress: PropTypes.string.isRequired,
     accountColor: PropTypes.number.isRequired,
@@ -99,6 +100,10 @@ export default class ProfileRow extends Component {
     if (this.props.isInitializationOver && !this.isTouched) {
       this.close();
     }
+  };
+
+  onAddAccount = () => {
+    console.log('TO DO');
   };
 
   onPress = () => {
@@ -153,6 +158,7 @@ export default class ProfileRow extends Component {
 
   render() {
     const {
+      addresses,
       accountAddress,
       accountName,
       accountColor,
@@ -162,71 +168,78 @@ export default class ProfileRow extends Component {
     const avatarSize = isHeader ? 32 : 30;
     const name = accountName ? removeFirstEmojiFromString(accountName) : '';
     return (
-      <Swipeable
-        ref={this.updateRef}
-        friction={2}
-        rightThreshold={20}
-        renderRightActions={this.renderRightActions}
-        onSwipeableWillOpen={() => {
-          this.props.onTransitionEnd(accountAddress);
-          this.isTouched = false;
-        }}
-      >
-        <ButtonPressAnimation
-          scaleTo={0.96}
-          onPress={onPress}
-          onPressStart={() => {
-            this.isTouched = true;
-            this.props.onTouch(accountAddress);
+      <View>
+        <Swipeable
+          ref={this.updateRef}
+          friction={2}
+          rightThreshold={20}
+          renderRightActions={this.renderRightActions}
+          onSwipeableWillOpen={() => {
+            this.props.onTransitionEnd(accountAddress);
+            this.isTouched = false;
           }}
-          onLongPress={this.onLongPress}
         >
-          <View style={[sx.container, { padding: isHeader ? 15 : 10 }]}>
-            <View style={sx.leftSide}>
-              <View
-                style={[
-                  sx.avatarCircle,
-                  {
-                    backgroundColor:
-                      colors.avatarColor[accountColor] || colors.white,
-                    height: avatarSize,
-                    width: avatarSize,
-                  },
-                ]}
-              >
-                <Text
+          <ButtonPressAnimation
+            scaleTo={0.96}
+            onPress={onPress}
+            onPressStart={() => {
+              this.isTouched = true;
+              this.props.onTouch(accountAddress);
+            }}
+            onLongPress={this.onLongPress}
+          >
+            <View style={[sx.container, { padding: isHeader ? 15 : 10 }]}>
+              <View style={sx.leftSide}>
+                <View
                   style={[
-                    sx.firstLetter,
+                    sx.avatarCircle,
                     {
-                      fontSize: isHeader ? 18 : 16,
-                      lineHeight: isHeader ? 31 : 30.5,
-                      marginLeft: isHeader ? 0.5 : 0.2,
+                      backgroundColor:
+                        colors.avatarColor[accountColor] || colors.white,
+                      height: avatarSize,
+                      width: avatarSize,
                     },
                   ]}
                 >
-                  {new GraphemeSplitter().splitGraphemes(accountName)[0]}
-                </Text>
-              </View>
-              <View>
-                <Text style={sx.nickname}>{name}</Text>
-                {/* <TruncatedAddress
-                  firstSectionLength={abbreviations.defaultNumCharsPerSection}
-                  size="smaller"
-                  truncationLength={4}
-                  weight="medium"
-                  address={accountAddress}
-                  style={sx.addressAbbreviation}
-                /> */}
+                  <Text
+                    style={[
+                      sx.firstLetter,
+                      {
+                        fontSize: isHeader ? 18 : 16,
+                        lineHeight: isHeader ? 31 : 30.5,
+                        marginLeft: isHeader ? 0.5 : 0.2,
+                      },
+                    ]}
+                  >
+                    {new GraphemeSplitter().splitGraphemes(accountName)[0]}
+                  </Text>
+                </View>
+                <View>
+                  <Text style={sx.nickname}>{name}</Text>
+                </View>
               </View>
             </View>
-            {/* <MoneyAmountWrapper>
-              <MoneyAmount>
-                $829.24
-              </MoneyAmount>
-            </MoneyAmountWrapper> */}
-          </View>
-        </ButtonPressAnimation>
-      </Swipeable>
+          </ButtonPressAnimation>
+        </Swipeable>
+        <View>
+          {addresses.map(account => (
+            <TruncatedAddress
+              firstSectionLength={abbreviations.defaultNumCharsPerSection}
+              size="smaller"
+              truncationLength={4}
+              weight="medium"
+              address={account.address}
+              style={sx.addressAbbreviation}
+              key={account.address}
+            />
+          ))}
+          <WalletOption
+            icon="plus"
+            label="Add account"
+            onPress={this.onAddAccount}
+          />
+        </View>
+      </View>
     );
   }
 }
