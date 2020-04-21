@@ -1,9 +1,9 @@
-import { captureException } from '@sentry/react-native';
+mport { captureException } from '@sentry/react-native';
 import { toBuffer } from 'ethereumjs-util';
 import { ethers } from 'ethers';
 import { signTypedDataLegacy, signTypedData_v4 } from 'eth-sig-util';
 import lang from 'i18n-js';
-import { get, isEmpty, isNil, orderBy } from 'lodash';
+import { get, isEmpty, isNil } from 'lodash';
 import { Alert } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import {
@@ -19,14 +19,8 @@ import {
   isValidMnemonic,
   web3Provider,
 } from '../handlers/web3';
-import { logger } from '../utils';
 import * as keychain from './keychain';
-import { removeFirstEmojiFromString } from '../helpers/emojiHandler';
 
-const RAINBOW_KEYCHAIN_VERSION = '1.0.0';
-const keychainVersion = 'rainbowKeychainVersion';
-const profiles = 'rainbowProfiles';
-const walletName = 'rainbowWalletName';
 const seedPhraseKey = 'rainbowSeedPhrase';
 const privateKeyKey = 'rainbowPrivateKey';
 const addressKey = 'rainbowAddressKey';
@@ -35,16 +29,12 @@ export function generateSeedPhrase() {
   return ethers.utils.HDNode.entropyToMnemonic(ethers.utils.randomBytes(16));
 }
 
-export const walletInit = async (
-  seedPhrase = null,
-  accountName = null,
-  color = null
-) => {
+export const walletInit = async (seedPhrase = null) => {
   let walletAddress = null;
   let isImported = false;
   let isNew = false;
   if (!isEmpty(seedPhrase)) {
-    const wallet = await createWallet(seedPhrase, accountName, color);
+    const wallet = await createWallet(seedPhrase);
     walletAddress = wallet.address;
     isImported = !isNil(walletAddress);
     return { isImported, isNew, walletAddress };
@@ -59,16 +49,7 @@ export const walletInit = async (
 };
 
 export const loadWallet = async () => {
-  const savedVersion = await loadKeychainVersion();
-  let privateKey = null;
-  if (!savedVersion || savedVersion !== RAINBOW_KEYCHAIN_VERSION) {
-    const seedPhrase = await loadSeedPhrase();
-    const wallet = await createWallet(seedPhrase);
-    privateKey = wallet.privateKey;
-    logger.sentry(`Upgrading keychain version to ${RAINBOW_KEYCHAIN_VERSION}`);
-  } else {
-    privateKey = await loadPrivateKey();
-  }
+  const privateKey = await loadPrivateKey();
   if (privateKey) {
     return new ethers.Wallet(privateKey, web3Provider);
   }
@@ -241,7 +222,7 @@ export const loadAddress = async () => {
   }
 };
 
-export const createWallet = async (seed, name, color) => {
+const createWallet = async seed => {
   const walletSeed = seed || generateSeedPhrase();
   let wallet = null;
   try {
@@ -258,13 +239,7 @@ export const createWallet = async (seed, name, color) => {
       wallet = new ethers.Wallet(node.privateKey);
     }
     if (wallet) {
-      saveWalletDetails(
-        name,
-        color,
-        walletSeed,
-        wallet.privateKey,
-        wallet.address
-      );
+      saveWalletDetails(walletSeed, wallet.privateKey, wallet.address);
       return wallet;
     }
     return null;
@@ -274,17 +249,10 @@ export const createWallet = async (seed, name, color) => {
   }
 };
 
-export const saveWalletDetails = async (
-  name,
-  color,
-  seedPhrase,
-  privateKey,
-  address
-) => {
+const saveWalletDetails = async (seedPhrase, privateKey, address) => {
   const canAuthenticate = await canImplyAuthentication({
     authenticationType: AUTHENTICATION_TYPE.DEVICE_PASSCODE_OR_BIOMETRICS,
   });
-  let accessControlOptions = {};
 
   let isSimulator = false;
 
@@ -292,39 +260,21 @@ export const saveWalletDetails = async (
     isSimulator = __DEV__ && (await DeviceInfo.isEmulator());
   }
 
+  let privateAccessControlOptions = {};
   if (canAuthenticate && !isSimulator) {
-    accessControlOptions = {
+    privateAccessControlOptions = {
       accessControl: ACCESS_CONTROL.USER_PRESENCE,
-      accessible: ACCESSIBLE.WHEN_UNLOCKED,
+      accessible: ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
     };
   }
-  if (!name) {
-    name = 'My Wallet';
-  }
-  if (!color) {
-    color = 0;
-  }
-  
-  saveSeedPhrase(seedPhrase, accessControlOptions);
-  savePrivateKey(privateKey, accessControlOptions);
-  saveAddress(address);
-};
 
-export const saveName = async (name, accessControlOptions = {}) => {
-  await keychain.saveString(walletName, name, accessControlOptions);
-};
+  const publicAccessControlOptions = {
+    accessible: ACCESSIBLE.ALWAYS_THIS_DEVICE_ONLY,
+  };
 
-export const loadName = async (
-  authenticationPrompt = lang.t('wallet.authenticate.please')
-) => {
-  try {
-    const name = await keychain.loadString(walletName, {
-      authenticationPrompt,
-    });
-    return name;
-  } catch (error) {
-    return null;
-  }
+  saveSeedPhrase(seedPhrase, privateAccessControlOptions);
+  savePrivateKey(privateKey, privateAccessControlOptions);
+  saveAddress(address, publicAccessControlOptions);
 };
 
 const saveSeedPhrase = async (seedPhrase, accessControlOptions = {}) => {
@@ -348,9 +298,6 @@ const loadPrivateKey = async (
   }
 };
 
-const saveAddress = async address => {
-  await keychain.saveString(addressKey, address);
+const saveAddress = async (address, accessControlOptions = {}) => {
+  await keychain.saveString(addressKey, address, accessControlOptions);
 };
-
-
-

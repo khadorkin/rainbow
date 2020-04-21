@@ -4,6 +4,7 @@ import actionSheetManager from './actionSheetManager';
 import addCash from './addCash';
 import contacts from './contacts';
 import data from './data';
+import editOptions from './editOptions';
 import explorer from './explorer';
 import gas from './gas';
 import imageDimensionsCache from './imageDimensionsCache';
@@ -20,6 +21,7 @@ import savings from './savings';
 import selectedInput from './selectedInput';
 import selectedWithFab from './selectedWithFab';
 import settings from './settings';
+import showcaseTokens from './showcaseTokens';
 import uniqueTokens from './uniqueTokens';
 import uniswap from './uniswap';
 import walletconnect from './walletconnect';
@@ -29,6 +31,7 @@ export default combineReducers({
   addCash,
   contacts,
   data,
+  editOptions,
   explorer,
   gas,
   imageDimensionsCache,
@@ -45,6 +48,7 @@ export default combineReducers({
   selectedInput,
   selectedWithFab,
   settings,
+  showcaseTokens,
   uniqueTokens,
   uniswap,
   walletconnect,

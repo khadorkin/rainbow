@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { getAccountInfo } from '../handlers/localstorage/accountLocal';
+import runMigrations from '../model/migrations';
 import { walletInit } from '../model/wallet';
 import runMigrations from '../model/migrations';
 import { setIsWalletEthZero } from '../redux/isWalletEthZero';

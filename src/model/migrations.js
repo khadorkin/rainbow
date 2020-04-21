@@ -1,13 +1,10 @@
+import { ACCESSIBLE } from 'react-native-keychain';
 import {
   getMigrationVersion,
   setMigrationVersion,
 } from '../handlers/localstorage/migrations';
 
-import {
-  loadUsersInfo,
-  saveWalletDetails,
-  loadCurrentUserInfo,
-} from '../model/wallet';
+import { loadAddress, saveAddress } from '../model/wallet';
 
 import { logger } from '../utils';
 
@@ -16,7 +13,22 @@ export default async function runMigrations() {
   const currentVersion = Number(await getMigrationVersion());
   const migrations = [];
 
+  /***** Migration v0 starts here  *****/
+  const v0 = async () => {
+    const walletAddress = await loadAddress();
+    const publicAccessControlOptions = {
+      accessible: ACCESSIBLE.ALWAYS_THIS_DEVICE_ONLY,
+    };
+    if (walletAddress) {
+      saveAddress(walletAddress, publicAccessControlOptions);
+    }
+  };
+
+  migrations.push(v0);
+
   /***** Migration v0 ends here  *****/
+
+ /***** Migration v1 starts here  *****/
   const v1 = async () => {
     let profiles = await loadUsersInfo();
     if (!profiles || profiles.length === 0) {
@@ -42,7 +54,7 @@ export default async function runMigrations() {
 
   migrations.push(v1);
 
-  /***** Migration v0 ends here  *****/
+  /***** Migration v1 ends here  *****/
 
   logger.log(
     'Migrations: ready to run migrations starting on number',

@@ -6,13 +6,13 @@ const migrationsVersion = '0.0.1';
 
 /**
  * @desc get migrations
- * @return {Object}
+ * @return {Number}
  */
 export const getMigrationVersion = () =>
-  getGlobal(MIGRATION_VERSION, [], migrationsVersion);
+  getGlobal(MIGRATION_VERSION, 0, migrationsVersion);
 
 /**
  * @desc save migrations
  */
-export const setMigrationVersion = migrations =>
-  saveGlobal(MIGRATION_VERSION, migrations, migrationsVersion);
+export const setMigrationVersion = migration =>
+  saveGlobal(MIGRATION_VERSION, migration, migrationsVersion);

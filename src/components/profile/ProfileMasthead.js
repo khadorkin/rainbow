@@ -9,7 +9,7 @@ import GraphemeSplitter from 'grapheme-splitter';
 import styled from 'styled-components/primitives';
 import AvatarImageSource from '../../assets/avatar.png';
 import { isAvatarPickerAvailable } from '../../config/experimental';
-import { useAccountData, useClipboard } from '../../hooks';
+import { useAccountSettings, useClipboard } from '../../hooks';
 import { colors, borders } from '../../styles';
 import { abbreviations } from '../../utils';
 import CopyTooltip from '../copy-tooltip';
@@ -54,7 +54,7 @@ const ProfileMasthead = ({
 }) => {
   const name = accountName || 'My Wallet';
   const color = accountColor || 0;
-  const { accountENS } = useAccountData();
+  const { accountENS } = useAccountSettings();
   const { setClipboard } = useClipboard();
   const { navigate } = useNavigation();
 
