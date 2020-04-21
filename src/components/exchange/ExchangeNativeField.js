@@ -1,7 +1,7 @@
 import { pick } from 'lodash';
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
-import { TouchableWithoutFeedback } from 'react-native';
+import { StyleSheet, TouchableWithoutFeedback } from 'react-native';
 import { withProps } from 'recompact';
 import supportedNativeCurrencies from '../../references/native-currencies.json';
 import { colors, fonts } from '../../styles';
@@ -9,6 +9,12 @@ import { isNewValueForPath } from '../../utils';
 import { Row } from '../layout';
 import { Text } from '../text';
 import ExchangeInput from './ExchangeInput';
+
+const sx = StyleSheet.create({
+  text: {
+    marginBottom: 0.5,
+  },
+});
 
 class ExchangeNativeField extends Component {
   static propTypes = {
@@ -95,9 +101,10 @@ class ExchangeNativeField extends Component {
       <TouchableWithoutFeedback flex={0} onPress={this.focusNativeField}>
         <Row align="center" flex={1} height={height}>
           <Text
+            color={color}
             flex={0}
             size="large"
-            style={{ color, marginBottom: 0.5 }}
+            style={sx.text}
             weight="regular"
           >
             {symbol}

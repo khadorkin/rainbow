@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import FastImage from 'react-native-fast-image';
 import Animated, { Easing } from 'react-native-reanimated';
 import { toRad, useTimingTransition } from 'react-native-redash';
@@ -15,6 +16,12 @@ const AnimatedFastImage = Animated.createAnimatedComponent(FastImage);
 
 const TokenFamilyHeaderAnimationDuration = 200;
 const TokenFamilyHeaderHeight = 50;
+
+const sx = StyleSheet.create({
+  text: {
+    marginBottom: 1,
+  },
+});
 
 const TokenFamilyHeader = ({
   childrenAmount,
@@ -60,7 +67,7 @@ const TokenFamilyHeader = ({
             letterSpacing="roundedMedium"
             lineHeight="normal"
             size="large"
-            style={{ marginBottom: 1 }}
+            style={sx.text}
             weight="semibold"
           >
             {title}
@@ -77,7 +84,7 @@ const TokenFamilyHeader = ({
               color="dark"
               letterSpacing="roundedTight"
               size="large"
-              style={{ marginBottom: 1 }}
+              style={sx.text}
             >
               {childrenAmount}
             </Text>

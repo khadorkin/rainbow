@@ -66,7 +66,6 @@ const enhanceRenderItem = compose(
 );
 
 const TokenItem = enhanceRenderItem(BalanceCoinRow);
-const UniswapCardItem = enhanceRenderItem(UniswapInvestmentCard);
 
 const balancesSkeletonRenderItem = item => (
   <AssetListItemSkeleton animated descendingOpacity={false} {...item} />
@@ -80,7 +79,7 @@ const tokenFamilyItem = item => (
   <CollectibleTokenFamily {...item} uniqueId={item.uniqueId} />
 );
 const uniswapRenderItem = item => (
-  <UniswapCardItem {...item} assetType="uniswap" isCollapsible />
+  <UniswapInvestmentCard {...item} assetType="uniswap" isCollapsible />
 );
 
 const filterWalletSections = sections =>

@@ -40,8 +40,8 @@ const UniqueTokenRow = React.memo(({ item }) => {
           {...position.sizeAsObject(CardSize)}
           item={uniqueToken}
           key={uniqueToken.uniqueId}
+          marginLeft={itemIndex >= 1 ? CardMargin : 0}
           onPress={handleItemPress}
-          style={{ marginLeft: itemIndex >= 1 ? CardMargin : 0 }}
         />
       ))}
     </Row>
