@@ -6,7 +6,7 @@ const sx = StyleSheet.create({
   divider: {
     backgroundColor: colors.blueGreyLighter,
     height: 2,
-    opacity: 0.04,
+    opacity: 1,
     width: '100%',
   },
   dividerWrapper: {

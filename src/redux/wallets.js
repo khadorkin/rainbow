@@ -1,4 +1,5 @@
 import {
+  generateAccount,
   getAllWallets,
   getSelectedWallet,
   loadAddress,
@@ -55,6 +56,34 @@ export const addressSetSelected = address => dispatch => {
   dispatch({
     payload: address,
     type: WALLETS_SET_SELECTED_ADDRESS,
+  });
+};
+
+export const createAccountForWallet = id => async (dispatch, getState) => {
+  console.log('creating account for wallet', id);
+  const {
+    wallets: { wallets },
+  } = getState().wallets;
+  console.log('wallets', wallets);
+  let index = 0;
+  wallets[id].addresses.forEach(
+    account => (index = Math.max(index, account.index))
+  );
+  const newIndex = index + 1;
+  console.log('new index is gonna be ', newIndex);
+  const account = await generateAccount(id, newIndex);
+  console.log('got account', newIndex);
+  wallets[id].addresses.push({
+    address: account.address,
+    index: newIndex,
+    label: '',
+    visible: true,
+  });
+  console.log('saving all wallets', JSON.stringify(wallets, null, 2));
+  saveAllWallets(wallets);
+  dispatch({
+    payload: wallets,
+    type: WALLETS_UPDATE,
   });
 };
 

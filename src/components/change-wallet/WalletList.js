@@ -8,16 +8,23 @@ import {
   LayoutProvider,
   RecyclerListView,
 } from 'recyclerlistview';
-import { removeFirstEmojiFromString } from '../../helpers/emojiHandler';
 import { deviceUtils } from '../../utils';
+import AddressOption from './AddressOption';
+import AddressRow from './AddressRow';
 import WalletDivider from './WalletDivider';
 import WalletOption from './WalletOption';
 import WalletRow from './WalletRow';
 
+let position = 0;
 const rowHeight = 50;
 const lastRowPadding = 10;
 
-let position = 0;
+const RowTypes = {
+  ADDRESS: 0,
+  ADDRESS_OPTION: 1,
+  WALLET: 2,
+  WALLET_OPTION: 3,
+};
 
 const WALLET_ROW = 1;
 const WALLET_LAST_ROW = 2;
@@ -32,75 +39,86 @@ class WalletList extends React.Component {
   static propTypes = {
     accountAddress: PropTypes.string,
     allWallets: PropTypes.array,
-    currentWallet: PropTypes.object,
     height: PropTypes.number,
     navigation: PropTypes.object,
-    onChangeWallet: PropTypes.func,
-    onCloseEditWalletModal: PropTypes.func,
-    onDeleteWallet: PropTypes.func,
-    onPressImportSeedPhrase: PropTypes.func,
   };
 
   constructor(args) {
     super(args);
 
-    this.state = {
-      wallets: [],
-    };
-
-    this._layoutProvider = new LayoutProvider(
-      i => {
-        if (this.props.allWallets && i < this.props.allWallets.length) {
-          return WALLET_ROW;
-        }
-        return WALLET_LAST_ROW;
-      },
-      (type, dim) => {
-        if (type === WALLET_ROW) {
-          dim.width = deviceUtils.dimensions.width;
-          dim.height = rowHeight;
-        } else if (type === WALLET_LAST_ROW) {
-          dim.width = deviceUtils.dimensions.width;
-          dim.height = rowHeight + lastRowPadding;
-        } else {
-          dim.width = 0;
-          dim.height = 0;
-        }
-      }
-    );
     this._renderRow = this._renderRow.bind(this);
     this.currentlyOpenWallet = undefined;
     this.touchedContact = undefined;
     this.recentlyRendered = false;
+    let rows = [];
+    if (this.props.allWallets) {
+      Object.keys(this.props.allWallets).forEach(key => {
+        const wallet = this.props.allWallets[key];
+        rows.push({ ...wallet, rowType: RowTypes.WALLET });
+        wallet.addresses.forEach(account => {
+          rows.push({
+            ...account,
+            rowType: RowTypes.ADDRESS,
+          });
+        });
+        rows.push({
+          icon: 'plus',
+          label: 'Add account',
+          onPress: () => this.props.onAddAccount(wallet.id),
+          rowType: RowTypes.ADDRESS_OPTION,
+        });
+      });
+      rows.push({
+        icon: 'arrowBack',
+        label: 'Import a Wallet',
+        onPress: this.props.onPressImportSeedPhrase,
+        rowType: RowTypes.WALLET_OPTION,
+      });
+
+      const dataProvider = new DataProvider((r1, r2) => {
+        if (r1.id !== r2.id) {
+          return true;
+        }
+        return false;
+      }).cloneWithRows(rows);
+
+      this.layoutProvider = new LayoutProvider(
+        i => {
+          if (i === rows.length - 1) {
+            return WALLET_LAST_ROW;
+          } else {
+            return rows[i].rowType;
+          }
+        },
+        (type, dim) => {
+          if (type === RowTypes.WALLET) {
+            dim.width = deviceUtils.dimensions.width;
+            dim.height = rowHeight + 10;
+          } else if (type === RowTypes.WALLET_OPTION) {
+            dim.width = deviceUtils.dimensions.width;
+            dim.height = rowHeight;
+          } else if (type === RowTypes.ADDRESS) {
+            dim.width = deviceUtils.dimensions.width;
+            dim.height = rowHeight;
+          } else if (type === RowTypes.ADDRESS_OPTION) {
+            dim.width = deviceUtils.dimensions.width;
+            dim.height = rowHeight;
+          } else if (type === WALLET_LAST_ROW) {
+            dim.width = deviceUtils.dimensions.width;
+            dim.height = rowHeight + lastRowPadding;
+          } else {
+            dim.width = 0;
+            dim.height = 0;
+          }
+        }
+      );
+
+      this.state = {
+        dataProvider,
+        rows,
+      };
+    }
   }
-
-  componentWillReceiveProps = props => {
-    const newItems = Object.assign([], props.allWallets || []);
-    for (let i = 0; i < newItems.length; i++) {
-      if (this.props.accountAddress === newItems[i].address.toLowerCase()) {
-        newItems.splice(i, 1);
-        break;
-      }
-    }
-
-    newItems.push({
-      icon: 'arrowBack',
-      isOption: true,
-      label: 'Import a Wallet',
-      onPress: this.props.onPressImportSeedPhrase,
-    });
-
-    if (newItems !== this.state.wallets) {
-      this.setState({ wallets: newItems });
-    }
-  };
-
-  shouldComponentUpdate = () => {
-    if (position < 0) {
-      return false;
-    }
-    return true;
-  };
 
   closeAllDifferentContacts = address => {
     this.lastTouchedContact = this.touchedContact;
@@ -109,142 +127,68 @@ class WalletList extends React.Component {
     this.setState({ touchedContact: address });
   };
 
-  renderItem = item =>
-    item.isOption ? (
-      <WalletOption
-        icon={item.icon}
-        label={item.label}
-        onPress={item.onPress}
-      />
-    ) : (
-      <WalletRow
-        key={item.address}
-        accountName={item.name}
-        accountColor={item.color}
-        accountAddress={item.address}
-        onPress={() => this.props.onChangeWallet(item)}
-        onEditWallet={() =>
-          this.props.navigation.navigate('ExpandedAssetScreen', {
-            address: item.address,
-            asset: [],
-            isCurrentWallet: false,
-            item,
-            onCloseModal: editedWallet => {
-              this.props.onCloseEditWalletModal(editedWallet);
-              this.props.onDeleteWallet(editedWallet.address);
-            },
-            type: 'profile_creator',
-          })
-        }
-        onTouch={this.closeAllDifferentContacts}
-        onTransitionEnd={this.changeCurrentlyUsedContact}
-        currentlyOpenWallet={this.touchedContact}
-      />
-    );
+  renderItem = item => {
+    switch (item.rowType) {
+      case RowTypes.WALLET_OPTION:
+        return (
+          <WalletOption
+            icon={item.icon}
+            label={item.label}
+            onPress={item.onPress}
+          />
+        );
+      case RowTypes.ADDRESS_OPTION:
+        return (
+          <AddressOption
+            icon={item.icon}
+            label={item.label}
+            onPress={item.onPress}
+          />
+        );
+      case RowTypes.WALLET:
+        return (
+          <WalletRow
+            id={item.id}
+            accountName={item.name}
+            accountColor={item.color}
+            addresses={item.addresses}
+            selectedAddress={this.props.accountAddress}
+            onPress={() => this.props.navigation.goBack()}
+            onTouch={this.closeAllDifferentContacts}
+            onTransitionEnd={this.changeCurrentlyUsedContact}
+            isInitializationOver
+          />
+        );
+      case RowTypes.ADDRESS:
+        return (
+          <AddressRow
+            data={item}
+            selectedAddress={this.props.accountAddress}
+            onPress={() => console.log('yo')}
+          />
+        );
+    }
+  };
 
   _renderRow(type, data) {
     return this.renderItem(data);
   }
-
-  filterContactList = (
-    list,
-    searchPhrase,
-    searchParameter = false,
-    separator = ' '
-  ) => {
-    const filteredList = [];
-    if (list && searchPhrase.length > 0) {
-      for (let i = 0; i < list.length; i++) {
-        const searchedItem = searchParameter
-          ? list[i][searchParameter]
-          : list[i];
-        const splitedWordList = searchedItem.split(separator);
-        splitedWordList.push(searchedItem);
-        splitedWordList.push(removeFirstEmojiFromString(searchedItem).join(''));
-        for (let j = 0; j < splitedWordList.length; j++) {
-          if (
-            splitedWordList[j]
-              .toLowerCase()
-              .startsWith(searchPhrase.toLowerCase())
-          ) {
-            filteredList.push(list[i]);
-            break;
-          }
-        }
-      }
-    } else {
-      return list;
-    }
-    return filteredList;
-  };
 
   changeCurrentlyUsedContact = address => {
     this.currentlyOpenWallet = address;
   };
 
   render() {
-    const {
-      accountAddress,
-      currentWallet,
-      height,
-      navigation,
-      onCloseEditWalletModal,
-    } = this.props;
+    const { height } = this.props;
+
     return (
       <View style={sx.container}>
-        {currentWallet && (
-          <WalletRow
-            accountName={currentWallet.name}
-            accountColor={currentWallet.color}
-            addresses={currentWallet.addresses}
-            selectedAddress={accountAddress}
-            isHeader
-            onPress={() => navigation.goBack()}
-            onEditWallet={() =>
-              navigation.navigate('ExpandedAssetScreen', {
-                address: currentWallet.address,
-                asset: [],
-                isCurrentWallet: true,
-                onCloseModal: editedWallet =>
-                  onCloseEditWalletModal(editedWallet),
-                profile: currentWallet,
-                type: 'profile_creator',
-              })
-            }
-            onTouch={this.closeAllDifferentContacts}
-            onTransitionEnd={this.changeCurrentlyUsedContact}
-            isInitializationOver
-          />
-        )}
         <WalletDivider />
         <View style={{ height }}>
           <RecyclerListView
             rowRenderer={this._renderRow}
-            dataProvider={new DataProvider((r1, r2) => {
-              if (this.isInitalized) {
-                if (r2 === this.state.wallets[this.state.wallets.length - 2]) {
-                  this.isInitalized = false;
-                }
-                return true;
-              }
-              if (
-                this.touchedContact !== r2.address &&
-                this.lastTouchedContact === r2.address &&
-                this.currentlyOpenWallet &&
-                this.touchedContact !== this.currentlyOpenWallet &&
-                !this.recentlyRendered
-              ) {
-                if (r2 === this.state.wallets[this.state.wallets.length - 2]) {
-                  this.recentlyRendered = true;
-                }
-                return true;
-              }
-              if (r1 !== r2) {
-                return true;
-              }
-              return false;
-            }).cloneWithRows(this.state.wallets)}
-            layoutProvider={this._layoutProvider}
+            dataProvider={this.state.dataProvider}
+            layoutProvider={this.layoutProvider}
             onScroll={(event, _offsetX, offsetY) => {
               position = offsetY;
             }}

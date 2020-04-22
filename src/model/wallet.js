@@ -26,6 +26,7 @@ const privateKeyKey = 'rainbowPrivateKey';
 const addressKey = 'rainbowAddressKey';
 const selectedWalletKey = 'rainbowSelectedWalletKey';
 const allWalletsKey = 'rainbowAllWalletsKey';
+const seedPhraseMigratedKey = 'rainbowSeedPhraseMigratedKey';
 
 const privateKeyVersion = 1.0;
 const seedPhraseVersion = 1.0;
@@ -241,8 +242,8 @@ const createWallet = async seed => {
     } else if (isValidMnemonic(walletSeed)) {
       wallet = ethers.Wallet.fromMnemonic(walletSeed);
     } else {
-      let hdnode = ethers.utils.HDNode.fromSeed(walletSeed);
-      let node = hdnode.derivePath("m/44'/60'/0'/0/0");
+      const hdnode = ethers.utils.HDNode.fromSeed(walletSeed);
+      const node = hdnode.derivePath("m/44'/60'/0'/0/0");
       wallet = new ethers.Wallet(node.privateKey);
     }
     if (wallet) {
@@ -446,5 +447,62 @@ export const getAllWallets = async (
   } catch (error) {
     captureException(error);
     return null;
+  }
+};
+
+export const generateAccount = async (id, index) => {
+  try {
+    const authenticationPrompt = lang.t('wallet.authenticate.please');
+    const isSeedPhraseMigrated = await keychain.loadString(
+      seedPhraseMigratedKey,
+      {
+        authenticationPrompt,
+      }
+    );
+    let seedPhrase;
+    // We need to migrate the seedphrase & private key first
+    if (!isSeedPhraseMigrated) {
+      const publicAccessControlOptions = {
+        accessible: ACCESSIBLE.ALWAYS_THIS_DEVICE_ONLY,
+      };
+      seedPhrase = await loadSeedPhrase();
+      console.log('got seedphrase', seedPhrase);
+      // Regenerate the existing private key to store it with the new format
+      const hdnode = ethers.utils.HDNode.fromMnemonic(seedPhrase);
+      console.log('got hdnode', hdnode);
+      const node = hdnode.derivePath(`m/44'/60'/0'/0/0`);
+      console.log('got node', node);
+      const existingAccount = new ethers.Wallet(node.privateKey);
+      console.log('got existing account regenerated', existingAccount);
+      await newSavePrivateKey(
+        existingAccount.address,
+        existingAccount.privateKey
+      );
+      await newSaveSeedPhrase(seedPhrase, id);
+      await keychain.saveString(
+        seedPhraseMigratedKey,
+        'true',
+        publicAccessControlOptions
+      );
+    } else {
+      const seedData = await newGetSeedPhrase(id);
+      seedPhrase = seedData.seedphrase;
+      console.log('got seedPhrase', seedPhrase);
+    }
+
+    if (!seedPhrase) {
+      throw new Error(`Can't access seed phrase to create new accounts`);
+    }
+
+    const hdnode = ethers.utils.HDNode.fromMnemonic(seedPhrase);
+    const node = hdnode.derivePath(`m/44'/60'/0'/0/${index}`);
+    console.log('got node', node);
+    const account = new ethers.Wallet(node.privateKey);
+    console.log('got account', node);
+    await newSavePrivateKey(account.address, account.privateKey);
+    console.log('gucci');
+    return account;
+  } catch (error) {
+    console.log('Error generating account for keychain', id, error);
   }
 };

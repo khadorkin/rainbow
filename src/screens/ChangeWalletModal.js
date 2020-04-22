@@ -6,26 +6,39 @@ import WalletList from '../components/change-wallet/WalletList';
 import { LoadingOverlay, Modal } from '../components/modal';
 // import { removeFirstEmojiFromString } from '../helpers/emojiHandler';
 import { useCreateWallet, useSelectWallet, useWallets } from '../hooks';
+import store from '../redux/store';
+import { createAccountForWallet } from '../redux/wallets';
 
-const headerHeight = 68;
 const walletRowHeight = 54;
 
 const ChangeWalletModal = () => {
   const {
-    wallets,
+    wallets: { wallets },
     selected: { wallet: selectedWallet },
     address: accountAddress,
   } = useWallets();
+
   const { goBack, navigate } = useNavigation();
   const createNewWallet = useCreateWallet();
   const selectWallet = useSelectWallet();
   const [isCreatingWallet, setIsCreatingWallet] = useState(false);
   //const [isChangingWallet, setIsChangingWallet] = useState(false);
-
-  const size = wallets ? Object.keys(wallets).length - 1 : 0;
-  let listHeight = walletRowHeight * 2 + walletRowHeight * size;
-  if (listHeight > 258) {
-    listHeight = 258;
+  let rowsCount = 0;
+  if (wallets) {
+    Object.keys(wallets).forEach(key => {
+      // Wallet header
+      rowsCount += 1;
+      // Addresses
+      rowsCount += wallets[key].addresses.length;
+      // Add account
+      rowsCount += 1;
+    });
+    // Import wallet
+    rowsCount += 1;
+  }
+  let listHeight = walletRowHeight * rowsCount;
+  if (listHeight > 298) {
+    listHeight = 298;
   }
 
   const onChangeWallet = useCallback(
@@ -111,6 +124,11 @@ const ChangeWalletModal = () => {
 
   const onCloseModal = useCallback(() => goBack(), [goBack]);
 
+  const onAddAccount = async wallet_id => {
+    console.log(wallet_id);
+    store.dispatch(createAccountForWallet(wallet_id));
+  };
+
   const onDeleteWallet = useCallback(
     deleteAddress => console.log('TODO', deleteAddress),
     []
@@ -126,20 +144,21 @@ const ChangeWalletModal = () => {
       {isCreatingWallet && <LoadingOverlay title="Creating Wallet..." />}
       <Modal
         fixedToTop
-        height={headerHeight + listHeight}
+        height={listHeight + 30}
         onCloseModal={onCloseModal}
         style={{ borderRadius: 18 }}
       >
         <WalletList
           currentWallet={selectedWallet}
           accountAddress={accountAddress}
-          allAssets={wallets}
+          allWallets={wallets}
           height={listHeight}
           onChangeWallet={onChangeWallet}
           onCloseEditWalletModal={onCloseEditWalletModal}
           onDeleteWallet={onDeleteWallet}
           onPressCreateWallet={onPressCreateWallet}
           onPressImportSeedPhrase={onPressImportSeedPhrase}
+          onAddAccount={onAddAccount}
         />
       </Modal>
     </View>

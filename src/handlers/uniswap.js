@@ -233,6 +233,7 @@ export const getLiquidityInfo = async (
   exchangeContracts,
   pairs
 ) => {
+  console.log('getting liquidity info');
   const promises = map(exchangeContracts, async exchangeAddress => {
     try {
       const ethReserveCall = web3Provider.getBalance(exchangeAddress);
