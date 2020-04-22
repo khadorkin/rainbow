@@ -1,11 +1,11 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import { InteractionManager, StatusBar, View } from 'react-native';
 // import { orderBy } from 'lodash';
 import { useNavigation } from 'react-navigation-hooks';
 import WalletList from '../components/change-wallet/WalletList';
-import { LoadingOverlay, Modal } from '../components/modal';
+import { Modal } from '../components/modal';
 // import { removeFirstEmojiFromString } from '../helpers/emojiHandler';
-import { useCreateWallet, useSelectWallet, useWallets } from '../hooks';
+import { useWallets } from '../hooks';
 import store from '../redux/store';
 import { createAccountForWallet } from '../redux/wallets';
 
@@ -19,9 +19,6 @@ const ChangeWalletModal = () => {
   } = useWallets();
 
   const { goBack, navigate } = useNavigation();
-  const createNewWallet = useCreateWallet();
-  const selectWallet = useSelectWallet();
-  const [isCreatingWallet, setIsCreatingWallet] = useState(false);
   //const [isChangingWallet, setIsChangingWallet] = useState(false);
   let rowsCount = 0;
   if (wallets) {
@@ -43,7 +40,7 @@ const ChangeWalletModal = () => {
 
   const onChangeWallet = useCallback(
     async wallet => {
-      await selectWallet(wallet.address);
+      console.log('todo', wallet);
       await goBack();
       InteractionManager.runAfterInteractions(() => {
         navigate('WalletScreen');
@@ -52,34 +49,8 @@ const ChangeWalletModal = () => {
         }, 200);
       });
     },
-    [goBack, navigate, selectWallet]
+    [goBack, navigate]
   );
-
-  const onPressCreateWallet = useCallback(async () => {
-    navigate('ExpandedAssetScreen', {
-      actionType: 'Create',
-      address: undefined,
-      asset: [],
-      isCurrentWallet: false,
-      isNewWallet: true,
-      onCloseModal: isCanceled => {
-        if (!isCanceled) {
-          setIsCreatingWallet(true);
-          setTimeout(async () => {
-            // initializeWallet(TBD);
-            await createNewWallet();
-            goBack();
-            // timeout to give time for modal to close
-            setTimeout(() => {
-              navigate('WalletScreen');
-            }, 200);
-          }, 20);
-        }
-      },
-      profile: {},
-      type: 'profile_creator',
-    });
-  }, [createNewWallet, goBack, navigate]);
 
   const onCloseEditWalletModal = useCallback(
     // eslint-disable-next-line no-unused-vars
@@ -141,7 +112,7 @@ const ChangeWalletModal = () => {
 
   return (
     <View>
-      {isCreatingWallet && <LoadingOverlay title="Creating Wallet..." />}
+      {/* {isCreatingWallet && <LoadingOverlay title="Creating Wallet..." />} */}
       <Modal
         fixedToTop
         height={listHeight + 30}
@@ -156,7 +127,6 @@ const ChangeWalletModal = () => {
           onChangeWallet={onChangeWallet}
           onCloseEditWalletModal={onCloseEditWalletModal}
           onDeleteWallet={onDeleteWallet}
-          onPressCreateWallet={onPressCreateWallet}
           onPressImportSeedPhrase={onPressImportSeedPhrase}
           onAddAccount={onAddAccount}
         />

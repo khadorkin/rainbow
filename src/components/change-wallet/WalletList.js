@@ -15,7 +15,6 @@ import WalletDivider from './WalletDivider';
 import WalletOption from './WalletOption';
 import WalletRow from './WalletRow';
 
-let position = 0;
 const rowHeight = 50;
 const lastRowPadding = 10;
 
@@ -24,10 +23,9 @@ const RowTypes = {
   ADDRESS_OPTION: 1,
   WALLET: 2,
   WALLET_OPTION: 3,
+  // eslint-disable-next-line sort-keys
+  LAST_ROW: 4,
 };
-
-const WALLET_ROW = 1;
-const WALLET_LAST_ROW = 2;
 
 const sx = StyleSheet.create({
   container: {
@@ -85,7 +83,7 @@ class WalletList extends React.Component {
       this.layoutProvider = new LayoutProvider(
         i => {
           if (i === rows.length - 1) {
-            return WALLET_LAST_ROW;
+            return RowTypes.LAST_ROW;
           } else {
             return rows[i].rowType;
           }
@@ -103,7 +101,7 @@ class WalletList extends React.Component {
           } else if (type === RowTypes.ADDRESS_OPTION) {
             dim.width = deviceUtils.dimensions.width;
             dim.height = rowHeight;
-          } else if (type === WALLET_LAST_ROW) {
+          } else if (type === RowTypes.LAST_ROW) {
             dim.width = deviceUtils.dimensions.width;
             dim.height = rowHeight + lastRowPadding;
           } else {
@@ -167,6 +165,8 @@ class WalletList extends React.Component {
             onPress={() => console.log('yo')}
           />
         );
+      default:
+        return null;
     }
   };
 
@@ -189,9 +189,6 @@ class WalletList extends React.Component {
             rowRenderer={this._renderRow}
             dataProvider={this.state.dataProvider}
             layoutProvider={this.layoutProvider}
-            onScroll={(event, _offsetX, offsetY) => {
-              position = offsetY;
-            }}
             optimizeForInsertDeleteAnimations
           />
         </View>

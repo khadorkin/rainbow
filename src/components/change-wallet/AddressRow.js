@@ -2,8 +2,6 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
-import store from '../../redux/store';
-import { createAccountForWallet } from '../../redux/wallets';
 import { colors, fonts } from '../../styles';
 import { abbreviations } from '../../utils';
 import { ButtonPressAnimation } from '../animations';
