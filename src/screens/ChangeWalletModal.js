@@ -95,7 +95,7 @@ const ChangeWalletModal = () => {
 
   const onCloseModal = useCallback(() => goBack(), [goBack]);
 
-  const onAddAccount = async wallet_id => {
+  const onPressAddAccount = async wallet_id => {
     console.log(wallet_id);
     store.dispatch(createAccountForWallet(wallet_id));
   };
@@ -128,7 +128,7 @@ const ChangeWalletModal = () => {
           onCloseEditWalletModal={onCloseEditWalletModal}
           onDeleteWallet={onDeleteWallet}
           onPressImportSeedPhrase={onPressImportSeedPhrase}
-          onAddAccount={onAddAccount}
+          onPressAddAccount={onPressAddAccount}
         />
       </Modal>
     </View>
