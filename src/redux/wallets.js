@@ -2,7 +2,6 @@ import {
   generateAccount,
   getAllWallets,
   getSelectedWallet,
-  loadAddress,
   saveAddress,
   saveAllWallets,
   setSelectedWallet,
@@ -12,7 +11,6 @@ import {
 const WALLETS_UPDATE = 'wallets/ALL_WALLETS_UPDATE';
 const WALLETS_LOAD = 'wallets/ALL_WALLETS_LOAD';
 const WALLETS_SET_SELECTED = 'wallets/SET_SELECTED';
-const WALLETS_SET_SELECTED_ADDRESS = 'wallets/SET_SELECTED_ADDRESS';
 
 // -- Actions ---------------------------------------- //
 export const walletsLoadState = () => async dispatch => {
@@ -22,11 +20,8 @@ export const walletsLoadState = () => async dispatch => {
     console.log('[redux-wallets] - wallets', wallets);
     const selected = await getSelectedWallet();
     console.log('[redux-wallets] - selected', selected);
-    const address = await loadAddress();
-    console.log('[redux-wallets] - address', address);
     dispatch({
       payload: {
-        address,
         selected,
         wallets,
       },
@@ -51,12 +46,8 @@ export const walletsSetSelected = wallet => dispatch => {
     type: WALLETS_SET_SELECTED,
   });
 };
-export const addressSetSelected = address => dispatch => {
+export const addressSetSelected = address => () => {
   saveAddress(address);
-  dispatch({
-    payload: address,
-    type: WALLETS_SET_SELECTED_ADDRESS,
-  });
 };
 
 export const createAccountForWallet = id => async (dispatch, getState) => {
@@ -87,15 +78,12 @@ export const createAccountForWallet = id => async (dispatch, getState) => {
 
 // -- Reducer ----------------------------------------- //
 const INITIAL_STATE = {
-  address: null,
   selected: null,
   wallets: null,
 };
 
 export default (state = INITIAL_STATE, action) => {
   switch (action.type) {
-    case WALLETS_SET_SELECTED_ADDRESS:
-      return { ...state, address: action.payload };
     case WALLETS_SET_SELECTED:
       return { ...state, selected: action.payload };
     case WALLETS_UPDATE:
@@ -103,7 +91,6 @@ export default (state = INITIAL_STATE, action) => {
     case WALLETS_LOAD:
       return {
         ...state,
-        address: action.payload.address,
         selected: action.payload.selected,
         wallets: action.payload.wallets,
       };

@@ -1,13 +1,15 @@
 import React, { useCallback } from 'react';
-import { InteractionManager, StatusBar, View } from 'react-native';
-// import { orderBy } from 'lodash';
+import { View } from 'react-native';
 import { useNavigation } from 'react-navigation-hooks';
 import WalletList from '../components/change-wallet/WalletList';
 import { Modal } from '../components/modal';
-// import { removeFirstEmojiFromString } from '../helpers/emojiHandler';
-import { useWallets } from '../hooks';
+import { useAccountSettings, useInitializeWallet, useWallets } from '../hooks';
 import store from '../redux/store';
-import { createAccountForWallet } from '../redux/wallets';
+import {
+  addressSetSelected,
+  createAccountForWallet,
+  walletsSetSelected,
+} from '../redux/wallets';
 
 const walletRowHeight = 54;
 
@@ -15,11 +17,11 @@ const ChangeWalletModal = () => {
   const {
     wallets,
     selected: { wallet: selectedWallet },
-    address: accountAddress,
   } = useWallets();
 
   const { goBack, navigate } = useNavigation();
-  //const [isChangingWallet, setIsChangingWallet] = useState(false);
+  const { accountAddress } = useAccountSettings();
+  const initializeWallet = useInitializeWallet();
   let rowsCount = 0;
   if (wallets) {
     Object.keys(wallets).forEach(key => {
@@ -38,18 +40,25 @@ const ChangeWalletModal = () => {
     listHeight = 298;
   }
 
-  const onChangeWallet = useCallback(
-    async wallet => {
-      console.log('todo', wallet);
-      await goBack();
-      InteractionManager.runAfterInteractions(() => {
-        navigate('WalletScreen');
-        setTimeout(() => {
-          StatusBar.setBarStyle('dark-content');
-        }, 200);
-      });
+  const onChangeAccount = useCallback(
+    async (wallet_id, address) => {
+      try {
+        console.log('onchange account', wallet_id, address);
+        const wallet = wallets[wallet_id];
+        store.dispatch(walletsSetSelected(wallet));
+        store.dispatch(addressSetSelected(address));
+        console.log('dispatching done');
+        console.log('initializeWallet done');
+        goBack();
+        await initializeWallet();
+        // InteractionManager.runAfterInteractions(() => {
+        //   navigate('WalletScreen');
+        // });
+      } catch (e) {
+        console.log('error while switching account', e);
+      }
     },
-    [goBack, navigate]
+    [goBack, initializeWallet, wallets]
   );
 
   const onCloseEditWalletModal = useCallback(
@@ -124,7 +133,7 @@ const ChangeWalletModal = () => {
           accountAddress={accountAddress}
           allWallets={wallets}
           height={listHeight}
-          onChangeWallet={onChangeWallet}
+          onChangeAccount={onChangeAccount}
           onCloseEditWalletModal={onCloseEditWalletModal}
           onDeleteWallet={onDeleteWallet}
           onPressImportSeedPhrase={onPressImportSeedPhrase}

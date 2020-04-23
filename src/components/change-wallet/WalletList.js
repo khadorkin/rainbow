@@ -40,6 +40,7 @@ export function WalletList({
   height,
   onPressAddAccount,
   onPressImportSeedPhrase,
+  onChangeAccount,
 }) {
   const { goBack } = useNavigation();
   const [rows, setRows] = useState([]);
@@ -51,7 +52,6 @@ export function WalletList({
   useEffect(() => {
     let rows = [];
     if (!allWallets) return;
-    console.log('[WALLETLIST]: allWallets updated!');
     Object.keys(allWallets).forEach(key => {
       const wallet = allWallets[key];
       rows.push({ ...wallet, rowType: RowTypes.WALLET });
@@ -59,6 +59,7 @@ export function WalletList({
         rows.push({
           ...account,
           id: account.address,
+          onPress: () => onChangeAccount(wallet.id, account.address),
           rowType: RowTypes.ADDRESS,
         });
       });
@@ -79,13 +80,10 @@ export function WalletList({
     });
 
     setRows(rows);
-    console.log('[WALLETLIST]: updated rows!', rows.length);
-    console.log('[WALLETLIST]: updated dataprovider');
-  }, [allWallets, onPressAddAccount, onPressImportSeedPhrase]);
+  }, [allWallets, onChangeAccount, onPressAddAccount, onPressImportSeedPhrase]);
 
   // Update the data provider when rows change
   useEffect(() => {
-    console.log('[WALLETLIST]: updating dataprovider!');
     const dataProvider = new DataProvider((r1, r2) => {
       if (r1.rowType !== r2.rowType) {
         return true;
@@ -180,7 +178,7 @@ export function WalletList({
             <AddressRow
               data={item}
               selectedAddress={accountAddress}
-              onPress={() => console.log('[WALLETLIST]: yo')}
+              onPress={item.onPress}
             />
           );
         default:
@@ -197,7 +195,6 @@ export function WalletList({
     [renderItem]
   );
   if (!dataProvider) return null;
-  console.log('re-rendering with row count', rows.length);
   return (
     <View style={sx.container}>
       <WalletDivider />
@@ -220,6 +217,7 @@ WalletList.propTypes = {
   accountAddress: PropTypes.string,
   allWallets: PropTypes.object,
   height: PropTypes.number,
+  onChangeAccount: PropTypes.func,
   onPressAddAccount: PropTypes.func,
   onPressImportSeedPhrase: PropTypes.func,
 };

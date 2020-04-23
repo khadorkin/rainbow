@@ -4,6 +4,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, fonts } from '../../styles';
 import { abbreviations } from '../../utils';
+import { ButtonPressAnimation } from '../animations';
 import CoinCheckButton from '../coin-row/CoinCheckButton';
 import { Column, Row } from '../layout';
 import { TruncatedAddress } from '../text';
@@ -38,34 +39,35 @@ const sx = StyleSheet.create({
 export default function AddressRow({ data, onPress, selectedAddress }) {
   return (
     <View style={[sx.subItem, sx.accountRow]}>
-      <Row>
-        <Column>
-          <View style={sx.coinCheck}>
-            <CoinCheckButton
-              toggle={data.address === selectedAddress}
-              onPress={onPress}
-              isAbsolute
-            />
-          </View>
-        </Column>
-        <Column>
-          <View style={sx.rightContent}>
-            <View>
-              <Text style={sx.accountLabel}>
-                {data.label || `Account ${data.index + 1}`}
-              </Text>
+      <ButtonPressAnimation onPress={onPress}>
+        <Row>
+          <Column>
+            <View style={sx.coinCheck}>
+              <CoinCheckButton
+                toggle={data.address === selectedAddress}
+                isAbsolute
+              />
             </View>
-            <TruncatedAddress
-              firstSectionLength={abbreviations.defaultNumCharsPerSection}
-              size="smaller"
-              truncationLength={4}
-              weight="medium"
-              address={data.address}
-              style={sx.addressAbbreviation}
-            />
-          </View>
-        </Column>
-      </Row>
+          </Column>
+          <Column>
+            <View style={sx.rightContent}>
+              <View>
+                <Text style={sx.accountLabel}>
+                  {data.label || `Account ${data.index + 1}`}
+                </Text>
+              </View>
+              <TruncatedAddress
+                firstSectionLength={abbreviations.defaultNumCharsPerSection}
+                size="smaller"
+                truncationLength={4}
+                weight="medium"
+                address={data.address}
+                style={sx.addressAbbreviation}
+              />
+            </View>
+          </Column>
+        </Row>
+      </ButtonPressAnimation>
     </View>
   );
 }

@@ -41,6 +41,7 @@ export const walletInit = async (seedPhrase = null) => {
   let walletAddress = null;
   let isImported = false;
   let isNew = false;
+  // Importing a seedphrase
   if (!isEmpty(seedPhrase)) {
     const wallet = await createWallet(seedPhrase);
     walletAddress = wallet.address;
@@ -48,6 +49,7 @@ export const walletInit = async (seedPhrase = null) => {
     return { isImported, isNew, walletAddress };
   }
   walletAddress = await loadAddress();
+  // First launch (no seed phrase)
   if (!walletAddress) {
     const wallet = await createWallet();
     walletAddress = wallet.address;
@@ -306,7 +308,7 @@ const loadPrivateKey = async (
   }
 };
 
-const saveAddress = async (address, accessControlOptions = {}) => {
+export const saveAddress = async (address, accessControlOptions = {}) => {
   await keychain.saveString(addressKey, address, accessControlOptions);
 };
 
