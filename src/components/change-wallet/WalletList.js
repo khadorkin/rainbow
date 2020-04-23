@@ -43,6 +43,7 @@ export function WalletList({
 }) {
   const { goBack } = useNavigation();
   const [rows, setRows] = useState([]);
+  const [openRow, setOpenRow] = useState(null);
   const [dataProvider, setDataProvider] = useState(null);
   const [layoutProvider, setLayoutProvider] = useState(null);
 
@@ -136,6 +137,10 @@ export function WalletList({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const onEditWallet = useCallback(() => {
+    console.log('TODO: edit wallet');
+  }, []);
+
   const renderItem = useCallback(
     item => {
       switch (item.rowType) {
@@ -162,9 +167,12 @@ export function WalletList({
               accountName={item.name}
               accountColor={item.color}
               addresses={item.addresses}
-              selectedAddress={accountAddress}
+              currentlyOpenRow={openRow}
               onPress={() => goBack()}
-              isInitializationOver
+              onTouch={id => setOpenRow(id)}
+              onTransitionEnd={id => setOpenRow(id)}
+              selectedAddress={accountAddress}
+              onEditWallet={onEditWallet}
             />
           );
         case RowTypes.ADDRESS:
@@ -179,7 +187,7 @@ export function WalletList({
           return null;
       }
     },
-    [accountAddress, goBack]
+    [accountAddress, openRow, goBack, onEditWallet]
   );
 
   const renderRow = useCallback(

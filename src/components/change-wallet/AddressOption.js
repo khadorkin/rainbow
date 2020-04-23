@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import React, { Component } from 'react';
+import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, fonts } from '../../styles';
 import { ButtonPressAnimation } from '../animations';
@@ -30,34 +30,30 @@ const sx = StyleSheet.create({
   },
 });
 
-export default class AddressOption extends Component {
-  static propTypes = {
-    icon: PropTypes.string,
-    label: PropTypes.string,
-    onPress: PropTypes.func,
-  };
-
-  render() {
-    const { icon, label, onPress } = this.props;
-
-    return (
-      <View style={sx.subItem}>
-        <ButtonPressAnimation scaleTo={0.96} onPress={onPress}>
-          <View style={sx.optionContainer}>
-            <View style={sx.optionIconWrapper}>
-              <Icon
-                color={colors.blueGreyDark50}
-                height={15}
-                width={15}
-                name={icon}
-              />
-            </View>
-            <View>
-              <Text style={sx.optionText}>{label}</Text>
-            </View>
+export default function AddressOption({ icon, label, onPress }) {
+  return (
+    <View style={sx.subItem}>
+      <ButtonPressAnimation scaleTo={0.96} onPress={onPress}>
+        <View style={sx.optionContainer}>
+          <View style={sx.optionIconWrapper}>
+            <Icon
+              color={colors.blueGreyDark50}
+              height={15}
+              width={15}
+              name={icon}
+            />
           </View>
-        </ButtonPressAnimation>
-      </View>
-    );
-  }
+          <View>
+            <Text style={sx.optionText}>{label}</Text>
+          </View>
+        </View>
+      </ButtonPressAnimation>
+    </View>
+  );
 }
+
+AddressOption.propTypes = {
+  icon: PropTypes.string,
+  label: PropTypes.string,
+  onPress: PropTypes.func,
+};
