@@ -11,7 +11,7 @@ import { ProfileMasthead } from '../components/profile';
 import TransactionList from '../components/transaction-list/TransactionList';
 import nativeTransactionListAvailable from '../helpers/isNativeTransactionListAvailable';
 import NetworkTypes from '../helpers/networkTypes';
-import { useAddress, useWallets } from '../hooks';
+import { useWallets } from '../hooks';
 import { colors, position } from '../styles';
 
 const ACTIVITY_LIST_INITIALIZATION_DELAY = 5000;
@@ -26,8 +26,7 @@ const ProfileScreen = ({
   transactionsCount,
 }) => {
   const [activityListInitialized, setActivityListInitialized] = useState(false);
-  const accountAddress = useAddress();
-  const { selected } = useWallets();
+  const { selected, address: accountAddress } = useWallets();
   useEffect(() => {
     setTimeout(() => {
       setActivityListInitialized(true);
