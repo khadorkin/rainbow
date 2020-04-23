@@ -57,7 +57,6 @@ class TransactionList extends React.PureComponent {
     const {
       header,
       initialized,
-      navigation,
       requests,
       transactions,
       accountAddress,
@@ -75,7 +74,7 @@ class TransactionList extends React.PureComponent {
       tapTarget,
     } = this.props;
 
-    if (!initialized && !navigation.isFocused()) {
+    if (!initialized) {
       return <LoadingState>{header}</LoadingState>;
     }
 

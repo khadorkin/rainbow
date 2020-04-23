@@ -6,7 +6,6 @@ import TransactionStatusTypes from '../helpers/transactionStatusTypes';
 const contactsSelector = state => state.contacts;
 const requestsSelector = state => state.requests;
 const transactionsSelector = state => state.transactions;
-const focusedSelector = state => state.isFocused;
 const initializedSelector = state => state.initialized;
 
 export const buildTransactionUniqueIdentifier = ({ hash, displayDetails }) =>
@@ -99,10 +98,9 @@ const buildTransactionsSections = (
   contacts,
   requests,
   transactions,
-  isFocused,
   initialized
 ) => {
-  if (!isFocused && !initialized) {
+  if (!initialized) {
     return { sections: [] };
   }
 
@@ -140,7 +138,6 @@ export const buildTransactionsSectionsSelector = createSelector(
     contactsSelector,
     requestsSelector,
     transactionsSelector,
-    focusedSelector,
     initializedSelector,
   ],
   buildTransactionsSections

@@ -1,9 +1,7 @@
 import PropTypes from 'prop-types';
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { withNavigation } from 'react-navigation';
 import { useNavigation } from 'react-navigation-hooks';
-import { compose } from 'recompact';
 import {
   DataProvider,
   LayoutProvider,
@@ -211,7 +209,7 @@ export function WalletList({
   );
 }
 
-export default compose(withNavigation)(WalletList);
+export default WalletList;
 
 WalletList.propTypes = {
   accountAddress: PropTypes.string,

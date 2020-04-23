@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
+import { useIsFocused } from 'react-navigation-hooks';
 import AddFundsInterstitial from '../components/AddFundsInterstitial';
 import { ActivityList } from '../components/activity-list';
 import { BackButton, Header, HeaderButton } from '../components/header';
@@ -26,13 +27,36 @@ const ProfileScreen = ({
   transactionsCount,
 }) => {
   const [activityListInitialized, setActivityListInitialized] = useState(false);
+  const [switchingAccounts, setSwitchingAccounts] = useState(false);
   const { selected } = useWallets();
   const { accountAddress } = useAccountSettings();
+  const isScreenFocused = useIsFocused();
+
+  // Initialize immediately if the screen is focused
+  useEffect(() => {
+    isScreenFocused &&
+      !activityListInitialized &&
+      !switchingAccounts &&
+      setActivityListInitialized(true);
+  }, [activityListInitialized, isScreenFocused, switchingAccounts]);
+
+  // Initialize automatically after 5 seconds
   useEffect(() => {
     setTimeout(() => {
-      setActivityListInitialized(true);
+      !activityListInitialized && setActivityListInitialized(true);
     }, ACTIVITY_LIST_INITIALIZATION_DELAY);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Handle Loading state for account switching
+  useEffect(() => {
+    setActivityListInitialized(false);
+    setSwitchingAccounts(true);
+    setTimeout(() => {
+      setActivityListInitialized(true);
+      setSwitchingAccounts(false);
+    }, 500);
+  }, [accountAddress]);
 
   // Don't render before redux is ready
   if (!selected || !selected.wallet) return null;
