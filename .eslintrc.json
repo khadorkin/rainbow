@@ -6,6 +6,7 @@
   "globals": {
     "__DEV__": true
   },
+  "ignorePatterns": ["node_modules/", "ios/", "android/"],
   "rules": {
     "sort-imports": ["error", {
       "ignoreCase": true,

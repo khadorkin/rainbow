@@ -13,6 +13,7 @@ const mapStateToProps = ({
   settings: {
     accountAddress,
     accountColor,
+    accountENS,
     accountName,
     chainId,
     language,
@@ -22,6 +23,7 @@ const mapStateToProps = ({
 }) => ({
   accountAddress,
   accountColor,
+  accountENS,
   accountName,
   chainId,
   language,

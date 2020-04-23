@@ -211,7 +211,7 @@ export const addressAssetsReceived = (
   append = false,
   change = false
 ) => (dispatch, getState) => {
-  console.log('[MYSTERY]: addressAssetsReceived');
+  // console.log('[MYSTERY]: addressAssetsReceived', JSON.stringify(message, null, 2));
   const isValidMeta = dispatch(checkMeta(message));
   if (!isValidMeta) return;
 

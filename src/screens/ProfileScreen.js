@@ -72,9 +72,7 @@ const ProfileScreen = ({
       </Header>
       {nativeTransactionListAvailable ? (
         <TransactionList
-          initialized={activityListInitialized}
-          navigation={navigation}
-          style={{ flex: 1 }}
+          addCashAvailable={addCashAvailable}
           header={
             <ProfileMasthead
               accountAddress={accountAddress}
@@ -85,6 +83,9 @@ const ProfileScreen = ({
               showBottomDivider={!isEmpty}
             />
           }
+          initialized={activityListInitialized}
+          navigation={navigation}
+          style={{ flex: 1 }}
         />
       ) : (
         <ActivityList
@@ -92,8 +93,6 @@ const ProfileScreen = ({
           accountColor={accountColor}
           accountName={accountName}
           addCashAvailable={addCashAvailable}
-          navigation={navigation}
-          initialized={activityListInitialized}
           header={
             <ProfileMasthead
               accountAddress={accountAddress}
@@ -104,8 +103,10 @@ const ProfileScreen = ({
               showBottomDivider={!isEmpty}
             />
           }
+          initialized={activityListInitialized}
           isEmpty={isEmpty}
           nativeCurrency={nativeCurrency}
+          navigation={navigation}
           requests={requests}
           transactions={transactions}
           transactionsCount={transactionsCount}
