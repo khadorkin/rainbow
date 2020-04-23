@@ -46,19 +46,6 @@ const sx = StyleSheet.create({
   },
 });
 
-// const MoneyAmountWrapper = styled(View)`
-//   background-color: ${colors.lightGreen};
-//   border-radius: 16;
-//   height: 24px;
-//   padding: 4px 6.5px;
-// `;
-
-// const MoneyAmount = styled(Text)`
-//   line-height: 16px;
-//   color: colors.moneyGreen,
-//   fontWeight: fonts.weight.semibold,
-// `;
-
 export default class AddressRow extends Component {
   static propTypes = {
     selectedAddress: PropTypes.string.isRequired,
@@ -124,7 +111,7 @@ export default class AddressRow extends Component {
     const { data, onPress, selectedAddress } = this.props;
 
     return (
-      <View key={data.address} style={[sx.subItem, sx.accountRow]}>
+      <View style={[sx.subItem, sx.accountRow]}>
         <Row>
           <Column>
             <View style={sx.coinCheck}>

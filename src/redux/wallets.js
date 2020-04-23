@@ -18,7 +18,7 @@ const WALLETS_SET_SELECTED_ADDRESS = 'wallets/SET_SELECTED_ADDRESS';
 export const walletsLoadState = () => async dispatch => {
   try {
     console.log('[redux-wallets] - walletsLoadState');
-    const wallets = await getAllWallets();
+    const { wallets } = await getAllWallets();
     console.log('[redux-wallets] - wallets', wallets);
     const selected = await getSelectedWallet();
     console.log('[redux-wallets] - selected', selected);
@@ -61,9 +61,7 @@ export const addressSetSelected = address => dispatch => {
 
 export const createAccountForWallet = id => async (dispatch, getState) => {
   console.log('creating account for wallet', id);
-  const {
-    wallets: { wallets },
-  } = getState().wallets;
+  const { wallets } = getState().wallets;
   console.log('wallets', wallets);
   let index = 0;
   wallets[id].addresses.forEach(

@@ -13,7 +13,7 @@ const walletRowHeight = 54;
 
 const ChangeWalletModal = () => {
   const {
-    wallets: { wallets },
+    wallets,
     selected: { wallet: selectedWallet },
     address: accountAddress,
   } = useWallets();
