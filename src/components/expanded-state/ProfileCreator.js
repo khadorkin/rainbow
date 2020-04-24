@@ -1,9 +1,9 @@
 import { get } from 'lodash';
 import PropTypes from 'prop-types';
-import React, { PureComponent } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
-import { compose } from 'recompact';
-import { withAccountData, withAccountSettings } from '../../hoc';
+import { useNavigation } from 'react-navigation-hooks';
+import { useAccountSettings } from '../../hooks';
 import { deleteUserInfo, editUserInfo } from '../../model/wallet';
 import {
   settingsUpdateAccountColor,
@@ -36,75 +36,63 @@ const sx = StyleSheet.create({
   },
 });
 
-class AddContactState extends PureComponent {
-  static propTypes = {
-    actionType: PropTypes.string,
-    address: PropTypes.string,
-    color: PropTypes.number,
-    isCurrentProfile: PropTypes.bool,
-    isNewProfile: PropTypes.bool,
-    navigation: PropTypes.object,
-    onCloseModal: PropTypes.func,
-    onUnmountModal: PropTypes.func,
-    profile: PropTypes.object,
-  };
+export default function ProfileCreator({
+  actionType,
+  address,
+  isCurrentProfile,
+  isNewProfile,
+  onCloseModal,
+  onUnmountModal,
+  profile,
+  setIsLoading,
+}) {
+  const { accountAddress } = useAccountSettings();
+  const { goBack } = useNavigation();
+  const [color, setColor] = useState(
+    isNewProfile
+      ? Math.floor(Math.random() * colors.avatarColor.length)
+      : profile.color
+  );
+  const [value, setValue] = useState(get(profile, 'name'));
+  const inputRef = useRef();
+  const text = useRef();
 
-  constructor(props) {
-    super(props);
-
-    this.state = {
-      color: this.props.isNewProfile
-        ? Math.floor(Math.random() * colors.avatarColor.length)
-        : this.props.profile.color,
-      isCreatingWallet: false,
-      value: get(this.props, 'profile.name', ''),
-    };
-  }
-
-  componentDidMount = () => {
-    if (this.state.value.length === 0) {
-      this._text.updateValue('Name');
+  useEffect(() => {
+    if (value.length === 0) {
+      text.updateValue('Name');
     }
-  };
+  }, [value.length]);
 
-  inputRef = undefined;
-
-  editProfile = async () => {
-    if (this.state.value.length > 0) {
-      const { address, privateKey, seedPhrase } = this.props.profile;
-      await editUserInfo(
-        this.state.value,
-        this.state.color,
-        seedPhrase,
-        privateKey,
-        address
-      );
-      if (this.props.isCurrentProfile) {
-        store.dispatch(settingsUpdateAccountName(this.state.value));
-        store.dispatch(settingsUpdateAccountColor(this.state.color));
+  const editProfile = useCallback(async () => {
+    if (value.length > 0) {
+      const { address, privateKey, seedPhrase } = profile;
+      await editUserInfo(value, color, seedPhrase, privateKey, address);
+      if (isCurrentProfile) {
+        store.dispatch(settingsUpdateAccountName(value));
+        store.dispatch(settingsUpdateAccountColor(color));
       }
-      this.props.onCloseModal({
+      onCloseModal({
         address,
-        color: this.state.color,
-        name: this.state.value,
+        color: color,
+        name: value,
         privateKey,
         seedPhrase,
       });
-      this.props.navigation.goBack();
+      goBack();
     }
-  };
+  }, [color, goBack, isCurrentProfile, onCloseModal, profile, value]);
 
-  addProfileInfo = async () => {
-    this.props.navigation.goBack();
-    if (this.props.setIsLoading) {
-      this.props.setIsLoading(false);
+  const addProfileInfo = useCallback(async () => {
+    goBack();
+    if (setIsLoading) {
+      setIsLoading(false);
     }
-    await store.dispatch(settingsUpdateAccountName(this.state.value));
-    await store.dispatch(settingsUpdateAccountColor(this.state.color));
-    this.props.onCloseModal();
-  };
+    await store.dispatch(settingsUpdateAccountName(value));
+    await store.dispatch(settingsUpdateAccountColor(color));
+    onCloseModal();
+  }, [color, goBack, onCloseModal, setIsLoading, value]);
 
-  handleDeleteProfile = () => {
+  const handleDeleteProfile = useCallback(() => {
     showActionSheetWithOptions(
       {
         cancelButtonIndex: 1,
@@ -114,170 +102,156 @@ class AddContactState extends PureComponent {
       },
       async buttonIndex => {
         if (buttonIndex === 0) {
-          this.props.navigation.goBack();
-          await deleteUserInfo(this.props.address);
-          const { address } = this.props.profile;
-          this.props.onCloseModal({
+          goBack();
+          await deleteUserInfo(accountAddress);
+          const { address } = profile;
+          onCloseModal({
             address,
             isDeleted: true,
           });
         }
       }
     );
-  };
+  }, [accountAddress, goBack, onCloseModal, profile]);
 
-  handleCancel = () => {
-    this.props.onUnmountModal('', 0, false);
-    if (this.props.onCloseModal) {
-      this.props.onCloseModal();
+  const handleCancel = useCallback(() => {
+    onUnmountModal('', 0, false);
+    if (onCloseModal) {
+      onCloseModal();
     }
-    this.props.navigation.goBack();
-  };
+    goBack();
+  }, [goBack, onCloseModal, onUnmountModal]);
 
-  handleChange = ({ nativeEvent: { text } }) => {
+  const handleChange = useCallback(({ nativeEvent: { text } }) => {
     const value = text.charCodeAt(0) === 32 ? text.substring(1) : text;
     if (value.length > 0) {
-      this._text.updateValue(' ');
+      text.updateValue(' ');
     } else {
-      this._text.updateValue('Name');
+      text.updateValue('Name');
     }
-    this.setState({ value });
-  };
+    setValue(value);
+  }, []);
 
-  handleChangeColor = async () => {
-    const { color } = this.state;
-
+  const handleChangeColor = useCallback(async () => {
     let newColor = color + 1;
     if (newColor > colors.avatarColor.length - 1) {
       newColor = 0;
     }
+    setColor(newColor);
+  }, [color]);
 
-    this.setState({ color: newColor });
-  };
-
-  handleFocusInput = () => {
-    if (this.inputRef) {
-      this.inputRef.focus();
+  const handleFocusInput = useCallback(async () => {
+    if (inputRef) {
+      inputRef.focus();
     }
-  };
+  }, []);
 
-  handleInputRef = ref => {
-    this.inputRef = ref;
-  };
+  const acceptAction = isNewProfile ? addProfileInfo : editProfile;
 
-  render() {
-    const { address } = this.props;
-    const { color, value } = this.state;
-    const acceptAction = this.props.isNewProfile
-      ? this.addProfileInfo
-      : this.editProfile;
-
-    return (
-      <KeyboardFixedOpenLayout>
-        <TouchableBackdrop />
-        <FloatingPanels maxWidth={deviceUtils.dimensions.width - 110}>
-          <AssetPanel>
-            <Centered css={padding(24, 25)} direction="column">
-              <ButtonPressAnimation
-                onPress={this.handleChangeColor}
-                scaleTo={0.96}
-              >
-                <ContactAvatar
-                  color={color}
-                  large
-                  marginBottom={19}
-                  value={value}
-                />
-              </ButtonPressAnimation>
-              <PlaceholderText
-                ref={component => {
-                  this._text = component;
-                }}
-              />
-              <Input
-                autoCapitalize
-                autoFocus
-                letterSpacing={0.2}
-                onChange={this.handleChange}
-                onSubmitEditing={acceptAction}
-                returnKeyType="done"
-                size="big"
-                spellCheck="false"
-                ref={this.handleInputRef}
-                style={{ width: '100%' }}
-                textAlign="center"
+  return (
+    <KeyboardFixedOpenLayout>
+      <TouchableBackdrop />
+      <FloatingPanels maxWidth={deviceUtils.dimensions.width - 110}>
+        <AssetPanel>
+          <Centered css={padding(24, 25)} direction="column">
+            <ButtonPressAnimation onPress={handleChangeColor} scaleTo={0.96}>
+              <ContactAvatar
+                color={color}
+                large
+                marginBottom={19}
                 value={value}
-                weight="semibold"
               />
-              {this.props.isNewProfile || (
-                <CopyTooltip
-                  onHide={this.handleFocusInput}
-                  textToCopy={address}
-                  tooltipText="Copy Address"
-                >
-                  <TruncatedAddress
-                    style={sx.addressAbbreviation}
-                    address={address}
-                    align="center"
-                    color={colors.blueGreyDark}
-                    firstSectionLength={abbreviations.defaultNumCharsPerSection}
-                    size="lmedium"
-                    truncationLength={4}
-                    weight="regular"
-                  />
-                </CopyTooltip>
-              )}
-              <Centered paddingVertical={19} width={93}>
-                <Divider inset={false} />
-              </Centered>
-              <Button
-                backgroundColor={
-                  value.length > 0 ? colors.appleBlue : undefined
-                }
-                disabled={!value.length > 0}
-                height={43}
-                onPress={acceptAction}
-                showShadow
-                size="small"
-                width={215}
+            </ButtonPressAnimation>
+            <PlaceholderText ref={text} />
+            <Input
+              autoCapitalize
+              autoFocus
+              letterSpacing={0.2}
+              onChange={handleChange}
+              onSubmitEditing={acceptAction}
+              returnKeyType="done"
+              size="big"
+              spellCheck="false"
+              ref={inputRef}
+              style={{ width: '100%' }}
+              textAlign="center"
+              value={value}
+              weight="semibold"
+            />
+            {isNewProfile || (
+              <CopyTooltip
+                onHide={handleFocusInput}
+                textToCopy={address}
+                tooltipText="Copy Address"
               >
-                <Text
-                  color="white"
+                <TruncatedAddress
+                  style={sx.addressAbbreviation}
+                  address={address}
+                  align="center"
+                  color={colors.blueGreyDark}
+                  firstSectionLength={abbreviations.defaultNumCharsPerSection}
                   size="lmedium"
-                  style={{ marginBottom: 1.5 }}
-                  weight="semibold"
-                >
-                  {this.props.isNewProfile
-                    ? `${this.props.actionType} Wallet`
-                    : 'Done'}
-                </Text>
-              </Button>
-              <ButtonPressAnimation
-                marginTop={11}
-                onPress={
-                  this.props.isNewProfile || this.props.isCurrentProfile
-                    ? this.handleCancel
-                    : this.handleDeleteProfile
-                }
-              >
-                <Centered backgroundColor={colors.white} css={padding(8, 9)}>
-                  <Text
-                    color={colors.alpha(colors.blueGreyDark, 0.4)}
-                    size="lmedium"
-                    weight="regular"
-                  >
-                    {this.props.isNewProfile || this.props.isCurrentProfile
-                      ? 'Cancel'
-                      : 'Delete Wallet'}
-                  </Text>
-                </Centered>
-              </ButtonPressAnimation>
+                  truncationLength={4}
+                  weight="regular"
+                />
+              </CopyTooltip>
+            )}
+            <Centered paddingVertical={19} width={93}>
+              <Divider inset={false} />
             </Centered>
-          </AssetPanel>
-        </FloatingPanels>
-      </KeyboardFixedOpenLayout>
-    );
-  }
+            <Button
+              backgroundColor={value.length > 0 ? colors.appleBlue : undefined}
+              disabled={!value.length > 0}
+              height={43}
+              onPress={acceptAction}
+              showShadow
+              size="small"
+              width={215}
+            >
+              <Text
+                color="white"
+                size="lmedium"
+                style={{ marginBottom: 1.5 }}
+                weight="semibold"
+              >
+                {isNewProfile ? `${actionType} Wallet` : 'Done'}
+              </Text>
+            </Button>
+            <ButtonPressAnimation
+              marginTop={11}
+              onPress={
+                isNewProfile || isCurrentProfile
+                  ? handleCancel
+                  : handleDeleteProfile
+              }
+            >
+              <Centered backgroundColor={colors.white} css={padding(8, 9)}>
+                <Text
+                  color={colors.alpha(colors.blueGreyDark, 0.4)}
+                  size="lmedium"
+                  weight="regular"
+                >
+                  {isNewProfile || isCurrentProfile
+                    ? 'Cancel'
+                    : 'Delete Wallet'}
+                </Text>
+              </Centered>
+            </ButtonPressAnimation>
+          </Centered>
+        </AssetPanel>
+      </FloatingPanels>
+    </KeyboardFixedOpenLayout>
+  );
 }
 
-export default compose(withAccountData, withAccountSettings)(AddContactState);
+ProfileCreator.propTypes = {
+  actionType: PropTypes.string,
+  address: PropTypes.string,
+  color: PropTypes.number,
+  isCurrentProfile: PropTypes.bool,
+  isNewProfile: PropTypes.bool,
+  onCloseModal: PropTypes.func,
+  onUnmountModal: PropTypes.func,
+  profile: PropTypes.object,
+  setIsLoading: PropTypes.func,
+};
