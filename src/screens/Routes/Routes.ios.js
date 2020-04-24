@@ -181,16 +181,6 @@ const MainNavigator = createStackNavigator(
       },
       screen: ExpandedAssetScreenWithData,
     },
-    ReceiveModal: {
-      navigationOptions: {
-        ...expandedPreset,
-        onTransitionStart: props => {
-          expandedPreset.onTransitionStart(props);
-          onTransitionStart();
-        },
-      },
-      screen: ReceiveModal,
-    },
     SavingsSheet: {
       navigationOptions: {
         ...savingsPreset,
@@ -236,6 +226,7 @@ const MainNavigator = createStackNavigator(
 const MainNativeNavigation = createBottomSheetStackNavigator(
   {
     MainNavigator,
+    ReceiveModal,
     SettingsModal,
   },
   {

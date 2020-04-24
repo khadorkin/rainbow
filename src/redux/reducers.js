@@ -2,6 +2,7 @@ import { combineReducers } from 'redux';
 
 import actionSheetManager from './actionSheetManager';
 import addCash from './addCash';
+import charts from './charts';
 import contacts from './contacts';
 import data from './data';
 import editOptions from './editOptions';
@@ -30,6 +31,7 @@ import wallets from './wallets';
 export default combineReducers({
   actionSheetManager,
   addCash,
+  charts,
   contacts,
   data,
   editOptions,
