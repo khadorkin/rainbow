@@ -12,6 +12,7 @@ import {
   AUTHENTICATION_TYPE,
   canImplyAuthentication,
 } from 'react-native-keychain';
+import { isMultiwalletAvailable } from '../config/experimental';
 import {
   addHexPrefix,
   isHexString,
@@ -43,7 +44,12 @@ export const walletInit = async (seedPhrase = null) => {
   let isNew = false;
   // Importing a seedphrase
   if (!isEmpty(seedPhrase)) {
-    const wallet = await createWallet(seedPhrase);
+    let wallet;
+    if (isMultiwalletAvailable) {
+      wallet = await newCreateWallet(seedPhrase);
+    } else {
+      wallet = await createWallet(seedPhrase);
+    }
     walletAddress = wallet.address;
     isImported = !isNil(walletAddress);
     return { isImported, isNew, walletAddress };
@@ -51,7 +57,12 @@ export const walletInit = async (seedPhrase = null) => {
   walletAddress = await loadAddress();
   // First launch (no seed phrase)
   if (!walletAddress) {
-    const wallet = await createWallet();
+    let wallet;
+    if (isMultiwalletAvailable) {
+      wallet = await newCreateWallet();
+    } else {
+      wallet = await createWallet();
+    }
     walletAddress = wallet.address;
     isNew = true;
   }
@@ -244,8 +255,8 @@ const createWallet = async seed => {
     } else if (isValidMnemonic(walletSeed)) {
       wallet = ethers.Wallet.fromMnemonic(walletSeed);
     } else {
-      const hdnode = ethers.utils.HDNode.fromSeed(walletSeed);
-      const node = hdnode.derivePath("m/44'/60'/0'/0/0");
+      let hdnode = ethers.utils.HDNode.fromSeed(walletSeed);
+      let node = hdnode.derivePath("m/44'/60'/0'/0/0");
       wallet = new ethers.Wallet(node.privateKey);
     }
     if (wallet) {
@@ -310,6 +321,122 @@ const loadPrivateKey = async (
 
 export const saveAddress = async (address, accessControlOptions = {}) => {
   await keychain.saveString(addressKey, address, accessControlOptions);
+};
+
+export const newCreateWallet = async seed => {
+  console.log('[IMPORT-WALLET]: newCreateWallet', seed);
+  const walletSeed = seed || generateSeedPhrase();
+  let wallet = null;
+  let hdnode = null;
+  let type = null;
+  let addresses = [];
+  try {
+    // Private key
+    if (
+      isHexStringIgnorePrefix(walletSeed) &&
+      addHexPrefix(walletSeed).length === 66
+    ) {
+      type = 'private_key';
+      wallet = new ethers.Wallet(walletSeed);
+      console.log('[IMPORT-WALLET]: private key type', { wallet });
+      // 12 or 24 words seed phrase
+    } else if (isValidMnemonic(walletSeed)) {
+      type = 'mnemonic';
+      hdnode = ethers.utils.HDNode.fromMnemonic(walletSeed);
+    } else {
+      // seed
+      type = 'seed';
+      hdnode = ethers.utils.HDNode.fromSeed(walletSeed);
+    }
+
+    // Always generate the first account
+    if (!wallet) {
+      const node = hdnode.derivePath(`m/44'/60'/0'/0/0`);
+      wallet = new ethers.Wallet(node.privateKey);
+      console.log(`[IMPORT-WALLET]: ${type} type`, { wallet });
+    }
+    const id = `wallet_${new Date().getTime()}`;
+    const publicAccessControlOptions = {
+      accessible: ACCESSIBLE.ALWAYS_THIS_DEVICE_ONLY,
+    };
+    console.log('[IMPORT-WALLET]: saving pkey');
+    // Save private key
+    await newSavePrivateKey(wallet.address, wallet.privateKey);
+    console.log('[IMPORT-WALLET]: saving seed');
+    // Save seed
+    await newSaveSeedPhrase(walletSeed, id);
+    console.log('[IMPORT-WALLET]: saving migration flag');
+    // Save migration flag
+    await keychain.saveString(
+      seedPhraseMigratedKey,
+      'true',
+      publicAccessControlOptions
+    );
+
+    console.log('[IMPORT-WALLET]: adding address to list');
+
+    addresses.push({
+      address: wallet.address,
+      index: 0,
+      label: '',
+      visible: true,
+    });
+
+    if (hdnode) {
+      let index = 1;
+      let lookup = true;
+      console.log('[IMPORT-WALLET]: looking up other addresses');
+
+      while (lookup) {
+        const node = hdnode.derivePath(`m/44'/60'/0'/0/${index}`);
+        const nextWallet = new ethers.Wallet(node.privateKey);
+        // TODO: Hit etherscan for this and check tx history
+        const hasTxHistory = false;
+        if (hasTxHistory) {
+          index++;
+          // Save private key
+          await newSavePrivateKey(nextWallet.address, nextWallet.privateKey);
+          addresses.push({
+            address: nextWallet.address,
+            index,
+            label: '',
+            visible: true,
+          });
+          console.log('[IMPORT-WALLET]: found new index with history', index);
+        } else {
+          console.log('[IMPORT-WALLET]: nothing found');
+          lookup = false;
+        }
+      }
+    }
+
+    console.log('[IMPORT-WALLET]: getting allWallets');
+    const { wallets: allWallets } = getAllWallets();
+    console.log('[IMPORT-WALLET]: got allWallets');
+
+    allWallets[id] = {
+      addresses,
+      color: 0,
+      id,
+      imported: seed ? true : false,
+      name: `${seed ? 'Imported' : 'My'} Wallet`,
+      type,
+    };
+
+    console.log('[IMPORT-WALLET]: added to allwallets', allWallets[id]);
+
+    await saveAllWallets(allWallets);
+
+    console.log('[IMPORT-WALLET]: saved allwallets');
+
+    if (wallet) {
+      return wallet;
+    }
+    return null;
+  } catch (error) {
+    captureException(error);
+    return null;
+  }
 };
 
 export const newSavePrivateKey = async (address, privateKey) => {

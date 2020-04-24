@@ -95,7 +95,7 @@ const ConfirmImportAlert = (onSuccess, navigate) =>
             profile: {},
             type: 'profile_creator',
           }),
-        text: 'Import As New Wallet',
+        text: 'Import Wallet',
       },
       {
         style: 'cancel',
@@ -103,8 +103,8 @@ const ConfirmImportAlert = (onSuccess, navigate) =>
       },
     ],
     message:
-      'Importing this private key will create new wallet. You can switch between your existing wallets in the menu on the top of profile screen.',
-    title: 'Are you sure you want to import new wallet?',
+      'You can switch between your existing wallets in the top navbar of the profile screen.',
+    title: 'Import new wallet',
   });
 
 const ImportButton = ({ disabled, onPress, seedPhrase }) => (

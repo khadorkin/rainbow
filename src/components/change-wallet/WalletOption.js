@@ -30,24 +30,8 @@ const sx = StyleSheet.create({
   },
 });
 
-const WalletOption = ({ icon, isInitializationOver, label, onPress }) =>
-  isInitializationOver ? (
-    <ButtonPressAnimation scaleTo={0.96} onPress={onPress}>
-      <View style={sx.container}>
-        <View style={sx.iconWrapper}>
-          <Icon
-            color={colors.blueGreyDark50}
-            height={15}
-            width={15}
-            name={icon}
-          />
-        </View>
-        <View>
-          <Text style={sx.nickname}>{label}</Text>
-        </View>
-      </View>
-    </ButtonPressAnimation>
-  ) : (
+const WalletOption = ({ icon, label, onPress }) => (
+  <ButtonPressAnimation scaleTo={0.96} onPress={onPress}>
     <View style={sx.container}>
       <View style={sx.iconWrapper}>
         <Icon
@@ -61,11 +45,11 @@ const WalletOption = ({ icon, isInitializationOver, label, onPress }) =>
         <Text style={sx.nickname}>{label}</Text>
       </View>
     </View>
-  );
+  </ButtonPressAnimation>
+);
 
 WalletOption.propTypes = {
   icon: PropTypes.string,
-  isInitializationOver: PropTypes.bool,
   label: PropTypes.string.isRequired,
   onPress: PropTypes.func,
 };
