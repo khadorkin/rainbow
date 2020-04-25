@@ -464,12 +464,8 @@ export const newCreateWallet = async (seed, color, name) => {
       type,
     };
 
-    // If we're creating a new wallet
-    // We need to select it
-    if (!seed) {
-      console.log('[IMPORT-WALLET]: setting wallet as selected');
-      setSelectedWallet(allWallets[id]);
-    }
+    console.log('[IMPORT-WALLET]: setting wallet as selected');
+    setSelectedWallet(allWallets[id]);
 
     console.log('[IMPORT-WALLET]: added to allwallets', allWallets[id]);
 

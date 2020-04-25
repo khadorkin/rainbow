@@ -55,7 +55,7 @@ const ProfileScreen = ({
     setTimeout(() => {
       setActivityListInitialized(true);
       setSwitchingAccounts(false);
-    }, 500);
+    }, 1000);
   }, [accountAddress]);
 
   // Don't render before redux is ready
