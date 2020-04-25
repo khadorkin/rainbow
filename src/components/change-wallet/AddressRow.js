@@ -36,17 +36,14 @@ const sx = StyleSheet.create({
   },
 });
 
-export default function AddressRow({ data, onPress, selectedAddress }) {
+export default function AddressRow({ data, onPress, isSelected }) {
   return (
     <View style={[sx.subItem, sx.accountRow]}>
       <ButtonPressAnimation onPress={onPress}>
         <Row>
           <Column>
             <View style={sx.coinCheck}>
-              <CoinCheckButton
-                toggle={data.address === selectedAddress}
-                isAbsolute
-              />
+              <CoinCheckButton toggle={isSelected} isAbsolute />
             </View>
           </Column>
           <Column>
@@ -75,5 +72,4 @@ export default function AddressRow({ data, onPress, selectedAddress }) {
 AddressRow.propTypes = {
   data: PropTypes.object,
   onPress: PropTypes.func,
-  selectedAddress: PropTypes.string.isRequired,
 };

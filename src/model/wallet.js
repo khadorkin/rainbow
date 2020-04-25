@@ -6,6 +6,7 @@ import lang from 'i18n-js';
 import { get, isEmpty, isNil } from 'lodash';
 import { Alert } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
+import { ETHERSCAN_API_KEY } from 'react-native-dotenv';
 import {
   ACCESS_CONTROL,
   ACCESSIBLE,
@@ -391,6 +392,8 @@ export const newCreateWallet = async (seed, color, name) => {
       visible: true,
     });
 
+    console.log('[IMPORT-WALLET]: address added to list', addresses);
+
     if (hdnode) {
       let index = 1;
       let lookup = true;
@@ -400,17 +403,18 @@ export const newCreateWallet = async (seed, color, name) => {
         const node = hdnode.derivePath(`m/44'/60'/0'/0/${index}`);
         const nextWallet = new ethers.Wallet(node.privateKey);
         // TODO: Hit etherscan for this and check tx history
-        const hasTxHistory = false;
+        console.log('[IMPORT-WALLET]: looking up', nextWallet.address);
+        const hasTxHistory = await hasPreviousTransactions(nextWallet.address);
         if (hasTxHistory) {
-          index++;
           // Save private key
           await newSavePrivateKey(nextWallet.address, nextWallet.privateKey);
           addresses.push({
             address: nextWallet.address,
-            index,
+            index: index,
             label: '',
             visible: true,
           });
+          index++;
           console.log('[IMPORT-WALLET]: found new index with history', index);
         } else {
           console.log('[IMPORT-WALLET]: nothing found');
@@ -420,8 +424,8 @@ export const newCreateWallet = async (seed, color, name) => {
     }
 
     console.log('[IMPORT-WALLET]: getting allWallets');
-    const { wallets: allWallets } = getAllWallets();
-    console.log('[IMPORT-WALLET]: got allWallets');
+    const { wallets: allWallets } = await getAllWallets();
+    console.log('[IMPORT-WALLET]: got allWallets', allWallets);
 
     // if imported and we have only one account
     // We name the wallet,
@@ -449,7 +453,7 @@ export const newCreateWallet = async (seed, color, name) => {
     await saveAllWallets(allWallets);
 
     console.log('[IMPORT-WALLET]: saved allwallets');
-
+    console.log('[IMPORT-WALLET]: About to return wallet', wallet);
     if (wallet) {
       return wallet;
     }
@@ -655,4 +659,24 @@ export const generateAccount = async (id, index) => {
   } catch (error) {
     console.log('Error generating account for keychain', id, error);
   }
+};
+
+const hasPreviousTransactions = address => {
+  return new Promise(async resolve => {
+    const response = await fetch(
+      `https://api.etherscan.io/api?module=account&action=txlist&address=${address}&tag=latest&page=1&offset=1&apikey=${ETHERSCAN_API_KEY}`
+    );
+    const parsedResponse = await response.json();
+    // Timeout needed to stay below the 5 requests / second rate limit of etherscan API
+    setTimeout(() => {
+      console.log(
+        '[IMPORT-WALLET]: Got response from etherscan',
+        JSON.stringify(parsedResponse, null, 2)
+      );
+      if (parsedResponse.status !== '0' && parsedResponse.result.length > 0) {
+        resolve(true);
+      }
+      resolve(false);
+    }, 260);
+  });
 };

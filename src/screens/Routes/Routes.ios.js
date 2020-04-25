@@ -80,6 +80,30 @@ const SwipeStack = createMaterialTopTabNavigator(
   }
 );
 
+const importSeedPhraseFlowRoutes = {
+  ImportSeedPhraseSheet: {
+    navigationOptions: {
+      ...sheetPreset,
+      onTransitionStart: props => {
+        expandedPreset.onTransitionStart(props);
+        onTransitionStart();
+      },
+    },
+    screen: function ImportSeedPhraseSheetWrapper(...props) {
+      return (
+        <ImportSeedPhraseSheetWithData
+          {...props}
+          setAppearListener={setListener}
+        />
+      );
+    },
+  },
+  OverlayExpandedAssetScreen: {
+    navigationOptions: overlayExpandedPreset,
+    screen: ExpandedAssetScreenWithData,
+  },
+};
+
 const sendFlowRoutes = {
   OverlayExpandedAssetScreen: {
     navigationOptions: overlayExpandedPreset,
@@ -291,14 +315,17 @@ const nativeStackWrapperRoutes = {
             mode: 'modal',
           })
         : () => null,
-      ImportSeedPhraseSheet: function ImportSeedPhraseSheetWrapper(...props) {
-        return (
-          <ImportSeedPhraseSheetWithData
-            {...props}
-            setAppearListener={setListener}
-          />
-        );
-      },
+      ImportSeedPhraseSheetNavigator: isNativeStackAvailable
+        ? createStackNavigator(importSeedPhraseFlowRoutes, {
+            defaultNavigationOptions: {
+              onTransitionEnd,
+              onTransitionStart,
+            },
+            headerMode: 'none',
+            initialRouteName: 'ImportSeedPhraseSheet',
+            mode: 'modal',
+          })
+        : () => null,
       MainNativeNavigation,
       SendSheetNavigator: isNativeStackAvailable
         ? createStackNavigator(sendFlowRoutes, {
@@ -349,8 +376,10 @@ const routesWithNativeStack = {
   ImportSeedPhraseSheet: {
     navigationOptions: {
       ...sheetPreset,
-      onTransitionStart: () => {
+      onTransitionStart: props => {
         StatusBar.setBarStyle('light-content');
+        onTransitionStart(props);
+        sheetPreset.onTransitionStart(props);
       },
     },
     screen: ImportSeedPhraseSheetWithData,

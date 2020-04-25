@@ -1,14 +1,15 @@
 /* eslint-disable sort-keys */
 import GraphemeSplitter from 'grapheme-splitter';
+import { get } from 'lodash';
 import PropTypes from 'prop-types';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import FastImage from 'react-native-fast-image';
 import Caret from '../../assets/family-dropdown-arrow.png';
 import { removeFirstEmojiFromString } from '../../helpers/emojiHandler';
+import { useAccountSettings, useWallets } from '../../hooks';
 import { colors, fonts } from '../../styles';
 import { ButtonPressAnimation } from '../animations';
-import { TruncatedAddress } from '../text';
 
 const sx = StyleSheet.create({
   container: {
@@ -43,13 +44,6 @@ const sx = StyleSheet.create({
     width: 6,
     transform: [{ rotate: '90deg' }],
   },
-  addressAbbreviation: {
-    color: colors.blueGreyDark,
-    fontFamily: fonts.family.SFProText,
-    opacity: 0.5,
-    paddingRight: 15,
-    width: '100%',
-  },
   avatarCircle: {
     borderRadius: 20,
     marginLeft: 8,
@@ -68,12 +62,19 @@ const sx = StyleSheet.create({
   },
 });
 
-const HeaderProfileInfo = ({
-  accountAddress,
-  accountColor,
-  accountName,
-  onPress,
-}) => {
+const HeaderProfileInfo = ({ onPress }) => {
+  const {
+    selected: { wallet: selectedWallet },
+  } = useWallets();
+  const { accountAddress } = useAccountSettings();
+
+  const { name, color: accountColor } = selectedWallet;
+  let accountName = name;
+  const selectedAddress = selectedWallet.addresses.find(
+    wallet => wallet.address === accountAddress
+  );
+  if (get(selectedAddress, 'label')) accountName = selectedAddress.label;
+
   return (
     <ButtonPressAnimation onPress={onPress} scaleTo={0.9}>
       <View style={sx.container}>
@@ -96,14 +97,6 @@ const HeaderProfileInfo = ({
               <FastImage style={sx.settingsIcon} source={Caret} />
             </View>
           </View>
-          <TruncatedAddress
-            firstSectionLength={6}
-            size="smaller"
-            truncationLength={4}
-            weight="medium"
-            address={accountAddress}
-            style={sx.addressAbbreviation}
-          />
         </View>
       </View>
     </ButtonPressAnimation>
@@ -111,15 +104,11 @@ const HeaderProfileInfo = ({
 };
 
 HeaderProfileInfo.defaultProps = {
-  accountAddress: '',
   accountColor: 0,
   accountName: '',
 };
 
 HeaderProfileInfo.propTypes = {
-  accountAddress: PropTypes.string,
-  accountColor: PropTypes.number,
-  accountName: PropTypes.string,
   onPress: PropTypes.func.isRequired,
 };
 

@@ -35,6 +35,7 @@ const sx = StyleSheet.create({
 export function WalletList({
   accountAddress,
   allWallets,
+  currentWallet,
   height,
   onPressAddAccount,
   onPressImportSeedPhrase,
@@ -59,6 +60,7 @@ export function WalletList({
           id: account.address,
           onPress: () => onChangeAccount(wallet.id, account.address),
           rowType: RowTypes.ADDRESS,
+          wallet_id: wallet.id,
         });
       });
       rows.push({
@@ -175,7 +177,10 @@ export function WalletList({
           return (
             <AddressRow
               data={item}
-              selectedAddress={accountAddress}
+              isSelected={
+                accountAddress === item.address &&
+                item.wallet_id === currentWallet.id
+              }
               onPress={item.onPress}
             />
           );
@@ -183,7 +188,7 @@ export function WalletList({
           return null;
       }
     },
-    [accountAddress, openRow, goBack, onEditWallet]
+    [openRow, accountAddress, onEditWallet, currentWallet.id, goBack]
   );
 
   const renderRow = useCallback(
@@ -214,6 +219,7 @@ export default WalletList;
 WalletList.propTypes = {
   accountAddress: PropTypes.string,
   allWallets: PropTypes.object,
+  currentWallet: PropTypes.object,
   height: PropTypes.number,
   onChangeAccount: PropTypes.func,
   onPressAddAccount: PropTypes.func,

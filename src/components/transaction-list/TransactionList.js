@@ -75,7 +75,11 @@ class TransactionList extends React.PureComponent {
     } = this.props;
 
     if (!initialized) {
-      return <LoadingState>{header}</LoadingState>;
+      return (
+        <View style={style}>
+          <LoadingState>{header}</LoadingState>
+        </View>
+      );
     }
 
     const addressOrEns = accountENS || this.formatAddress(accountAddress);

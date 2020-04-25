@@ -85,7 +85,7 @@ const ConfirmImportAlert = (onSuccess, navigate) =>
     buttons: [
       {
         onPress: () =>
-          navigate('ExpandedAssetScreen', {
+          navigate('OverlayExpandedAssetScreen', {
             actionType: 'Import',
             address: undefined,
             asset: [],

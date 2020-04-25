@@ -81,7 +81,6 @@ const ProfileScreen = ({
           <Icon color={colors.black} name="gear" />
         </HeaderButton>
         <HeaderProfileInfo
-          accountAddress={accountAddress}
           accountColor={accountColor}
           accountName={accountName}
           onPress={onPressProfileHeader}
@@ -109,7 +108,7 @@ const ProfileScreen = ({
           }
           initialized={activityListInitialized}
           navigation={navigation}
-          style={{ flex: 1 }}
+          style={{ flex: 1, marginTop: 10 }}
         />
       ) : (
         <ActivityList
