@@ -367,18 +367,18 @@ export const newCreateWallet = async (seed, color, name) => {
     }
 
     console.log('[IMPORT-WALLET]: getting allWallets');
-    const { wallets: allWallets } = await getAllWallets();
+    const allWalletsResult = await getAllWallets();
+    const allWallets = get(allWalletsResult, 'wallets', {});
     console.log('[IMPORT-WALLET]: got allWallets', allWallets);
 
     // Checking if the generated account already exists
-    const alreadyExisting =
-      allWallets &&
-      Object.keys(allWallets).some(key => {
-        const wallet = allWallets[key];
-        return wallet.addresses.some(address => {
-          return address === wallet.address;
-        });
+    const alreadyExisting = Object.keys(allWallets).some(key => {
+      const someWallet = allWallets[key];
+      return someWallet.addresses.some(account => {
+        console.log('COMPARING', account.address, wallet.address);
+        return account.address === wallet.address;
       });
+    });
 
     if (alreadyExisting) {
       Alert.alert('Oops!', 'Looks like you already imported this wallet!');
@@ -463,6 +463,13 @@ export const newCreateWallet = async (seed, color, name) => {
       name: walletName,
       type,
     };
+
+    // If we're creating a new wallet
+    // We need to select it
+    if (!seed) {
+      console.log('[IMPORT-WALLET]: setting wallet as selected');
+      setSelectedWallet(allWallets[id]);
+    }
 
     console.log('[IMPORT-WALLET]: added to allwallets', allWallets[id]);
 

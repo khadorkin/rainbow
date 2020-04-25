@@ -25,6 +25,7 @@ import {
   useAccountSettings,
   useClipboard,
   useInitializeWallet,
+  usePrevious,
   useTimeout,
 } from '../hooks';
 import { sheetVerticalOffset } from '../navigation/transitions/effects';
@@ -136,6 +137,7 @@ const ImportSeedPhraseSheet = ({ isEmpty, setAppearListener }) => {
   const [name, setName] = useState(null);
   const [startFocusTimeout] = useTimeout();
   const [startAnalyticsTimeout] = useTimeout();
+  const wasImporting = usePrevious(isImporting);
 
   const isClipboardValidSecret = useMemo(() => {
     return clipboard !== accountAddress && validateSeed(clipboard);
@@ -211,7 +213,7 @@ const ImportSeedPhraseSheet = ({ isEmpty, setAppearListener }) => {
 
   useEffect(() => {
     console.log('[IMPORT-WALLET]: useffect running');
-    if (isImporting) {
+    if (!wasImporting && isImporting) {
       console.log('[IMPORT-WALLET]: isImporting letsgooo');
       startAnalyticsTimeout(() => {
         console.log(
@@ -248,6 +250,7 @@ const ImportSeedPhraseSheet = ({ isEmpty, setAppearListener }) => {
     seedPhrase,
     startAnalyticsTimeout,
     toggleImporting,
+    wasImporting,
   ]);
 
   return (

@@ -43,8 +43,10 @@ export default function useInitializeWallet() {
           name
         );
         logger.sentry('Start wallet setup');
-        await dispatch(walletsLoadState());
-        await runMigrations();
+        if (!seedPhrase) {
+          await dispatch(walletsLoadState());
+          await runMigrations();
+        }
         // Load the network first
         await dispatch(settingsLoadNetwork());
         console.log('[IMPORT-WALLET]: calling walletInit ');
@@ -53,6 +55,9 @@ export default function useInitializeWallet() {
           color,
           name
         );
+        if (seedPhrase) {
+          await dispatch(walletsLoadState());
+        }
         const info = await getAccountInfo(walletAddress, network);
         if (info.name && info.color) {
           dispatch(settingsUpdateAccountName(info.name));
