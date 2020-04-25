@@ -365,6 +365,26 @@ export const newCreateWallet = async (seed, color, name) => {
       wallet = new ethers.Wallet(node.privateKey);
       console.log(`[IMPORT-WALLET]: ${type} type`, { wallet });
     }
+
+    console.log('[IMPORT-WALLET]: getting allWallets');
+    const { wallets: allWallets } = await getAllWallets();
+    console.log('[IMPORT-WALLET]: got allWallets', allWallets);
+
+    // Checking if the generated account already exists
+    const alreadyExisting =
+      allWallets &&
+      Object.keys(allWallets).some(key => {
+        const wallet = allWallets[key];
+        return wallet.addresses.some(address => {
+          return address === wallet.address;
+        });
+      });
+
+    if (alreadyExisting) {
+      Alert.alert('Oops!', 'Looks like you already imported this wallet!');
+      return null;
+    }
+
     const id = `wallet_${new Date().getTime()}`;
     const publicAccessControlOptions = {
       accessible: ACCESSIBLE.ALWAYS_THIS_DEVICE_ONLY,
@@ -422,10 +442,6 @@ export const newCreateWallet = async (seed, color, name) => {
         }
       }
     }
-
-    console.log('[IMPORT-WALLET]: getting allWallets');
-    const { wallets: allWallets } = await getAllWallets();
-    console.log('[IMPORT-WALLET]: got allWallets', allWallets);
 
     // if imported and we have only one account
     // We name the wallet,

@@ -17,7 +17,7 @@ export const walletsLoadState = () => async dispatch => {
   try {
     console.log('[redux-wallets] - walletsLoadState');
     const { wallets } = await getAllWallets();
-    console.log('[redux-wallets] - wallets', wallets);
+    console.log('[redux-wallets] - wallets', JSON.stringify(wallets, null, 2));
     const selected = await getSelectedWallet();
     console.log('[redux-wallets] - selected', selected);
     dispatch({

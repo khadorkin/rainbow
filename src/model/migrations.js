@@ -38,27 +38,29 @@ export default async function runMigrations() {
     if (!selected) {
       // Read from the old wallet data
       const address = await loadAddress();
-      const id = `wallet_${new Date().getTime()}`;
-      const currentWallet = {
-        addresses: [
-          {
-            address,
-            index: 0,
-            label: '',
-            visible: true,
-          },
-        ],
-        color: 0,
-        id,
-        imported: false,
-        name: 'My Wallet',
-        type: 'normal',
-      };
+      if (address) {
+        const id = `wallet_${new Date().getTime()}`;
+        const currentWallet = {
+          addresses: [
+            {
+              address,
+              index: 0,
+              label: '',
+              visible: true,
+            },
+          ],
+          color: 0,
+          id,
+          imported: false,
+          name: 'My Wallet',
+          type: 'normal',
+        };
 
-      const wallets = { [id]: currentWallet };
+        const wallets = { [id]: currentWallet };
 
-      store.dispatch(walletsUpdate(wallets));
-      store.dispatch(walletsSetSelected(currentWallet));
+        store.dispatch(walletsUpdate(wallets));
+        store.dispatch(walletsSetSelected(currentWallet));
+      }
     }
   };
 
