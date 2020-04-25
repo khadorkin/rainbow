@@ -1,3 +1,4 @@
+import { get } from 'lodash';
 import PropTypes from 'prop-types';
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -178,8 +179,8 @@ export function WalletList({
             <AddressRow
               data={item}
               isSelected={
-                accountAddress === item.address &&
-                item.wallet_id === currentWallet.id
+                accountAddress === get(item, 'address') &&
+                get(item, 'wallet_id') === get(currentWallet, 'id')
               }
               onPress={item.onPress}
             />
@@ -188,7 +189,7 @@ export function WalletList({
           return null;
       }
     },
-    [openRow, accountAddress, onEditWallet, currentWallet.id, goBack]
+    [openRow, accountAddress, onEditWallet, currentWallet, goBack]
   );
 
   const renderRow = useCallback(
