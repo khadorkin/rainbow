@@ -53,18 +53,18 @@ export default function ProfileCreator({
       ? Math.floor(Math.random() * colors.avatarColor.length)
       : profile.color
   );
-  const [value, setValue] = useState(get(profile, 'name'));
-  const inputRef = useRef();
-  const text = useRef();
+  const [value, setValue] = useState(get(profile, 'name', ''));
+  const inputRef = useRef(null);
+  const text = useRef(null);
 
   useEffect(() => {
-    if (value.length === 0) {
-      text.updateValue('Name');
+    if (!value || value.length === 0) {
+      text.current.updateValue('Name');
     }
-  }, [value.length]);
+  }, [value]);
 
   const editProfile = useCallback(async () => {
-    if (value.length > 0) {
+    if (value && value.length > 0) {
       const { address, privateKey, seedPhrase } = profile;
       await editUserInfo(value, color, seedPhrase, privateKey, address);
       if (isCurrentProfile) {
@@ -87,9 +87,11 @@ export default function ProfileCreator({
     if (setIsLoading) {
       setIsLoading(false);
     }
-    await store.dispatch(settingsUpdateAccountName(value));
-    await store.dispatch(settingsUpdateAccountColor(color));
-    onCloseModal();
+    console.log('[IMPORT-WALLET]: calling onCloseModal called with', {
+      color,
+      name: value,
+    });
+    onCloseModal({ color, name: value });
   }, [color, goBack, onCloseModal, setIsLoading, value]);
 
   const handleDeleteProfile = useCallback(() => {
@@ -122,12 +124,13 @@ export default function ProfileCreator({
     goBack();
   }, [goBack, onCloseModal, onUnmountModal]);
 
-  const handleChange = useCallback(({ nativeEvent: { text } }) => {
-    const value = text.charCodeAt(0) === 32 ? text.substring(1) : text;
+  const handleChange = useCallback(({ nativeEvent: { text: inputText } }) => {
+    const value =
+      inputText.charCodeAt(0) === 32 ? inputText.substring(1) : inputText;
     if (value.length > 0) {
-      text.updateValue(' ');
+      text.current.updateValue(' ');
     } else {
-      text.updateValue('Name');
+      text.current.updateValue('Name');
     }
     setValue(value);
   }, []);
@@ -142,7 +145,7 @@ export default function ProfileCreator({
 
   const handleFocusInput = useCallback(async () => {
     if (inputRef) {
-      inputRef.focus();
+      inputRef.current.focus();
     }
   }, []);
 

@@ -91,7 +91,12 @@ const ConfirmImportAlert = (onSuccess, navigate) =>
             asset: [],
             isCurrentProfile: false,
             isNewProfile: true,
-            onCloseModal: isCanceled => (isCanceled ? null : onSuccess()),
+            onCloseModal: args => {
+              if (args) {
+                console.log('[IMPORT-WALLET]: onCloseModal called with', args);
+                onSuccess(args);
+              }
+            },
             profile: {},
             type: 'profile_creator',
           }),
@@ -127,6 +132,8 @@ const ImportSeedPhraseSheet = ({ isEmpty, setAppearListener }) => {
   const initializeWallet = useInitializeWallet();
   const [isImporting, setImporting] = useState(false);
   const [seedPhrase, setSeedPhrase] = useState('');
+  const [color, setColor] = useState(null);
+  const [name, setName] = useState(null);
   const [startFocusTimeout] = useTimeout();
   const [startAnalyticsTimeout] = useTimeout();
 
@@ -168,20 +175,25 @@ const ImportSeedPhraseSheet = ({ isEmpty, setAppearListener }) => {
     newImportingState => {
       setImporting(newImportingState);
       setParams({ gesturesEnabled: !newImportingState });
+      console.log('[IMPORT-WALLET]: toggleImporting ran');
     },
     [setParams]
   );
 
   const onPressImportButton = useCallback(() => {
     if (isSecretValid && seedPhrase) {
-      return ConfirmImportAlert(
-        () =>
-          setTimeout(() => {
-            setIsWalletImporting(true);
-            toggleImporting(true);
-          }, 20),
-        navigate
-      );
+      return ConfirmImportAlert(({ color, name }) => {
+        if (color) setColor(color);
+        if (name) setName(name);
+        console.log('[IMPORT-WALLET]: color and name are set');
+        try {
+          setIsWalletImporting(true);
+          toggleImporting(true);
+        } catch (e) {
+          console.log('ERROR:', e);
+        }
+        console.log('[IMPORT-WALLET]: toggleImporting done');
+      }, navigate);
     }
 
     if (isClipboardValidSecret && clipboard) {
@@ -198,9 +210,17 @@ const ImportSeedPhraseSheet = ({ isEmpty, setAppearListener }) => {
   ]);
 
   useEffect(() => {
+    console.log('[IMPORT-WALLET]: useffect running');
     if (isImporting) {
+      console.log('[IMPORT-WALLET]: isImporting letsgooo');
       startAnalyticsTimeout(() => {
-        initializeWallet(seedPhrase.trim())
+        console.log(
+          '[IMPORT-WALLET], about to intialize wallet with',
+          seedPhrase,
+          color,
+          name
+        );
+        initializeWallet(seedPhrase.trim(), color, name)
           .then(success => {
             if (success) {
               toggleImporting(false);
@@ -219,9 +239,11 @@ const ImportSeedPhraseSheet = ({ isEmpty, setAppearListener }) => {
       }, 50);
     }
   }, [
+    color,
     initializeWallet,
     isEmpty,
     isImporting,
+    name,
     navigate,
     seedPhrase,
     startAnalyticsTimeout,

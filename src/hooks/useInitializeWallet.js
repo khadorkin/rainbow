@@ -34,16 +34,24 @@ export default function useInitializeWallet() {
   const { network } = useAccountSettings();
 
   const initializeWallet = useCallback(
-    async seedPhrase => {
+    async (seedPhrase, color = null, name = null) => {
       try {
+        console.log(
+          '[IMPORT-WALLET]: initializing wallet with ',
+          seedPhrase,
+          color,
+          name
+        );
         logger.sentry('Start wallet setup');
         await dispatch(walletsLoadState());
         await runMigrations();
         // Load the network first
         await dispatch(settingsLoadNetwork());
-
+        console.log('[IMPORT-WALLET]: calling walletInit ');
         const { isImported, isNew, walletAddress } = await walletInit(
-          seedPhrase
+          seedPhrase,
+          color,
+          name
         );
         const info = await getAccountInfo(walletAddress, network);
         if (info.name && info.color) {

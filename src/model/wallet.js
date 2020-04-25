@@ -38,18 +38,27 @@ export function generateSeedPhrase() {
   return ethers.utils.HDNode.entropyToMnemonic(ethers.utils.randomBytes(16));
 }
 
-export const walletInit = async (seedPhrase = null) => {
+export const walletInit = async (
+  seedPhrase = null,
+  color = null,
+  name = null
+) => {
   let walletAddress = null;
   let isImported = false;
   let isNew = false;
   // Importing a seedphrase
   if (!isEmpty(seedPhrase)) {
     let wallet;
+    console.log(
+      '[IMPORT-WALLET]: walletInit : isMultiwalletAvailable',
+      isMultiwalletAvailable
+    );
     if (isMultiwalletAvailable) {
-      wallet = await newCreateWallet(seedPhrase);
+      wallet = await newCreateWallet(seedPhrase, color, name);
     } else {
       wallet = await createWallet(seedPhrase);
     }
+    console.log('[IMPORT-WALLET]: walletInit : done', { wallet });
     walletAddress = wallet.address;
     isImported = !isNil(walletAddress);
     return { isImported, isNew, walletAddress };
@@ -323,7 +332,7 @@ export const saveAddress = async (address, accessControlOptions = {}) => {
   await keychain.saveString(addressKey, address, accessControlOptions);
 };
 
-export const newCreateWallet = async seed => {
+export const newCreateWallet = async (seed, color, name) => {
   console.log('[IMPORT-WALLET]: newCreateWallet', seed);
   const walletSeed = seed || generateSeedPhrase();
   let wallet = null;
@@ -414,12 +423,24 @@ export const newCreateWallet = async seed => {
     const { wallets: allWallets } = getAllWallets();
     console.log('[IMPORT-WALLET]: got allWallets');
 
+    // if imported and we have only one account
+    // We name the wallet,
+    // If we have more than one account, we name the account
+    let walletName = 'My Wallet';
+    if (seed) {
+      if (addresses.length > 1 && name) {
+        walletName = name;
+      } else if (name) {
+        addresses[0].label = name;
+      }
+    }
+
     allWallets[id] = {
       addresses,
-      color: 0,
+      color: color || 0,
       id,
       imported: seed ? true : false,
-      name: `${seed ? 'Imported' : 'My'} Wallet`,
+      name: walletName,
       type,
     };
 
