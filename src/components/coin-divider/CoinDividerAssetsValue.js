@@ -1,46 +1,34 @@
-import PropTypes from 'prop-types';
 import React from 'react';
-import { View } from 'react-native';
+import styled from 'styled-components/primitives';
 import { convertAmountToNativeDisplay } from '../../helpers/utilities';
-import { colors } from '../../styles';
+import { colors, position } from '../../styles';
 import { OpacityToggler } from '../animations';
 import { Text } from '../text';
+
+const Container = styled(OpacityToggler)`
+  ${position.centered};
+  height: 30;
+`;
+
+const ValueText = styled(Text).attrs({
+  align: 'right',
+  color: colors.alpha(colors.blueGreyDark, 0.6),
+  size: 'lmedium',
+})`
+  padding-bottom: 1;
+`;
 
 const CoinDividerAssetsValue = ({
   assetsAmount,
   balancesSum,
   nativeCurrency,
-  node,
   openSmallBalances,
 }) => (
-  <View
-    style={{
-      height: 30,
-      justifyContent: 'center',
-    }}
-  >
-    <OpacityToggler
-      isVisible={openSmallBalances || assetsAmount === 0}
-      animationNode={node}
-    >
-      <Text
-        align="right"
-        color={colors.alpha(colors.blueGreyDark, 0.6)}
-        size="lmedium"
-        style={{ paddingBottom: 1 }}
-      >
-        {convertAmountToNativeDisplay(balancesSum, nativeCurrency)}
-      </Text>
-    </OpacityToggler>
-  </View>
+  <Container isVisible={openSmallBalances || assetsAmount === 0}>
+    <ValueText>
+      {convertAmountToNativeDisplay(balancesSum, nativeCurrency)}
+    </ValueText>
+  </Container>
 );
 
-CoinDividerAssetsValue.propTypes = {
-  assetsAmount: PropTypes.number,
-  balancesSum: PropTypes.string,
-  nativeCurrency: PropTypes.string,
-  node: PropTypes.object,
-  openSmallBalances: PropTypes.bool,
-};
-
-export default CoinDividerAssetsValue;
+export default React.memo(CoinDividerAssetsValue);

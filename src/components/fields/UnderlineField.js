@@ -8,7 +8,6 @@ import store from '../../redux/store';
 import { colors, fonts, position } from '../../styles';
 import { Button } from '../buttons';
 import { ExchangeInput } from '../exchange';
-import { Input } from '../inputs';
 import { Column, Row } from '../layout';
 
 const Underline = styled(View)`
@@ -35,7 +34,8 @@ export default class UnderlineField extends PureComponent {
     autoFocus: PropTypes.bool,
     buttonText: PropTypes.string,
     format: PropTypes.func,
-    keyboardType: Input.propTypes.keyboardType,
+    keyboardType: PropTypes.string,
+    mask: PropTypes.string,
     maxLength: PropTypes.number,
     onBlur: PropTypes.func,
     onChange: PropTypes.func,
@@ -89,10 +89,8 @@ export default class UnderlineField extends PureComponent {
     }
   };
 
-  onChange = event => {
-    const { nativeEvent } = event;
-
-    const value = this.format(nativeEvent.text);
+  onChangeText = event => {
+    const value = this.format(event);
 
     if (value !== this.props.value) {
       this.setState({ value });
@@ -130,6 +128,7 @@ export default class UnderlineField extends PureComponent {
       autoFocus,
       buttonText,
       keyboardType,
+      mask,
       maxLength,
       placeholder,
       ...props
@@ -147,14 +146,14 @@ export default class UnderlineField extends PureComponent {
             keyboardAppearance="light"
             keyboardType={keyboardType}
             letterSpacing={fonts.letterSpacing.roundedTightest}
-            mask="[099999999999999999].[999999999999999999]"
+            mask={mask}
             maxLength={maxLength}
             onBlur={this.onBlur}
-            onChange={this.onChange}
+            onChangeText={this.onChangeText}
             onFocus={this.onFocus}
             paddingRight={8}
             placeholder={placeholder}
-            refInput={this.handleRef}
+            ref={this.handleRef}
             size={fonts.size.h3}
             value={this.format(String(this.state.value || ''))}
             weight={fonts.weight.medium}
@@ -162,7 +161,6 @@ export default class UnderlineField extends PureComponent {
           {showFieldButton && (
             <Button
               backgroundColor={colors.sendScreen.brightBlue}
-              flex={0}
               onPress={this.handleButtonPress}
               size="small"
               type="pill"

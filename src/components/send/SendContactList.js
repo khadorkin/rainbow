@@ -1,16 +1,15 @@
 import { toLower } from 'lodash';
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
-import { withNavigation } from 'react-navigation';
-import { compose } from 'recompose';
+import { compose } from 'recompact';
 import {
   DataProvider,
   LayoutProvider,
   RecyclerListView,
 } from 'recyclerlistview';
 import { withSelectedInput } from '../../hoc';
-import { sheetVerticalOffset } from '../../navigation/transitions/effects';
-import Routes from '../../screens/Routes/routesNames';
+import { withNavigation } from '../../navigation/Navigation';
+import Routes from '../../navigation/routesNames';
 import { deviceUtils } from '../../utils';
 import { filterList } from '../../utils/search';
 import { FlyInAnimation } from '../animations';
@@ -104,27 +103,31 @@ class SendContactList extends Component {
     return false;
   };
 
+  handleRefocus = () => {
+    if (this.props.selectedInputId) {
+      this.props.selectedInputId.focus();
+    }
+  };
+
   onSelectEdit = accountInfo => {
     const { address, color, navigation, nickname, onChange } = accountInfo;
-    const refocusCallback =
-      this.props.selectedInputId && this.props.selectedInputId.focus;
 
-    navigation.navigate(Routes.OVERLAY_EXPANDED_ASSET_SCREEN, {
+    navigation.navigate(Routes.MODAL_SCREEN, {
+      additionalPadding: true,
       address,
       asset: {},
       color,
       contact: { address, color, nickname },
       onCloseModal: onChange,
-      onRefocusInput: refocusCallback,
+      onRefocusInput: this.handleRefocus,
       type: 'contact',
     });
   };
 
   renderItem = (type, item) => {
-    const { inputRef, navigation, onPressContact, removeContact } = this.props;
+    const { navigation, onPressContact, removeContact } = this.props;
     return (
       <SwipeableContactRow
-        inputRef={inputRef}
         navigation={navigation}
         onPress={onPressContact}
         onSelectEdit={this.onSelectEdit}
@@ -139,9 +142,7 @@ class SendContactList extends Component {
   };
 
   render = () => (
-    <FlyInAnimation
-      style={{ flex: 1, paddingBottom: sheetVerticalOffset, width: '100%' }}
-    >
+    <FlyInAnimation>
       {this.state.contacts.length === 0 ? (
         <SendEmptyState />
       ) : (

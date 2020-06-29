@@ -1,4 +1,12 @@
-import { compact, forEach, get, groupBy, includes, sortBy } from 'lodash';
+import {
+  chunk,
+  compact,
+  forEach,
+  get,
+  groupBy,
+  includes,
+  sortBy,
+} from 'lodash';
 import supportedNativeCurrencies from '../references/native-currencies.json';
 import { add } from './utilities';
 
@@ -40,7 +48,7 @@ export const buildCoinsList = (
   const isShortList = assetsLength <= amountOfShowedCoins;
 
   forEach(assets, asset => {
-    if (hiddenCoins.includes(asset.uniqueId)) {
+    if (hiddenCoins && hiddenCoins.includes(asset.uniqueId)) {
       hiddenAssets.push({
         isCoin: true,
         isHidden: true,
@@ -112,7 +120,8 @@ export const buildCoinsList = (
     smallBalances.assets.length > 0 ||
     (hiddenAssets.length > 0 && assetsLength > amountOfShowedCoins) ||
     (pinnedAssetsLength === allAssetsLength &&
-      allAssetsLength > amountOfShowedCoins)
+      allAssetsLength > amountOfShowedCoins) ||
+    isCoinListEdited
   ) {
     allAssets.push({
       assetsAmount: smallBalances.assets.length,
@@ -150,14 +159,22 @@ export const buildUniqueTokenList = (uniqueTokens, selectedShowcaseTokens) => {
         tokensRow.push([grouped[families[i]][j]]);
       }
     }
-    const tokens = compact(tokensRow);
-    rows.push({
-      childrenAmount: grouped[families[i]].length,
-      familyImage: get(tokensRow, '[0][0].familyImage', null),
-      familyName: families[i],
-      stableId: tokensRow[0].map(({ uniqueId }) => uniqueId).join('__'),
-      tokens,
-      uniqueId: tokensRow[0].map(({ uniqueId }) => uniqueId).join('__'),
+    let tokens = compact(tokensRow);
+    tokens = chunk(tokens, tokens.length > 25 ? 4 : 25);
+    // eslint-disable-next-line no-loop-func
+    tokens.forEach((tokenChunk, index) => {
+      const id = tokensRow[0]
+        .map(({ uniqueId }) => uniqueId)
+        .join(`__${index}`);
+      rows.push({
+        childrenAmount: grouped[families[i]].length,
+        familyImage: get(tokensRow, '[0][0].familyImage', null),
+        familyName: families[i],
+        isHeader: index === 0,
+        stableId: id,
+        tokens: tokenChunk,
+        uniqueId: id,
+      });
     });
   }
 
@@ -182,6 +199,7 @@ export const buildUniqueTokenList = (uniqueTokens, selectedShowcaseTokens) => {
       {
         childrenAmount: showcaseTokens.length,
         familyName: 'Showcase',
+        isHeader: true,
         stableId: 'showcase_stable_id',
         tokens: bundledShowcaseTokens,
         uniqueId: `sc_${showcaseTokens

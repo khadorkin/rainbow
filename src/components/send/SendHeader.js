@@ -3,11 +3,11 @@ import { get, isEmpty, isNumber, toLower } from 'lodash';
 import PropTypes from 'prop-types';
 import React, { Fragment, PureComponent } from 'react';
 import { Keyboard } from 'react-native';
-import { withNavigation } from 'react-navigation';
 import { compose, withProps } from 'recompact';
 import styled from 'styled-components/primitives';
 import { withNeverRerender, withSelectedInput } from '../../hoc';
-import Routes from '../../screens/Routes/routesNames';
+import { withNavigation } from '../../navigation/Navigation';
+import Routes from '../../navigation/routesNames';
 import { colors, padding } from '../../styles';
 import { showActionSheetWithOptions } from '../../utils/actionsheet';
 import Divider from '../Divider';
@@ -52,7 +52,6 @@ const getContactForRecipient = ({ contacts, recipient }) => {
   if (recipient && !isEmpty(contacts)) {
     contact = get(contacts, `${[toLower(recipient)]}`, DefaultContactItem);
   }
-
   return { contact };
 };
 
@@ -137,24 +136,21 @@ class SendHeader extends PureComponent {
   };
 
   navigateToContact = (contact = {}) => {
-    const { navigation, recipient } = this.props;
-    const refocusCallback =
-      this.props.selectedInputId &&
-      this.props.selectedInputId.isFocused() &&
-      this.props.selectedInputId.focus;
+    const { navigation, recipient, selectedInputId } = this.props;
 
     let color = get(contact, 'color');
     if (!isNumber(color)) {
-      color = Math.floor(Math.random() * colors.avatarColor.length);
+      color = colors.getRandomColor();
     }
 
     Keyboard.dismiss();
-    navigation.navigate(Routes.OVERLAY_EXPANDED_ASSET_SCREEN, {
+    navigation.navigate(Routes.MODAL_SCREEN, {
+      additionalPadding: true,
       address: recipient,
       asset: {},
       color,
       contact: isEmpty(contact.address) ? false : contact,
-      onRefocusInput: refocusCallback,
+      onRefocusInput: () => selectedInputId?.focus(),
       type: 'contact',
     });
   };
@@ -180,7 +176,7 @@ class SendHeader extends PureComponent {
       showAssetList,
     } = this.props;
 
-    const isPreExistingContact = contact.nickname.length > 0;
+    const isPreExistingContact = (contact?.nickname.length || 0) > 0;
 
     return (
       <Fragment>

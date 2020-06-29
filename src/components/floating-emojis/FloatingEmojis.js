@@ -1,6 +1,8 @@
+import { castArray } from 'lodash';
 import PropTypes from 'prop-types';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Animated, View } from 'react-native';
+import { useTimeout } from '../../hooks';
 import { position } from '../../styles';
 import FloatingEmoji from './FloatingEmoji';
 
@@ -23,15 +25,14 @@ const FloatingEmojis = ({
   opacityThreshold,
   range,
   scaleTo,
+  setOnNewEmoji,
   size,
   wiggleFactor,
   ...props
 }) => {
+  const emojisArray = useMemo(() => castArray(emojis), [emojis]);
   const [floatingEmojis, setEmojis] = useState(EMPTY_ARRAY);
-
-  const timeout = useRef(undefined);
-  useEffect(() => () => timeout.current && clearTimeout(timeout.current), []);
-
+  const [startTimeout, stopTimeout] = useTimeout();
   const clearEmojis = useCallback(() => setEmojis(EMPTY_ARRAY), []);
 
   // 🚧️ TODO: 🚧️
@@ -41,8 +42,8 @@ const FloatingEmojis = ({
   const onNewEmoji = useCallback(
     (x, y) => {
       // Set timeout to automatically clearEmojis after the latest one has finished animating
-      if (timeout.current) clearTimeout(timeout.current);
-      timeout.current = setTimeout(clearEmojis, duration * 1.1);
+      stopTimeout();
+      startTimeout(clearEmojis, duration * 1.1);
 
       setEmojis(existingEmojis => {
         const newEmoji = {
@@ -50,17 +51,30 @@ const FloatingEmojis = ({
           emojiToRender:
             (existingEmojis.length + 1) % 7 === 0 && !disableRainbow
               ? 'rainbow'
-              : emojis.length === 1
-              ? emojis[0]
-              : emojis[getEmoji(emojis)],
+              : emojisArray.length === 1
+              ? emojisArray[0]
+              : emojisArray[getEmoji(emojisArray)],
           x: x ? x - getRandomNumber(-20, 20) : getRandomNumber(...range) + '%',
           y: y || 0,
         };
         return [...existingEmojis, newEmoji];
       });
     },
-    [clearEmojis, disableRainbow, duration, emojis, range]
+    [
+      clearEmojis,
+      disableRainbow,
+      duration,
+      emojisArray,
+      range,
+      startTimeout,
+      stopTimeout,
+    ]
   );
+
+  useEffect(() => {
+    setOnNewEmoji?.(onNewEmoji);
+    return () => setOnNewEmoji?.(undefined);
+  }, [setOnNewEmoji, onNewEmoji]);
 
   return (
     <View zIndex={1} {...props}>
@@ -112,6 +126,7 @@ FloatingEmojis.propTypes = {
   opacityThreshold: PropTypes.number,
   range: PropTypes.arrayOf(PropTypes.number),
   scaleTo: PropTypes.number,
+  setOnNewEmoji: PropTypes.func,
   size: PropTypes.string.isRequired,
   wiggleFactor: PropTypes.number,
 };

@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { Platform, View } from 'react-native';
 import { Transition, Transitioning } from 'react-native-reanimated';
-import { sheetVerticalOffset } from '../../navigation/transitions/effects';
+import { sheetVerticalOffset } from '../../navigation/effects';
 import { colors } from '../../styles';
 import { Icon } from '../icons';
 import { Centered } from '../layout';
@@ -44,13 +44,13 @@ const SendEmptyState = () => {
   const icon = (
     <Icon
       color={colors.alpha(colors.blueGreyDark, 0.06)}
+      height={88}
       name="send"
       style={{
-        height: 88,
         marginBottom: Platform.OS === 'ios' ? 0 : 150,
         marginTop: Platform.OS === 'ios' ? 0 : 150,
-        width: 91,
       }}
+      width={91}
     />
   );
 

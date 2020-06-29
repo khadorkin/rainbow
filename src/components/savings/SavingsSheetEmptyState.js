@@ -1,71 +1,85 @@
-import PropTypes from 'prop-types';
-import React, { useMemo } from 'react';
-import { useNavigation } from 'react-navigation-hooks';
+import React, { useCallback, useMemo } from 'react';
+import { Alert } from 'react-native';
+import styled from 'styled-components/primitives';
 import { calculateAPY } from '../../helpers/savings';
-import Routes from '../../screens/Routes/routesNames';
-import { colors, fonts, padding } from '../../styles';
+import { useNavigation } from '../../navigation/Navigation';
+import Routes from '../../navigation/routesNames';
+import { colors, padding } from '../../styles';
+import { magicMemo } from '../../utils';
 import Divider from '../Divider';
 import { CoinIcon } from '../coin-icon';
 import { Centered, ColumnWithMargins } from '../layout';
 import { SheetButton } from '../sheet';
 import { Br, GradientText, Text } from '../text';
 
-const APYHeadingTextStyle = {
-  fontSize: parseFloat(fonts.size.big),
-  fontWeight: fonts.weight.bold,
-};
+const APYHeadingText = styled(Text).attrs({
+  size: 'big',
+  weight: 'bold',
+})``;
 
-const APYHeadingText = p => <Text {...p} style={APYHeadingTextStyle} />;
+const BodyText = styled(Text).attrs({
+  align: 'center',
+  color: colors.blueGreyDark50,
+  lineHeight: 'looser',
+  size: 'large',
+})`
+  padding-bottom: 30;
+`;
 
-const SavingsSheetEmptyState = ({ supplyRate, underlying }) => {
-  const apy = useMemo(() => calculateAPY(supplyRate), [supplyRate]);
-  const apyTruncated = Math.floor(apy * 10) / 10;
+const GradientAPYHeadingText = styled(GradientText).attrs({
+  align: 'center',
+  angle: false,
+  end: { x: 1, y: 1 },
+  renderer: APYHeadingText,
+  start: { x: 0, y: 0 },
+  steps: [0, 1],
+})``;
+
+const SavingsSheetEmptyState = ({
+  isReadOnlyWallet,
+  supplyRate,
+  underlying,
+}) => {
   const { navigate } = useNavigation();
+
+  const apy = useMemo(() => Math.floor(calculateAPY(supplyRate) * 10) / 10, [
+    supplyRate,
+  ]);
+
+  const onDeposit = useCallback(() => {
+    if (!isReadOnlyWallet) {
+      navigate(Routes.SAVINGS_DEPOSIT_MODAL, {
+        defaultInputAsset: underlying,
+      });
+    } else {
+      Alert.alert(`You need to import the wallet in order to do this`);
+    }
+  }, [isReadOnlyWallet, navigate, underlying]);
 
   return (
     <Centered direction="column" paddingTop={9}>
       <CoinIcon size={50} symbol="DAI" />
       <Centered marginBottom={12} marginTop={15}>
         <APYHeadingText>Get </APYHeadingText>
-        <GradientText
-          align="center"
-          angle={false}
-          end={{ x: 1, y: 1 }}
-          start={{ x: 0, y: 0 }}
-          steps={[0, 1]}
-          renderer={Text}
-          style={APYHeadingTextStyle}
-        >
-          {apyTruncated}%
-        </GradientText>
+        <GradientAPYHeadingText>{apy}%</GradientAPYHeadingText>
         <APYHeadingText> on your dollars</APYHeadingText>
       </Centered>
-      <Text
-        align="center"
-        color={colors.alpha(colors.blueGreyDark, 0.5)}
-        lineHeight="looser"
-        size="large"
-        style={{ paddingBottom: 30 }}
-      >
+      <BodyText>
         With digital dollars like Dai, saving <Br />
         earns you more than ever before
-      </Text>
+      </BodyText>
       <Divider color={colors.rowDividerLight} inset={[0, 42]} />
       <ColumnWithMargins css={padding(19, 15)} margin={19} width="100%">
         <SheetButton
           color={colors.swapPurple}
           label="􀁍 Deposit from Wallet"
-          onPress={() =>
-            navigate(Routes.SAVINGS_DEPOSIT_MODAL, {
-              defaultInputAsset: underlying,
-            })
-          }
+          onPress={onDeposit}
         />
         {/*
           <SheetButton
             color={colors.white}
             label="Deposit with Pay"
-            onPress={() => navigate('SavingsDepositModal')}
+            onPress={() => navigate(Routes.SAVINGS_DEPOSIT_MODAL)}
             textColor={colors.dark}
           />
         */}
@@ -74,10 +88,4 @@ const SavingsSheetEmptyState = ({ supplyRate, underlying }) => {
   );
 };
 
-SavingsSheetEmptyState.propTypes = {
-  supplyRate: PropTypes.string,
-  underlying: PropTypes.object,
-};
-
-const neverRerender = () => true;
-export default React.memo(SavingsSheetEmptyState, neverRerender);
+export default magicMemo(SavingsSheetEmptyState, 'isReadOnlyWallet');

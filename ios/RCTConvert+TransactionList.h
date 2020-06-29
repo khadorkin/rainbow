@@ -30,12 +30,19 @@
 {
   json = [self NSArray:json];
   NSMutableArray *result = [[NSMutableArray alloc] init];
+  int index = 0;
   
   for (id t in json) {
     NSDictionary *data = [self NSDictionary:t];
     Transaction *transaction = [[Transaction alloc] init];
     if (data[@"status"] != [NSNull null]) {
-       transaction.status = [data[@"status"] capitalizedString];
+       transaction.status = data[@"status"];
+    }
+    if (data[@"title"] != [NSNull null]) {
+       transaction.title = data[@"title"];
+    }
+    if (data[@"description"] != [NSNull null]) {
+       transaction.transactionDescription = data[@"description"];
     }
     if (data[@"symbol"] != [NSNull null]) {
        transaction.symbol = data[@"symbol"];
@@ -55,10 +62,10 @@
     if (data[@"name"] != [NSNull null]) {
       transaction.coinName = data[@"name"];
     }
-    if(data[@"native"][@"display"]){
+    if(data[@"native"] != [NSNull null] && data[@"native"][@"display"] != [NSNull null]){
       transaction.nativeDisplay = data[@"native"][@"display"];
     }
-    if(data[@"balance"][@"display"]){
+    if(data[@"balance"] != [NSNull null] && data[@"balance"][@"display"] != [NSNull null]){
       transaction.balanceDisplay = data[@"balance"][@"display"];
     }
     if (data[@"type"] != [NSNull null]) {
@@ -73,6 +80,9 @@
     } else {
       transaction.minedAt = [[NSDate alloc] init];
     }
+    
+    transaction.originalIndex = [[NSNumber alloc] initWithInt:index];
+    index+=1;
     
     [result addObject:transaction];
   }

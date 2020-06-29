@@ -11,13 +11,10 @@ import styled from 'styled-components/primitives';
 import { padding } from '../../styles';
 import { interpolate } from '../animations';
 import { CoinIcon } from '../coin-icon';
-import { Row } from '../layout';
+import { Centered } from '../layout';
 import { Text } from '../text';
 
-const Container = styled(Row).attrs({
-  align: 'center',
-  justify: 'center',
-})`
+const Container = styled(Centered)`
   ${padding(19, 19, 2)};
   width: 100%;
 `;
@@ -80,11 +77,11 @@ const SwapInfo = ({ asset, amount }) => {
     >
       <Container>
         <CoinIcon
+          address={get(asset, 'address')}
           flex={0}
+          marginRight={5}
           size={20}
           symbol={get(asset, 'symbol')}
-          address={get(asset, 'address')}
-          marginRight={5}
         />
         <Text color="grey" size="smedium" weight="medium">
           Swapping for{' '}

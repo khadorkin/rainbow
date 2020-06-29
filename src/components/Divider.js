@@ -1,11 +1,10 @@
 import { constant, isNil, isNumber, times } from 'lodash';
-import PropTypes from 'prop-types';
 import React from 'react';
-import { onlyUpdateForKeys } from 'recompact';
-import styled, { css } from 'styled-components/primitives';
+import styled from 'styled-components/primitives';
 import { borders, colors, position } from '../styles';
+import { magicMemo } from '../utils';
 
-const DefaultDividerSize = 2;
+export const DividerSize = 2;
 
 const buildInsetFromProps = inset => {
   if (!inset) return times(4, constant(0));
@@ -21,29 +20,29 @@ const buildInsetFromProps = inset => {
   ];
 };
 
-const horizontalBorderLineStyles = inset => css`
-  ${inset[3] ? borders.buildRadius('left', 2) : null}
-  ${inset[1] ? borders.buildRadius('right', 2) : null}
+const horizontalBorderLineStyles = inset => `
+  ${inset[3] ? borders.buildRadius('left', 2) : ''}
+  ${inset[1] ? borders.buildRadius('right', 2) : ''}
   left: ${inset[3]};
   right: ${inset[1]};
 `;
 
-const verticalBorderLineStyles = inset => css`
-  ${inset[2] ? borders.buildRadius('bottom', 2) : null}
-  ${inset[0] ? borders.buildRadius('top', 2) : null}
+const verticalBorderLineStyles = inset => `
+  ${inset[2] ? borders.buildRadius('bottom', 2) : ''}
+  ${inset[0] ? borders.buildRadius('top', 2) : ''}
   bottom: ${inset[2]};
   top: ${inset[0]};
 `;
 
 const BorderLine = styled.View`
   ${position.cover};
-  ${({ horizontal, inset }) =>
-    horizontal
-      ? horizontalBorderLineStyles(inset)
-      : verticalBorderLineStyles(inset)};
   background-color: ${({ color }) => color};
-  bottom: 0;
-  top: 0;
+  ${({ horizontal, inset }) => {
+    const insetFromProps = buildInsetFromProps(inset);
+    return horizontal
+      ? horizontalBorderLineStyles(insetFromProps)
+      : verticalBorderLineStyles(insetFromProps);
+  }}
 `;
 
 const Container = styled.View`
@@ -53,36 +52,27 @@ const Container = styled.View`
   width: ${({ horizontal, size }) => (horizontal ? '100%' : size)};
 `;
 
-const enhance = onlyUpdateForKeys(['color', 'inset']);
-
-const Divider = enhance(({ color, horizontal, inset, size, ...props }) => (
-  <Container {...props} horizontal={horizontal} size={size}>
+const Divider = ({
+  backgroundColor,
+  color = colors.rowDivider,
+  horizontal = true,
+  inset = [0, 0, 0, 19],
+  size = DividerSize,
+  ...props
+}) => (
+  <Container
+    {...props}
+    backgroundColor={backgroundColor}
+    horizontal={horizontal}
+    size={size}
+  >
     <BorderLine
       {...props}
       color={color}
       horizontal={horizontal}
-      inset={buildInsetFromProps(inset)}
+      inset={inset}
     />
   </Container>
-));
+);
 
-Divider.propTypes = {
-  color: PropTypes.string,
-  horizontal: PropTypes.bool,
-  inset: PropTypes.oneOfType([
-    PropTypes.arrayOf(PropTypes.number),
-    PropTypes.bool,
-  ]),
-  size: PropTypes.number,
-};
-
-Divider.defaultProps = {
-  color: colors.rowDivider,
-  horizontal: true,
-  inset: [0, 0, 0, 19],
-  size: DefaultDividerSize,
-};
-
-Divider.size = DefaultDividerSize;
-
-export default Divider;
+export default magicMemo(Divider, ['color', 'inset']);

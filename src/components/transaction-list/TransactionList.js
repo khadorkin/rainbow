@@ -1,182 +1,112 @@
 import Clipboard from '@react-native-community/clipboard';
 import analytics from '@segment/analytics-react-native';
-import React from 'react';
-import { Linking, requireNativeComponent, View } from 'react-native';
-import { connect } from 'react-redux';
-import { compose, withHandlers, withState } from 'recompact';
-import { isAvatarPickerAvailable } from '../../config/experimental';
+import PropTypes from 'prop-types';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { Linking, requireNativeComponent } from 'react-native';
+import { useDispatch } from 'react-redux';
+import styled from 'styled-components/primitives';
+import useExperimentalFlag, {
+  AVATAR_PICKER,
+} from '../../config/experimentalHooks';
+import isNativeStackAvailable from '../../helpers/isNativeStackAvailable';
 import TransactionStatusTypes from '../../helpers/transactionStatusTypes';
-import {
-  withAccountInfo,
-  withAccountSettings,
-  withAccountTransactions,
-  withContacts,
-  withRequests,
-} from '../../hoc';
+import { useAccountProfile } from '../../hooks';
+import { useNavigation } from '../../navigation/Navigation';
+import Routes from '../../navigation/routesNames';
 import { removeRequest } from '../../redux/requests';
-import Routes from '../../screens/Routes/routesNames';
 import { colors } from '../../styles';
 import { abbreviations, ethereumUtils } from '../../utils';
 import { showActionSheetWithOptions } from '../../utils/actionsheet';
-import LoadingState from '../activity-list/LoadingState';
 import { FloatingEmojis } from '../floating-emojis';
-
 const NativeTransactionListView = requireNativeComponent('TransactionListView');
 
-class TransactionList extends React.PureComponent {
-  static defaultProps = {
-    style: {},
-  };
+const Container = styled.View`
+  flex: 1;
+  margin-top: 0;
+`;
 
-  onCopyAddressPress = e => {
-    const { accountAddress, setTapTarget } = this.props;
-    const { x, y, width, height } = e.nativeEvent;
-    setTapTarget([x, y, width, height]);
-    if (this.onNewEmoji) {
-      this.onNewEmoji();
-    }
-    Clipboard.setString(accountAddress);
-  };
+const FloatingEmojisRegion = styled(FloatingEmojis).attrs({
+  distance: 250,
+  duration: 500,
+  fadeOut: false,
+  scaleTo: 0,
+  size: 50,
+  wiggleFactor: 0,
+})`
+  height: 0;
+  left: ${({ tapTarget }) => tapTarget[0] - 24};
+  position: absolute;
+  top: ${({ tapTarget }) => tapTarget[1] - tapTarget[3]};
+  width: ${({ tapTarget }) => tapTarget[2]};
+`;
 
-  onCopyTooltipPress = () => {
-    const { accountENS, accountAddress } = this.props;
-    Clipboard.setString(accountENS || accountAddress);
-  };
+const TransactionList = ({
+  addCashAvailable,
+  contacts,
+  initialized,
+  isLoading,
+  network,
+  requests,
+  transactions,
+}) => {
+  const [tapTarget, setTapTarget] = useState([0, 0, 0, 0]);
+  const onNewEmoji = useRef();
+  const setOnNewEmoji = useCallback(
+    newOnNewEmoji => (onNewEmoji.current = newOnNewEmoji),
+    []
+  );
+  const dispatch = useDispatch();
+  const { navigate, isFocused } = useNavigation();
+  const {
+    accountAddress,
+    accountColor,
+    accountSymbol,
+    accountName,
+  } = useAccountProfile();
 
-  formatAddress = address => {
-    if (address) {
-      return abbreviations.address(
-        address,
-        4,
-        abbreviations.defaultNumCharsPerSection
-      );
-    }
-    return '';
-  };
-
-  render() {
-    const {
-      header,
-      initialized,
-      navigation,
-      requests,
-      transactions,
-      accountAddress,
-      accountColor,
-      accountENS,
-      accountName,
-      addCashAvailable,
-      onAddCashPress,
-      onAvatarPress,
-      onReceivePress,
-      onRequestPress,
-      onRequestExpire,
-      onTransactionPress,
-      style,
-      tapTarget,
-    } = this.props;
-
-    if (!initialized && !navigation.isFocused()) {
-      return <LoadingState>{header}</LoadingState>;
-    }
-
-    const addressOrEns = accountENS || this.formatAddress(accountAddress);
-
-    const data = {
-      requests,
-      transactions,
-    };
-
-    return (
-      <View style={style}>
-        <NativeTransactionListView
-          accountAddress={addressOrEns}
-          accountColor={colors.avatarColor[accountColor]}
-          accountName={accountName}
-          addCashAvailable={addCashAvailable}
-          data={data}
-          isAvatarPickerAvailable={isAvatarPickerAvailable}
-          onAddCashPress={onAddCashPress}
-          onAvatarPress={onAvatarPress}
-          onCopyAddressPress={this.onCopyAddressPress}
-          onCopyTooltipPress={this.onCopyTooltipPress}
-          onReceivePress={onReceivePress}
-          onRequestExpire={onRequestExpire}
-          onRequestPress={onRequestPress}
-          onTransactionPress={onTransactionPress}
-          style={style}
-        />
-        <FloatingEmojis
-          distance={250}
-          duration={500}
-          fadeOut={false}
-          scaleTo={0}
-          size={50}
-          style={{
-            height: 0,
-            left: tapTarget[0] - 24,
-            position: 'absolute',
-            top: tapTarget[1] - tapTarget[3],
-            width: tapTarget[2],
-          }}
-          wiggleFactor={0}
-        >
-          {({ onNewEmoji }) => {
-            if (!this.onNewEmoji) {
-              this.onNewEmoji = onNewEmoji;
-            }
-            return null;
-          }}
-        </FloatingEmojis>
-      </View>
+  const onAddCashPress = useCallback(() => {
+    navigate(
+      isNativeStackAvailable
+        ? Routes.ADD_CASH_SCREEN_NAVIGATOR
+        : Routes.ADD_CASH_SHEET
     );
-  }
-}
+    analytics.track('Tapped Add Cash', {
+      category: 'add cash',
+    });
+  }, [navigate]);
 
-export default compose(
-  connect(null, { removeExpiredRequest: removeRequest }),
-  withAccountInfo,
-  withAccountSettings,
-  withAccountTransactions,
-  withRequests,
-  withContacts,
-  withState('tapTarget', 'setTapTarget', [0, 0, 0, 0]),
-  withHandlers({
-    onAddCashPress: ({ navigation }) => () => {
-      navigation.navigate(Routes.ADD_CASH_SHEET);
-      analytics.track('Tapped Add Cash', {
-        category: 'add cash',
-      });
-    },
-    onAvatarPress: ({ navigation, accountColor, accountName }) => () => {
-      navigation.navigate(Routes.AVATAR_BUILDER, {
-        accountColor,
-        accountName,
-      });
-    },
-    onReceivePress: ({ navigation }) => () => {
-      navigation.navigate(Routes.RECEIVE_MODAL);
-    },
-    onRequestExpire: ({ requests, removeExpiredRequest }) => e => {
+  const onAvatarPress = useCallback(() => {
+    navigate(Routes.AVATAR_BUILDER, {
+      accountColor,
+      accountName,
+    });
+  }, [accountColor, accountName, navigate]);
+
+  const onReceivePress = useCallback(() => {
+    navigate(Routes.RECEIVE_MODAL);
+  }, [navigate]);
+
+  const onRequestExpire = useCallback(
+    e => {
       const { index } = e.nativeEvent;
       const item = requests[index];
-      removeExpiredRequest(item.requestId);
+      item && item.requestId && dispatch(removeRequest(item.requestId));
     },
-    onRequestPress: ({ requests, navigation }) => e => {
+    [dispatch, requests]
+  );
+
+  const onRequestPress = useCallback(
+    e => {
       const { index } = e.nativeEvent;
       const item = requests[index];
-      navigation.navigate({
-        params: { transactionDetails: item },
-        routeName: Routes.CONFIRM_REQUEST,
-      });
+      navigate(Routes.CONFIRM_REQUEST, { transactionDetails: item });
       return;
     },
-    onTransactionPress: ({
-      transactions,
-      contacts,
-      navigation,
-      network,
-    }) => e => {
+    [navigate, requests]
+  );
+
+  const onTransactionPress = useCallback(
+    e => {
       const { index } = e.nativeEvent;
       const item = transactions[index];
       const { hash, from, to, status } = item;
@@ -197,7 +127,7 @@ export default compose(
       if (contact) {
         headerInfo.address = contact.nickname;
         contactColor = contact.color;
-      } else if (!isPurchasing) {
+      } else {
         headerInfo.address = abbreviations.address(contactAddress, 4, 10);
         contactColor = Math.floor(Math.random() * colors.avatarColor.length);
       }
@@ -218,7 +148,7 @@ export default compose(
           },
           buttonIndex => {
             if (!isPurchasing && buttonIndex === 0) {
-              navigation.navigate(Routes.EXPANDED_ASSET_SCREEN, {
+              navigate(Routes.MODAL_SCREEN, {
                 address: contactAddress,
                 asset: item,
                 color: contactColor,
@@ -239,5 +169,77 @@ export default compose(
         );
       }
     },
-  })
-)(TransactionList);
+    [contacts, navigate, network, transactions]
+  );
+
+  const onCopyAddressPress = useCallback(
+    e => {
+      const { x, y, width, height } = e.nativeEvent;
+      setTapTarget([x, y, width, height]);
+      if (onNewEmoji && onNewEmoji.current) {
+        onNewEmoji.current();
+      }
+      Clipboard.setString(accountAddress);
+    },
+    [accountAddress]
+  );
+
+  const onAccountNamePress = useCallback(() => {
+    navigate(Routes.CHANGE_WALLET_SHEET);
+  }, [navigate]);
+
+  const data = useMemo(
+    () => ({
+      requests,
+      transactions,
+    }),
+    [requests, transactions]
+  );
+
+  const loading = useMemo(() => (!initialized && !isFocused()) || isLoading, [
+    initialized,
+    isLoading,
+    isFocused,
+  ]);
+
+  const isAvatarPickerAvailable = useExperimentalFlag(AVATAR_PICKER);
+
+  return (
+    <Container>
+      <Container
+        accountAddress={accountName}
+        accountColor={colors.avatarColor[accountColor]}
+        accountName={accountSymbol}
+        addCashAvailable={addCashAvailable}
+        as={NativeTransactionListView}
+        data={data}
+        isAvatarPickerAvailable={isAvatarPickerAvailable}
+        onAccountNamePress={onAccountNamePress}
+        onAddCashPress={onAddCashPress}
+        onAvatarPress={onAvatarPress}
+        onCopyAddressPress={onCopyAddressPress}
+        onReceivePress={onReceivePress}
+        onRequestExpire={onRequestExpire}
+        onRequestPress={onRequestPress}
+        onTransactionPress={onTransactionPress}
+        isLoading={loading}
+      />
+      <FloatingEmojisRegion
+        setOnNewEmoji={setOnNewEmoji}
+        tapTarget={tapTarget}
+      />
+    </Container>
+  );
+};
+
+TransactionList.propTypes = {
+  addCashAvailable: PropTypes.bool,
+  contacts: PropTypes.array,
+  initialized: PropTypes.bool,
+  isLoading: PropTypes.bool,
+  network: PropTypes.string,
+  requests: PropTypes.array,
+  transactions: PropTypes.array,
+};
+
+export default TransactionList;

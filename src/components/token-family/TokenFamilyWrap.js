@@ -1,10 +1,12 @@
 import { times } from 'lodash';
-import PropTypes from 'prop-types';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Transition, Transitioning } from 'react-native-reanimated';
-import { View } from 'react-primitives';
+import styled from 'styled-components/primitives';
+import { useTimeout } from '../../hooks';
 import { colors } from '../../styles';
-import TokenFamilyHeader from './TokenFamilyHeader';
+import TokenFamilyHeader, {
+  TokenFamilyHeaderAnimationDuration,
+} from './TokenFamilyHeader';
 
 export const TokenFamilyWrapPaddingTop = 6;
 
@@ -17,85 +19,65 @@ const transition = (
   />
 );
 
-const TokenFamilyWrap = ({
+const Container = styled.View`
+  background-color: ${colors.white};
+  overflow: hidden;
+  padding-top: ${({ isFirst }) => (isFirst ? TokenFamilyWrapPaddingTop : 0)};
+`;
+
+const Content = styled(Transitioning.View).attrs({ transition })`
+  padding-top: ${({ areChildrenVisible }) =>
+    areChildrenVisible ? TokenFamilyWrapPaddingTop : 0};
+`;
+
+export default function TokenFamilyWrap({
   childrenAmount,
-  highlight,
   isFirst,
+  isHeader,
   isOpen,
   item,
   onToggle,
   renderItem,
   title,
   ...props
-}) => {
+}) {
+  const [areChildrenVisible, setAreChildrenVisible] = useState(false);
+  const [startTimeout, stopTimeout] = useTimeout();
   const transitionRef = useRef();
-  const [areChildrenVisible, setAreChildrenVisible] = useState(isOpen);
-
-  const timeoutHandle = useRef();
-  const clearHandle = useCallback(
-    () => timeoutHandle.current && clearTimeout(timeoutHandle.current),
-    []
-  );
 
   const showChildren = useCallback(() => {
     if (!areChildrenVisible) {
       setAreChildrenVisible(true);
-      if (transitionRef.current) {
-        transitionRef.current.animateNextTransition();
-      }
+      transitionRef.current?.animateNextTransition();
     }
   }, [areChildrenVisible]);
 
   useEffect(() => {
-    clearHandle();
+    stopTimeout();
     if (areChildrenVisible && !isOpen) {
       setAreChildrenVisible(false);
     } else if (!areChildrenVisible && isOpen) {
-      timeoutHandle.current = setTimeout(
-        showChildren,
-        TokenFamilyHeader.animationDuration
-      );
+      startTimeout(showChildren, TokenFamilyHeaderAnimationDuration);
     }
-    return () => clearHandle();
-  }, [areChildrenVisible, clearHandle, isOpen, showChildren]);
+  }, [areChildrenVisible, isOpen, showChildren, startTimeout, stopTimeout]);
 
   return (
-    <View
-      backgroundColor={colors.white}
-      overflow="hidden"
-      paddingTop={isFirst ? TokenFamilyWrapPaddingTop : 0}
-    >
-      <TokenFamilyHeader
-        {...props}
-        childrenAmount={childrenAmount}
-        highlight={highlight}
-        isOpen={isOpen}
-        onPress={onToggle}
-        title={title}
-      />
+    <Container isFirst={isFirst}>
+      {isHeader ? (
+        <TokenFamilyHeader
+          {...props}
+          childrenAmount={childrenAmount}
+          isOpen={isOpen}
+          onPress={onToggle}
+          title={title}
+        />
+      ) : null}
       {/*
           XXX 👇️👇️👇️👇️ not sure if this Transitioning.View should have a `key` defined for performance or not
       */}
-      <Transitioning.View
-        paddingTop={areChildrenVisible ? TokenFamilyWrapPaddingTop : 0}
-        ref={transitionRef}
-        transition={transition}
-      >
+      <Content areChildrenVisible={areChildrenVisible} ref={transitionRef}>
         {areChildrenVisible ? times(item.length, renderItem) : null}
-      </Transitioning.View>
-    </View>
+      </Content>
+    </Container>
   );
-};
-
-TokenFamilyWrap.propTypes = {
-  childrenAmount: PropTypes.number,
-  highlight: PropTypes.bool,
-  isFirst: PropTypes.bool,
-  isOpen: PropTypes.bool,
-  item: PropTypes.array,
-  onToggle: PropTypes.func,
-  renderItem: PropTypes.func,
-  title: PropTypes.string,
-};
-
-export default TokenFamilyWrap;
+}

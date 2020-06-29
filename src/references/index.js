@@ -1,9 +1,9 @@
-import { keys, mapKeys, mapValues, toLower } from 'lodash';
+import { mapKeys, mapValues, toLower } from 'lodash';
 import savingAssets from './compound/saving-assets.json';
-import tokenOverridesFallback from './token-overrides.json';
-import uniswapAssetsFallback from './uniswap/uniswap-pairs.json';
-import { supportedCountries } from './wyre/supportedCountries';
+import tokenOverridesData from './token-overrides.json';
+import uniswapPairsData from './uniswap/uniswap-pairs.json';
 
+export { default as chains } from './chains.json';
 export { default as compoundCERC20ABI } from './compound/compound-cerc20-abi.json';
 export { default as compoundCETHABI } from './compound/compound-ceth-abi.json';
 export { default as erc20ABI } from './erc20-abi.json';
@@ -20,8 +20,6 @@ const SOCKS_ADDRESS = '0x23B608675a2B2fB1890d3ABBd85c5775c51691d5';
 export const TRANSFER_EVENT_TOPIC_LENGTH = 3;
 export const TRANSFER_EVENT_KECCAK =
   '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
-
-export const WYRE_SUPPORTED_COUNTRIES_ISO = keys(supportedCountries);
 
 export const AddCashCurrencies = {
   kovan: {
@@ -41,7 +39,7 @@ export const AddCashCurrencyInfo = {
       name: 'Dai',
       symbol: 'DAI',
     },
-    eth: {
+    'eth': {
       decimals: 18,
       name: 'Ethereum',
       symbol: 'ETH',
@@ -53,7 +51,7 @@ export const AddCashCurrencyInfo = {
       name: 'Dai',
       symbol: 'DAI',
     },
-    eth: {
+    'eth': {
       decimals: 18,
       name: 'Ethereum',
       symbol: 'ETH',
@@ -71,23 +69,18 @@ export const DefaultUniswapFavorites = {
   ],
 };
 
-export const loweredTokenOverridesFallback = mapKeys(
-  tokenOverridesFallback,
-  (_, address) => toLower(address)
+export const tokenOverrides = mapKeys(tokenOverridesData, (_, address) =>
+  toLower(address)
 );
 
-const loweredUniswapAssetsFallback = mapKeys(
-  uniswapAssetsFallback,
-  (value, key) => toLower(key)
+const loweredUniswapPairs = mapKeys(uniswapPairsData, (value, key) =>
+  toLower(key)
 );
 
-export const cleanUniswapAssetsFallback = mapValues(
-  loweredUniswapAssetsFallback,
-  (value, key) => ({
-    ...value,
-    ...loweredTokenOverridesFallback[key],
-  })
-);
+export const uniswapPairs = mapValues(loweredUniswapPairs, (value, key) => ({
+  ...value,
+  ...tokenOverrides[key],
+}));
 
 export const savingsAssetsList = savingAssets;
 
@@ -102,15 +95,3 @@ export const savingsAssetsListByUnderlying = mapValues(
       value => value.address
     )
 );
-
-export const shitcoinBlacklist = {
-  goerli: [],
-  kovan: [],
-  mainnet: [
-    '0xc12d1c73ee7dc3615ba4e37e4abfdbddfa38907e', // KickToken (KICK)
-    '0xdbadabe39b91f2069e27291add14a1d95e3ff54f', // betbeb.com空投1万个ETH (BEB)
-    '0xf222ba8af81d799c565241b0d3eedf9bdc4fc462', // betbeb.com空投1万个ETH (BEB)
-  ],
-  rinkeby: [],
-  ropsten: [],
-};

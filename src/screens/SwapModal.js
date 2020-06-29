@@ -1,19 +1,30 @@
+import { useRoute } from '@react-navigation/native';
 import React from 'react';
 import ExchangeModalTypes from '../helpers/exchangeModalTypes';
+
 import createUnlockAndSwapRap, {
   estimateUnlockAndSwap,
 } from '../raps/unlockAndSwap';
-import ExchangeModalWithData from './ExchangeModalWithData';
+import ExchangeModal from './ExchangeModal';
 
-const SwapModal = ({ ...props }) => (
-  <ExchangeModalWithData
-    createRap={createUnlockAndSwapRap}
-    estimateRap={estimateUnlockAndSwap}
-    inputHeaderTitle="Swap"
-    showOutputField
-    type={ExchangeModalTypes.swap}
-    {...props}
-  />
-);
+const SwapModal = (props, ref) => {
+  const { params = {} } = useRoute();
 
-export default SwapModal;
+  const { inputAsset, outputAsset } = params;
+
+  return (
+    <ExchangeModal
+      createRap={createUnlockAndSwapRap}
+      defaultInputAsset={inputAsset}
+      defaultOutputAsset={outputAsset}
+      estimateRap={estimateUnlockAndSwap}
+      inputHeaderTitle="Swap"
+      ref={ref}
+      showOutputField
+      type={ExchangeModalTypes.swap}
+      {...props}
+    />
+  );
+};
+
+export default React.forwardRef(SwapModal);

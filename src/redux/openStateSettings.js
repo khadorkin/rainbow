@@ -4,10 +4,6 @@ import {
   getOpenInvestmentCards,
   getSavingsToggle,
   getSmallBalanceToggle,
-  removeOpenFamilies,
-  removeOpenInvestmentCards,
-  removeSavingsToggle,
-  removeSmallBalanceToggle,
   saveOpenFamilies,
   saveOpenInvestmentCards,
   saveSavingsToggle,
@@ -113,16 +109,10 @@ export const pushOpenInvestmentCard = payload => dispatch =>
     type: PUSH_OPEN_INVESTMENT_CARD,
   });
 
-export const clearOpenStateSettings = () => (dispatch, getState) => {
-  const { accountAddress, network } = getState().settings;
-  removeOpenFamilies(accountAddress, network);
-  removeOpenInvestmentCards(accountAddress, network);
-  removeSavingsToggle(accountAddress, network);
-  removeSmallBalanceToggle(accountAddress, network);
+export const resetOpenStateSettings = () => dispatch =>
   dispatch({
     type: CLEAR_OPEN_STATE_SETTINGS,
   });
-};
 
 // -- Reducer --------------------------------------------------------------- //
 export const INITIAL_STATE = {

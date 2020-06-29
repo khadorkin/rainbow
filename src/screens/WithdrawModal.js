@@ -1,25 +1,26 @@
 import React from 'react';
 import ExchangeModalTypes from '../helpers/exchangeModalTypes';
+import useStatusBarManaging from '../navigation/useStatusBarManaging';
 import createWithdrawFromCompoundRap, {
   estimateWithdrawFromCompound,
 } from '../raps/withdrawFromCompound';
-import ExchangeModalWithData from './ExchangeModalWithData';
+import ExchangeModal from './ExchangeModal';
 
-const WithdrawModal = ({ navigation, ...props }) => {
-  const cTokenBalance = navigation.getParam('cTokenBalance');
-  const defaultInputAsset = navigation.getParam('defaultInputAsset');
-  const underlyingPrice = navigation.getParam('underlyingPrice');
-  const supplyBalanceUnderlying = navigation.getParam(
-    'supplyBalanceUnderlying'
-  );
+const WithdrawModal = ({ route, navigation, ...props }) => {
+  useStatusBarManaging();
+  const cTokenBalance = route.params?.cTokenBalance;
+  const defaultInputAsset = route.params?.defaultInputAsset;
+  const underlyingPrice = route.params?.underlyingPrice;
+  const supplyBalanceUnderlying = route.params?.supplyBalanceUnderlying;
 
   return (
-    <ExchangeModalWithData
+    <ExchangeModal
       createRap={createWithdrawFromCompoundRap}
       cTokenBalance={cTokenBalance}
       defaultInputAsset={defaultInputAsset}
       estimateRap={estimateWithdrawFromCompound}
       inputHeaderTitle={`Withdraw ${defaultInputAsset.symbol}`}
+      navigation={navigation}
       showOutputField={false}
       type={ExchangeModalTypes.withdrawal}
       underlyingPrice={underlyingPrice}

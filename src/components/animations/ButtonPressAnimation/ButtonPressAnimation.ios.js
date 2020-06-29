@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { Platform } from 'react-native';
 import {
   createNativeWrapper,
   PureNativeButton,
@@ -15,11 +16,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import stylePropType from 'react-style-proptype';
 import { useMemoOne } from 'use-memo-one';
-import isNativeButtonAvailable from '../../../helpers/isNativeButtonAvailable';
+import useNativeButtonAvailable from '../../../helpers/isNativeButtonAvailable';
 import { useInteraction, useTransformOrigin } from '../../../hooks';
-import { animations } from '../../../styles';
 import { directionPropType } from '../../../utils';
-import Button from '../../native-button';
+import NativeButton from './NativeButton';
 
 const {
   and,
@@ -87,7 +87,7 @@ function usePressHandler({
   return [handlePress, createHandle, removeHandle];
 }
 
-const maybeProc = isNativeButtonAvailable ? a => a : proc;
+const maybeProc = Platform.OS === 'ios' ? a => a : proc;
 
 const ButtonPressAnimationProc = maybeProc(function(
   animationState,
@@ -205,6 +205,7 @@ function ButtonPressAnimationJS({
   hapticType,
   isInteraction,
   minLongPressDuration,
+  onLayout,
   onLongPress,
   onPress,
   onPressStart,
@@ -213,7 +214,10 @@ function ButtonPressAnimationJS({
   transformOrigin,
 }) {
   const [createHandle, removeHandle, interactionHandle] = useInteraction();
-  const { onLayout, withTransformOrigin } = useTransformOrigin(transformOrigin);
+  const {
+    onLayout: measureInnerElement,
+    withTransformOrigin,
+  } = useTransformOrigin(transformOrigin);
 
   const optionallyTriggerHaptic = useCallback(() => {
     if (enableHapticFeedback) {
@@ -352,10 +356,11 @@ function ButtonPressAnimationJS({
     <AnimatedRawButton
       enabled={!disabled}
       onHandlerStateChange={onGestureEvent}
+      onLayout={onLayout}
     >
       <Animated.View
         accessible
-        onLayout={onLayout}
+        onLayout={measureInnerElement}
         style={[
           style,
           {
@@ -374,9 +379,13 @@ function ButtonPressAnimationJS({
   );
 }
 
-const ButtonPressAnimation = isNativeButtonAvailable
-  ? Button
-  : ButtonPressAnimationJS;
+const ButtonPressAnimation = props => {
+  const isNativeButtonAvailable = useNativeButtonAvailable();
+  const Component = isNativeButtonAvailable
+    ? NativeButton
+    : ButtonPressAnimationJS;
+  return <Component {...props} />;
+};
 
 export default ButtonPressAnimation;
 
@@ -389,15 +398,17 @@ ButtonPressAnimation.propTypes = {
   hapticType: PropTypes.string,
   isInteraction: PropTypes.bool,
   minLongPressDuration: PropTypes.number,
+  onLayout: PropTypes.func,
   onLongPress: PropTypes.func,
   onPress: PropTypes.func,
   onPressStart: PropTypes.func,
   pressOutDuration: PropTypes.number,
   scaleTo: PropTypes.number,
   style: stylePropType,
-  transformOrigin: isNativeButtonAvailable
-    ? PropTypes.arrayOf(PropTypes.number)
-    : directionPropType,
+  transformOrigin: PropTypes.oneOfType([
+    PropTypes.arrayOf(PropTypes.number),
+    directionPropType,
+  ]),
   useLateHaptic: PropTypes.bool,
 };
 
@@ -407,15 +418,15 @@ ButtonPressAnimation.defaultProps = {
   enableHapticFeedback: true,
   hapticType: 'selection',
   minLongPressDuration: 500,
-  scaleTo: animations.keyframes.button.to.scale,
+  scaleTo: 0.86,
 };
 
-Button.defaultProps = {
+NativeButton.defaultProps = {
   activeOpacity: 1,
   duration: 160,
   enableHapticFeedback: true,
   hapticType: 'selection',
   minLongPressDuration: 500,
-  scaleTo: animations.keyframes.button.to.scale,
+  scaleTo: 0.86,
   useLateHaptic: true,
 };

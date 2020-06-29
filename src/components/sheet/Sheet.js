@@ -1,26 +1,30 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import { useSafeArea } from 'react-native-safe-area-context';
-import { useNavigation } from 'react-navigation-hooks';
+import { useDimensions } from '../../hooks';
+import { useNavigation } from '../../navigation/Navigation';
+
 import { borders, colors } from '../../styles';
 import TouchableBackdrop from '../TouchableBackdrop';
 import { Centered, Column } from '../layout';
 import SheetHandle from './SheetHandle';
 
-const Sheet = ({ children }) => {
+const Sheet = ({ borderRadius, children, hideHandle }) => {
+  const { width } = useDimensions();
   const { goBack } = useNavigation();
   const insets = useSafeArea();
 
   return (
-    <Column height="100%" justify="end">
+    <Column height="100%" justify="end" width={width}>
       <TouchableBackdrop onPress={goBack} />
       <Column
         backgroundColor={colors.white}
-        css={borders.buildRadius('top', 39)}
+        css={borders.buildRadius('top', borderRadius)}
         paddingBottom={insets.bottom}
+        width="100%"
       >
-        <Centered paddingBottom={15} paddingTop={6}>
-          <SheetHandle />
+        <Centered paddingBottom={7} paddingTop={6}>
+          {!hideHandle && <SheetHandle />}
         </Centered>
         {children}
       </Column>
@@ -29,7 +33,13 @@ const Sheet = ({ children }) => {
 };
 
 Sheet.propTypes = {
+  borderRadius: PropTypes.number,
   children: PropTypes.node,
+  hideHandle: PropTypes.bool,
+};
+
+Sheet.defaultProps = {
+  borderRadius: 39,
 };
 
 export default Sheet;

@@ -7,6 +7,7 @@
 
 @import Firebase;
 #import "AppDelegate.h"
+#import <RNBranch/RNBranch.h>
 #import <React/RCTBridge.h>
 #import <React/RCTBundleURLProvider.h>
 #import <React/RCTLinkingManager.h>
@@ -34,8 +35,43 @@ static void InitializeFlipper(UIApplication *application) {
 }
 #endif
 
+@interface RainbowSplashScreenManager : NSObject <RCTBridgeModule>
+@end
+
+@implementation RainbowSplashScreenManager
+
+- (dispatch_queue_t)methodQueue {
+  return dispatch_get_main_queue();
+}
+
+RCT_EXPORT_MODULE(RainbowSplashScreen);
+
+RCT_EXPORT_METHOD(hideAnimated) {
+  [((AppDelegate*) UIApplication.sharedApplication.delegate) hideSplashScreenAnimated];
+}
+
+@end
+
+
 
 @implementation AppDelegate
+- (void)hideSplashScreenAnimated {
+  UIView* subview = self.window.rootViewController.view.subviews.lastObject;
+  UIView* rainbowIcon = subview.subviews.firstObject;
+  if (![rainbowIcon isKindOfClass:UIImageView.class]) {
+    return;
+  }
+  [UIView animateWithDuration:0.1
+                        delay:0.0
+                      options:UIViewAnimationOptionCurveEaseIn
+  animations:^{
+      rainbowIcon.transform = CGAffineTransformScale(CGAffineTransformIdentity, 0.0000000001, 0.0000000001);
+      subview.alpha = 0.0;
+  } completion:^(BOOL finished) {
+      rainbowIcon.hidden = YES;
+      [RNSplashScreen hide];
+  }];
+}
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
@@ -49,7 +85,7 @@ static void InitializeFlipper(UIApplication *application) {
   UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
   center.delegate = self;
   
-  
+  [RNBranch initSessionWithLaunchOptions:launchOptions isReferrable:YES];
 
   // React Native - Defaults
   RCTBridge *bridge = [[RCTBridge alloc] initWithDelegate:self launchOptions:launchOptions];
@@ -76,7 +112,7 @@ static void InitializeFlipper(UIApplication *application) {
     object:nil];
   
   // Splashscreen - react-native-splash-screen
-  [RNSplashScreen show];
+  [RNSplashScreen showSplash:@"LaunchScreen" inRootView:rootView];
   return YES;
 }
 
@@ -91,7 +127,7 @@ static void InitializeFlipper(UIApplication *application) {
 - (NSURL *)sourceURLForBridge:(RCTBridge *)bridge
 {
   #if DEBUG
-    return [NSURL URLWithString:[[[[RCTBundleURLProvider sharedSettings] jsBundleURLForBundleRoot:@"index" fallbackResource:nil] absoluteString] stringByAppendingString:@"&inlineSourceMap=true" ]];
+    return [[RCTBundleURLProvider sharedSettings] jsBundleURLForBundleRoot:@"index" fallbackResource:nil];
   #else
     return [[NSBundle mainBundle] URLForResource:@"main" withExtension:@"jsbundle"];
   #endif
@@ -138,9 +174,9 @@ sourceApplication:(NSString *)sourceApplication annotation:(id)annotation
 - (BOOL)application:(UIApplication *)application continueUserActivity:(NSUserActivity *)userActivity
  restorationHandler:(void (^)(NSArray * _Nullable))restorationHandler
 {
- return [RCTLinkingManager application:application
-                  continueUserActivity:userActivity
-										restorationHandler:restorationHandler];
+  
+  return [RNBranch continueUserActivity:userActivity];
+
 }
 
 
@@ -155,12 +191,18 @@ sourceApplication:(NSString *)sourceApplication annotation:(id)annotation
                                                          error:nil];
 
     SentryEvent *sentryEvent = [[SentryEvent alloc] initWithJSON:jsonData];
-    [SentryClient.sharedClient sendEvent:sentryEvent withCompletionHandler:^(NSError * _Nullable error) {
-      NSLog((@"ApplicationWillTerminate was called"));
-    }];
+    [SentrySDK captureEvent:sentryEvent];
   }
   
 }
+
+- (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {
+    if ([RNBranch application:app openURL:url options:options])  {
+        // do other deep link routing for other SDKs
+    }
+    return YES;
+}
+
 
 
 @end

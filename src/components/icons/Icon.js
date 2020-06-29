@@ -1,9 +1,10 @@
 import PropTypes from 'prop-types';
 import { createElement } from 'react';
-import Emoji from 'react-native-emoji';
 import Flex from '../layout/Flex';
+import { Emoji } from '../text';
 
 import ApplePayIcon from './svg/ApplePayIcon';
+import ArrowBackIcon from './svg/ArrowBack';
 import ArrowCircledIcon from './svg/ArrowCircledIcon';
 import ArrowIcon from './svg/ArrowIcon';
 import AvatarIcon from './svg/AvatarIcon';
@@ -32,6 +33,7 @@ import EmojiSmileysIcon from './svg/EmojiSmileysIcon';
 import EmojiSymbolsIcon from './svg/EmojiSymbolsIcon';
 import EmojiTravelIcon from './svg/EmojiTravelIcon';
 import FaceIdIcon from './svg/FaceIdIcon';
+import FatArrowIcon from './svg/FatArrowIcon';
 import GearIcon from './svg/GearIcon';
 import HandleIcon from './svg/HandleIcon';
 import HiddenIcon from './svg/HiddenIcon';
@@ -43,6 +45,7 @@ import OfflineIcon from './svg/OfflineIcon';
 import PasscodeIcon from './svg/PasscodeIcon';
 import PinIcon from './svg/PinIcon';
 import PlusCircledIcon from './svg/PlusCircledIcon';
+import PlusIcon from './svg/PlusIcon';
 import ProgressIcon from './svg/ProgressIcon';
 import QRCodeIcon from './svg/QRCodeIcon';
 import SearchIcon from './svg/SearchIcon';
@@ -64,6 +67,7 @@ const Icon = ({ name, ...props }) =>
 Icon.IconTypes = {
   applePay: ApplePayIcon,
   arrow: ArrowIcon,
+  arrowBack: ArrowBackIcon,
   arrowCircled: ArrowCircledIcon,
   avatar: AvatarIcon,
   backspace: BackspaceIcon,
@@ -91,6 +95,7 @@ Icon.IconTypes = {
   emojiSymbols: EmojiSymbolsIcon,
   emojiTravel: EmojiTravelIcon,
   faceid: FaceIdIcon,
+  fatArrow: FatArrowIcon,
   gear: GearIcon,
   handle: HandleIcon,
   hidden: HiddenIcon,
@@ -101,6 +106,7 @@ Icon.IconTypes = {
   offline: OfflineIcon,
   passcode: PasscodeIcon,
   pin: PinIcon,
+  plus: PlusIcon,
   plusCircled: PlusCircledIcon,
   progress: ProgressIcon,
   qrCode: QRCodeIcon,

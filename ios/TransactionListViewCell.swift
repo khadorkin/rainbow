@@ -13,7 +13,30 @@ class MyBoundedLabel: UILabel {
   }
 }
 
+extension UIColor {
+    convenience init(red: Int, green: Int, blue: Int) {
+        let newRed = CGFloat(red)/255
+        let newGreen = CGFloat(green)/255
+        let newBlue = CGFloat(blue)/255
+        
+        self.init(red: newRed, green: newGreen, blue: newBlue, alpha: 1.0)
+    }
+}
+
+
 class TransactionListViewCell: TransactionListBaseCell {
+  // TODO use single source of truth
+  static var avatarColors = [
+    UIColor.init(red: 255, green: 73, blue: 74),
+    UIColor.init(red: 2, green: 211, blue: 255),
+    UIColor.init(red: 251, green: 96, blue: 196),
+    UIColor.init(red: 63, green: 106, blue: 255),
+    UIColor.init(red: 255, green: 217, blue: 99),
+    UIColor.init(red: 177, green: 64, blue: 255),
+    UIColor.init(red: 64, green: 235, blue: 193),
+    UIColor.init(red: 244, green: 110, blue: 56),
+    UIColor.init(red: 109, green: 126, blue: 143),
+]
   
   @IBOutlet weak var transactionType: UILabel!
   @IBOutlet weak var transactionIcon: UIImageView!
@@ -28,18 +51,19 @@ class TransactionListViewCell: TransactionListBaseCell {
   }
   
   func set(transaction: Transaction) {
-    transactionType.text = transaction.status
-    coinName.text = transaction.coinName
+    transactionType.text = transaction.title
+    coinName.text = transaction.transactionDescription
     nativeDisplay.text = transaction.nativeDisplay
     balanceDisplay.text = transaction.balanceDisplay
-    
+
     balanceDisplay.addCharacterSpacing()
-    
+
     setStatusColor(transaction)
     setBottomRowStyles(transaction)
-    setText(transaction)
+    setTextSpacing()
     setIcon(transaction)
 
+    
     if transaction.symbol != nil {
       if let img = UIImage.init(named: transaction.symbol.lowercased()) {
         coinImage.image = img
@@ -47,7 +71,9 @@ class TransactionListViewCell: TransactionListBaseCell {
         let url = URL(string: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/\(transaction.address!)/logo.png");
         coinImage.sd_setImage(with: url) { (image, error, cache, urls) in
           if (error != nil) {
-            self.coinImage.image = self.generateTextImage(transaction.symbol)
+            let colorIndex = transaction.symbol.lowercased().utf8.compactMap{ Int($0) }.reduce(0, +) % TransactionListViewCell.avatarColors.count
+            let color = TransactionListViewCell.avatarColors[colorIndex]
+            self.coinImage.image = self.generateTextImage(transaction.symbol, backgroundColor: color)
             self.coinImage.layer.cornerRadius = self.coinImage.frame.width * 0.5
           } else {
             self.coinImage.image = image
@@ -67,7 +93,7 @@ class TransactionListViewCell: TransactionListBaseCell {
       transactionIcon.image = UIImage.init(named: "spinner");
       transactionIcon.image!.accessibilityIdentifier = "spinner"
       transactionIcon.rotate()
-     } else if let image = UIImage.init(named: transaction.status.lowercased()) {
+     } else if let image = UIImage.init(named: transaction.status) {
        if (transactionIcon.image != nil && transactionIcon.image?.accessibilityIdentifier == "spinner") {
          transactionIcon.stopRotating()
        }
@@ -75,40 +101,45 @@ class TransactionListViewCell: TransactionListBaseCell {
        transactionIcon.image!.accessibilityIdentifier = "static";
      }
 
+    // Purchase Overrides
+    if transaction.type == "purchase" && transaction.status == "purchased" {
+      transactionIcon.image = UIImage.init(named: "received")
+    }
+
     // Authorize Overrides
-    if transaction.type?.lowercased() == "authorize" && transaction.status?.lowercased() == "approved" {
+    if transaction.type == "authorize" && transaction.status == "approved" {
       transactionIcon.image = UIImage.init(named: "self")
     }
     
     // Failed Overrides
-    if transaction.status?.lowercased() == "failed" {
+    if transaction.status == "failed" {
       statusFrame = CGRect(x: 85, y: 9, width: 206, height: 16)
     }
     
     // Savings Overrides
-    if (transaction.status?.lowercased() ==  "deposited" || transaction.status?.lowercased() == "withdrew") {
+    if (transaction.status ==  "deposited" || transaction.status == "withdrew") {
       transactionIcon.image = UIImage.init(named: "sunflower")
       iconFrame = CGRect(x: 69, y: 10, width: 13, height: 14)
       statusFrame = CGRect(x: 82, y: 9, width: 206, height: 16)
     }
     
     // Self Overrides
-    if (transaction.status?.lowercased() ==  "self" || transaction.status?.lowercased() == "approved") {
+    if (transaction.status ==  "self" || transaction.status == "approved") {
       statusFrame = CGRect(x: 80, y: 9, width: 206, height: 16)
     }
     
     // Sent Overrides
-    if transaction.status?.lowercased() == "sent" {
+    if transaction.status == "sent" {
       transactionIcon.image = UIImage.init(named: "sent")
       statusFrame = CGRect(x: 82, y: 9, width: 206, height: 16)
     }
     
     // Swap Overrides
-    if transaction.type?.lowercased() == "trade" && transaction.status?.lowercased() == "sent" {
+    if transaction.status == "swapped" {
         transactionIcon.image = UIImage.init(named: "swapped")
         statusFrame = CGRect(x: 84, y: 9, width: 206, height: 16)
     }
-    if transaction.status?.lowercased() == "swapping" {
+    if transaction.status == "swapping" {
         transactionIcon.image = UIImage.init(named: "swapping")
     }
     
@@ -123,14 +154,13 @@ class TransactionListViewCell: TransactionListBaseCell {
     var color = transactionColors.blueGreyDark70
     
     if transaction.pending {
-      if transaction.status.lowercased() == "swapping" {
+      if transaction.status == "swapping" {
         color = transactionColors.swapPurple
       } else {
         color = transactionColors.appleBlue
       }
     } else if transaction.isSwapped() {
       color = transactionColors.swapPurple
-      transactionType.text = "Swapped"
     }
     
     transactionIcon.tintColor = color
@@ -144,20 +174,20 @@ class TransactionListViewCell: TransactionListBaseCell {
     var nativeDisplayColor = transactionColors.blueGreyDark50
     var nativeDisplayFont = UIFont(name: "SFRounded-Regular", size: 16)
     
-    if transaction.status.lowercased() == "sent" {
+    if transaction.status == "sent" {
       nativeDisplayColor = transactionColors.dark
       nativeDisplay.text = "- " + transaction.nativeDisplay
     }
-    if transaction.status.lowercased() == "received" || transaction.status.lowercased() == "purchased" {
+    if transaction.status == "received" || transaction.status == "purchased" {
       nativeDisplayColor = transactionColors.green
       nativeDisplayFont = UIFont(name: "SFRounded-Medium", size: 16)
     }
-    if transaction.type == "trade" && transaction.status.lowercased() == "sent" {
+    if transaction.status == "swapped" {
       coinNameColor = transactionColors.blueGreyDark50
       nativeDisplayColor = transactionColors.dark
       nativeDisplay.text = "- " + transaction.nativeDisplay
     }
-    if transaction.type == "trade" && transaction.status.lowercased() == "received" {
+    if transaction.type == "trade" && transaction.status == "received" {
       nativeDisplayColor = transactionColors.swapPurple
       nativeDisplayFont = UIFont(name: "SFRounded-Medium", size: 16)
     }
@@ -169,21 +199,10 @@ class TransactionListViewCell: TransactionListBaseCell {
     nativeDisplay.setLineSpacing(lineHeightMultiple: 1.1)
   }
 
-  private func setText(_ transaction: Transaction) {
-    if let type = transaction.type {
-      if (type.lowercased() == "deposit" || type.lowercased() == "withdraw") {
-        if let status = transaction.status {
-          if (status.lowercased() == "depositing" || status.lowercased() == "withdrawing" || status.lowercased() == "sending") {
-            transactionType.text = " \(status.capitalized)";
-            coinName.text = "\(transaction.coinName!)";
-          } else if (status.lowercased() == "deposited" || status.lowercased() == "withdrew") {
-            transactionType.text = " Savings";
-            coinName.text = "\(status.capitalized) \(transaction.coinName!)";
-          } else if (transaction.status.lowercased() == "failed") {
-            coinName.text = "\(type.lowercased() == "withdraw" ? "Withdrew" : "Deposited") \(transaction.coinName!)";
-          }
-        }
-      }
+  private func setTextSpacing() {
+    transactionType.addCharacterSpacing(kernValue: 0.5);
+    if transactionType.text == "Savings" {
+      transactionType.text = " " + transactionType.text!
     }
     coinName.addCharacterSpacing(kernValue: 0.5);
     coinName.setLineSpacing(lineHeightMultiple: 1.1)

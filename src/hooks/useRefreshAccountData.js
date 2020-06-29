@@ -2,9 +2,10 @@ import { captureException } from '@sentry/react-native';
 import delay from 'delay';
 import { useCallback } from 'react';
 import { useDispatch } from 'react-redux';
-import networkTypes from '../helpers/networkTypes';
+import NetworkTypes from '../helpers/networkTypes';
 import { uniqueTokensRefreshState } from '../redux/uniqueTokens';
 import { uniswapUpdateState } from '../redux/uniswap';
+import { fetchWalletNames } from '../redux/wallets';
 import { logger } from '../utils';
 import useAccountSettings from './useAccountSettings';
 
@@ -13,17 +14,25 @@ export default function useRefreshAccountData() {
   const { network } = useAccountSettings();
 
   const refreshAccountData = useCallback(async () => {
-    // Nothing to refresh for testnets
-    if (network !== networkTypes.mainnet) {
+    // Refresh unique tokens for Rinkeby
+    if (network === NetworkTypes.rinkeby) {
+      const getUniqueTokens = dispatch(uniqueTokensRefreshState());
+      return Promise.all([delay(1250), getUniqueTokens]);
+    }
+
+    // Nothing to refresh for other testnets
+    if (network !== NetworkTypes.mainnet) {
       return Promise.all([delay(1250)]);
     }
 
     try {
+      const getWalletNames = dispatch(fetchWalletNames());
       const getUniswap = dispatch(uniswapUpdateState());
       const getUniqueTokens = dispatch(uniqueTokensRefreshState());
 
       return Promise.all([
         delay(1250), // minimum duration we want the "Pull to Refresh" animation to last
+        getWalletNames,
         getUniswap,
         getUniqueTokens,
       ]);

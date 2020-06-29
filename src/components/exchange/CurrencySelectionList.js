@@ -1,16 +1,26 @@
 import { get } from 'lodash';
-import PropTypes from 'prop-types';
-import React, { memo, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Transition, Transitioning } from 'react-native-reanimated';
-import { withNeverRerender } from '../../hoc';
+import styled from 'styled-components/primitives';
 import { colors, position } from '../../styles';
-import { isNewValueForObjectPaths } from '../../utils';
+import { magicMemo } from '../../utils';
 import { EmptyAssetList } from '../asset-list';
-import { Centered, ColumnWithMargins } from '../layout';
-import { Emoji, Text } from '../text';
-import CurrencySelectModalHeader from './CurrencySelectModalHeader';
+import { Centered } from '../layout';
+import { NoResults } from '../list';
+import { CurrencySelectModalHeaderHeight } from './CurrencySelectModalHeader';
 import ExchangeAssetList from './ExchangeAssetList';
-import ExchangeSearch from './ExchangeSearch';
+import { ExchangeSearchHeight } from './ExchangeSearch';
+
+const EmptyCurrencySelectionList = styled(EmptyAssetList).attrs({
+  pointerEvents: 'none',
+})`
+  ${position.cover};
+  background-color: ${colors.white};
+`;
+
+const NoCurrencyResults = styled(NoResults)`
+  padding-bottom: ${CurrencySelectModalHeaderHeight + ExchangeSearchHeight / 2};
+`;
 
 const skeletonTransition = (
   <Transition.Sequence>
@@ -19,25 +29,6 @@ const skeletonTransition = (
     <Transition.In durationMs={0.001} interpolation="easeOut" type="fade" />
   </Transition.Sequence>
 );
-
-const NoResultMessage = withNeverRerender(() => (
-  <ColumnWithMargins
-    {...position.centeredAsObject}
-    margin={3}
-    paddingBottom={CurrencySelectModalHeader.height + ExchangeSearch.height / 2}
-  >
-    <Centered>
-      <Emoji lineHeight="none" name="ghost" size={42} />
-    </Centered>
-    <Text
-      color={colors.alpha(colors.blueGreyDark, 0.4)}
-      size="lmedium"
-      weight="medium"
-    >
-      Nothing here!
-    </Text>
-  </ColumnWithMargins>
-));
 
 const CurrencySelectionList = ({
   itemProps,
@@ -52,7 +43,7 @@ const CurrencySelectionList = ({
 
   useEffect(() => {
     if (showSkeleton && !loading) {
-      skeletonTransitionRef.current.animateNextTransition();
+      skeletonTransitionRef.current?.animateNextTransition();
       setShowSkeleton(false);
     }
   }, [loading, showSkeleton]);
@@ -66,7 +57,7 @@ const CurrencySelectionList = ({
       {showList && (
         <Centered flex={1}>
           {showNoResults ? (
-            <NoResultMessage />
+            <NoCurrencyResults />
           ) : (
             <ExchangeAssetList
               itemProps={itemProps}
@@ -76,25 +67,9 @@ const CurrencySelectionList = ({
           )}
         </Centered>
       )}
-      {(showSkeleton || !showList) && (
-        <EmptyAssetList
-          {...position.coverAsObject}
-          backgroundColor={colors.white}
-          pointerEvents="none"
-        />
-      )}
+      {(showSkeleton || !showList) && <EmptyCurrencySelectionList />}
     </Transitioning.View>
   );
 };
 
-CurrencySelectionList.propTypes = {
-  itemProps: PropTypes.object,
-  listItems: PropTypes.array,
-  query: PropTypes.string,
-  showList: PropTypes.bool,
-};
-
-const propsAreEqual = (...props) =>
-  !isNewValueForObjectPaths(...props, ['listItems', 'showList']);
-
-export default memo(CurrencySelectionList, propsAreEqual);
+export default magicMemo(CurrencySelectionList, ['listItems', 'showList']);

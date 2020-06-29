@@ -12,7 +12,8 @@ import supportedNativeCurrencies from '../references/native-currencies.json';
 const mapStateToProps = ({
   settings: {
     accountAddress,
-    accountENS,
+    accountColor,
+    accountName,
     chainId,
     language,
     nativeCurrency,
@@ -20,7 +21,8 @@ const mapStateToProps = ({
   },
 }) => ({
   accountAddress,
-  accountENS,
+  accountColor,
+  accountName,
   chainId,
   language,
   nativeCurrency,

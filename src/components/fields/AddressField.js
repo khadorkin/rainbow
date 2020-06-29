@@ -4,10 +4,10 @@ import PropTypes from 'prop-types';
 import React from 'react';
 import { Platform } from 'react-native';
 import { TouchableWithoutFeedback } from 'react-native-gesture-handler';
-import { withNavigation } from 'react-navigation';
 import styled from 'styled-components/primitives';
 import { isHexString } from '../../handlers/web3';
-import { checkIsValidAddress } from '../../helpers/validators';
+import { checkIsValidAddressOrENS } from '../../helpers/validators';
+import { withNavigation } from '../../navigation/Navigation';
 import { colors } from '../../styles';
 import { abbreviations, addressUtils, isNewValueForPath } from '../../utils';
 import { Input } from '../inputs';
@@ -15,7 +15,8 @@ import { Row } from '../layout';
 import { Label } from '../text';
 
 const Placeholder = styled(Row)`
-  margin-top: ${Platform.OS === 'android' ? 13 : 0};
+  margin-top: ${Platform.OS === 'android' ? 14 : 0};
+  margin-left: ${Platform.OS === 'android' ? 3 : 0};
   position: absolute;
   top: 0;
   z-index: 1;
@@ -45,12 +46,6 @@ export default withNavigation(
       inputValue: '',
       isValid: false,
     };
-
-    componentDidMount() {
-      this.focusListener = this.props.navigation.addListener('refocus', () =>
-        this.inputRef.focus()
-      );
-    }
 
     shouldComponentUpdate(nextProps, nextState) {
       const isNewAddress = isNewValueForPath(nextProps, this.state, 'address');
@@ -96,10 +91,6 @@ export default withNavigation(
       }
     }
 
-    componentWillUnmount() {
-      this.focusListener.remove();
-    }
-
     inputRef = undefined;
 
     handleInputRef = ref => {
@@ -117,7 +108,7 @@ export default withNavigation(
     onChangeText = inputValue => this.setState({ inputValue });
 
     validateAddress = async address => {
-      const isValid = await checkIsValidAddress(address);
+      const isValid = await checkIsValidAddressOrENS(address);
       return this.setState({ isValid });
     };
 

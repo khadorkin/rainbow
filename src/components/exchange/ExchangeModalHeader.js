@@ -1,53 +1,15 @@
-import PropTypes from 'prop-types';
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Transition, Transitioning } from 'react-native-reanimated';
-import { withProps } from 'recompact';
 import styled from 'styled-components/primitives';
 import { usePrevious } from '../../hooks';
 import { colors, padding, position } from '../../styles';
-import { TouchableScale } from '../animations';
+import { ButtonPressAnimation } from '../animations';
 import { Icon } from '../icons';
-import { Centered, Column } from '../layout';
+import { Column } from '../layout';
 import { SheetHandle } from '../sheet';
 import { Text } from '../text';
 
-const InfoButtonPaddingHorizontal = 19;
-const InfoIconSize = 18;
 const SheetHandleMargin = 6;
-
-const InfoButtonPosition = `
-  bottom: 0;
-  position: absolute;
-  right: 0;
-  top: 0;
-`;
-
-const InfoButton = styled(Centered).attrs({
-  activeScale: 0.8,
-  component: TouchableScale,
-  hapticType: 'impactLight',
-  pressInFriction: 50,
-  pressInTension: 400,
-  pressOutFriction: 30,
-  pressOutTension: 300,
-})`
-  ${InfoButtonPosition};
-  margin-top: ${SheetHandleMargin + 4};
-  padding-left: ${InfoButtonPaddingHorizontal};
-  padding-right: ${InfoButtonPaddingHorizontal};
-`;
-
-const InfoButtonTransition = styled(Transitioning.View)`
-  ${position.centered};
-  ${InfoButtonPosition};
-`;
-
-const Title = withProps({
-  align: 'center',
-  lineHeight: 'loose',
-  size: 'large',
-  weight: 'bold',
-})(Text);
 
 const transition = (
   <Transition.Sequence>
@@ -60,41 +22,58 @@ const transition = (
   </Transition.Sequence>
 );
 
-const ExchangeModalHeader = ({ onPressDetails, showDetailsButton, title }) => {
-  const ref = useRef();
+const InfoButton = styled(ButtonPressAnimation).attrs({
+  scaleTo: 1.3,
+})`
+  ${padding(0, 19)};
+  ${position.centered};
+  margin-top: ${SheetHandleMargin + 4};
+`;
+
+const InfoButtonIcon = styled(Icon).attrs({
+  color: colors.alpha(colors.blueGreyDark, 0.3),
+  name: 'info',
+})`
+  ${position.size(18)};
+`;
+
+const InfoButtonTransition = styled(Transitioning.View)`
+  ${position.centered};
+  bottom: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+`;
+
+const ExchangeModalHeader = ({
+  onPressDetails,
+  showDetailsButton,
+  title = 'Swap',
+}) => {
+  const transitionRef = useRef();
   const prevShowDetailsButton = usePrevious(showDetailsButton);
 
-  if (ref.current && showDetailsButton !== prevShowDetailsButton) {
-    ref.current.animateNextTransition();
-  }
+  useEffect(() => {
+    if (showDetailsButton !== prevShowDetailsButton) {
+      transitionRef.current?.animateNextTransition();
+    }
+  }, [prevShowDetailsButton, showDetailsButton]);
 
   return (
     <Column align="center" css={padding(8, 0)}>
       <SheetHandle marginBottom={SheetHandleMargin} />
-      <Title>{title}</Title>
-      <InfoButtonTransition ref={ref} transition={transition}>
+      <Text align="center" lineHeight="loose" size="large" weight="bold">
+        {title}
+      </Text>
+      <InfoButtonTransition ref={transitionRef} transition={transition}>
         {showDetailsButton && (
-          <InfoButton onPress={onPressDetails} useNativeDriver>
-            <Icon
-              {...position.sizeAsObject(InfoIconSize)}
-              color={colors.alpha(colors.blueGreyDark, 0.3)}
-              name="info"
-            />
+          <InfoButton onPress={onPressDetails}>
+            <InfoButtonIcon />
           </InfoButton>
         )}
       </InfoButtonTransition>
     </Column>
   );
-};
-
-ExchangeModalHeader.propTypes = {
-  onPressDetails: PropTypes.func,
-  showDetailsButton: PropTypes.bool,
-  title: PropTypes.string,
-};
-
-ExchangeModalHeader.defaultProps = {
-  title: 'Swap',
 };
 
 export default React.memo(ExchangeModalHeader);

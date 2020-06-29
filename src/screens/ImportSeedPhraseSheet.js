@@ -1,4 +1,5 @@
 import analytics from '@segment/analytics-react-native';
+import { isValidAddress } from 'ethereumjs-util';
 import PropTypes from 'prop-types';
 import React, {
   useCallback,
@@ -7,30 +8,33 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { KeyboardAvoidingView, Platform, StatusBar } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, StatusBar } from 'react-native';
 import { BorderlessButton } from 'react-native-gesture-handler';
 import { getStatusBarHeight } from 'react-native-iphone-x-helper';
-import { useNavigation } from 'react-navigation-hooks';
 import styled from 'styled-components/primitives';
-import { Alert } from '../components/alerts';
+
 import { Button } from '../components/buttons';
 import { Icon } from '../components/icons';
 import { Input } from '../components/inputs';
 import { Centered, Column, Row, RowWithMargins } from '../components/layout';
 import { LoadingOverlay } from '../components/modal';
+import { SheetHandle } from '../components/sheet';
 import { Text } from '../components/text';
+import { web3Provider } from '../handlers/web3';
 import isNativeStackAvailable from '../helpers/isNativeStackAvailable';
-import { isValidSeed as validateSeed } from '../helpers/validators';
+import { isENSAddressFormat, isValidWallet } from '../helpers/validators';
 import {
   useAccountSettings,
   useClipboard,
   useInitializeWallet,
+  usePrevious,
   useTimeout,
 } from '../hooks';
-import { sheetVerticalOffset } from '../navigation/transitions/effects';
+import { useNavigation } from '../navigation/Navigation';
+import { sheetVerticalOffset } from '../navigation/effects';
+import Routes from '../navigation/routesNames';
 import { borders, colors, padding, shadow } from '../styles';
 import { logger } from '../utils';
-import Routes from './Routes/routesNames';
 
 const keyboardVerticalOffset =
   Platform.OS === 'android'
@@ -57,14 +61,6 @@ const Container = isNativeStackAvailable
       top: ${statusBarHeight};
     `;
 
-const HandleIcon = styled(Icon).attrs({
-  color: '#C4C6CB',
-  name: 'handle',
-})`
-  margin-top: 16px;
-  margin-bottom: 2;
-`;
-
 const StyledImportButton = styled(
   Platform.OS === 'ios' ? BorderlessButton : Button
 )`
@@ -79,23 +75,6 @@ const StyledImportButton = styled(
 const StyledInput = styled(Input)`
   min-height: 50;
 `;
-
-const ConfirmImportAlert = onSuccess =>
-  Alert({
-    buttons: [
-      {
-        onPress: onSuccess,
-        text: 'Import Wallet',
-      },
-      {
-        style: 'cancel',
-        text: 'Cancel',
-      },
-    ],
-    message:
-      'This will replace your existing wallet.\n\nBefore continuing, please make sure you’ve backed up or emptied it!',
-    title: '🚨 Careful 🚨',
-  });
 
 const ImportButton = ({ disabled, onPress, seedPhrase }) => (
   <StyledImportButton disabled={disabled} onPress={onPress} overflow="visible">
@@ -117,15 +96,19 @@ const ImportSeedPhraseSheet = ({ isEmpty, setAppearListener }) => {
   const initializeWallet = useInitializeWallet();
   const [isImporting, setImporting] = useState(false);
   const [seedPhrase, setSeedPhrase] = useState('');
+  const [color, setColor] = useState(null);
+  const [name, setName] = useState(null);
+  const [resolvedAddress, setResolvedAddress] = useState(null);
   const [startFocusTimeout] = useTimeout();
   const [startAnalyticsTimeout] = useTimeout();
+  const wasImporting = usePrevious(isImporting);
 
   const isClipboardValidSecret = useMemo(() => {
-    return clipboard !== accountAddress && validateSeed(clipboard);
+    return clipboard !== accountAddress && isValidWallet(clipboard);
   }, [accountAddress, clipboard]);
 
   const isSecretValid = useMemo(() => {
-    return seedPhrase !== accountAddress && validateSeed(seedPhrase);
+    return seedPhrase !== accountAddress && isValidWallet(seedPhrase);
   }, [accountAddress, seedPhrase]);
 
   const inputRef = useRef(null);
@@ -143,8 +126,10 @@ const ImportSeedPhraseSheet = ({ isEmpty, setAppearListener }) => {
 
   useEffect(() => {
     setAppearListener && setAppearListener(focusListener);
-    return () => setAppearListener && setAppearListener(null);
-  });
+    return () => {
+      setAppearListener && setAppearListener(null);
+    };
+  }, [focusListener, setAppearListener]);
 
   const handleSetSeedPhrase = useCallback(
     text => {
@@ -162,9 +147,64 @@ const ImportSeedPhraseSheet = ({ isEmpty, setAppearListener }) => {
     [setParams]
   );
 
-  const onPressImportButton = useCallback(() => {
+  const onPressImportButton = useCallback(async () => {
     if (isSecretValid && seedPhrase) {
-      return ConfirmImportAlert(() => toggleImporting(true));
+      const input = seedPhrase.trim();
+      let name = null;
+      // Validate ENS
+      if (isENSAddressFormat(input)) {
+        try {
+          const address = await web3Provider.resolveName(input);
+
+          if (!address) {
+            Alert.alert('This is not a valid ENS name');
+            return;
+          }
+          setResolvedAddress(address);
+          name = input;
+        } catch (e) {
+          Alert.alert(
+            'Sorry, we cannot add this ENS name at this time. Please try again later!'
+          );
+          return;
+        }
+        // Look up ENS for 0x address
+      } else if (isValidAddress(input)) {
+        const ens = await web3Provider.lookupAddress(input);
+        if (ens && ens !== input) {
+          name = ens;
+        }
+      }
+
+      const ConfirmImportAlert = (name, onSuccess, navigate) =>
+        navigate(Routes.MODAL_SCREEN, {
+          actionType: 'Import',
+          additionalPadding: true,
+          asset: [],
+          isNewProfile: true,
+          onCloseModal: args => {
+            if (args) {
+              onSuccess(args);
+            }
+          },
+          onRefocusInput:
+            Platform.OS === 'ios' ? setAppearListener(focusListener) : null,
+          profile: {
+            name,
+          },
+          type: 'wallet_profile_creator',
+          withoutStatusBar: true,
+        });
+
+      return ConfirmImportAlert(
+        name,
+        ({ color, name }) => {
+          if (color !== null) setColor(color);
+          if (name) setName(name);
+          toggleImporting(true);
+        },
+        navigate
+      );
     }
 
     if (isClipboardValidSecret && clipboard) {
@@ -172,20 +212,23 @@ const ImportSeedPhraseSheet = ({ isEmpty, setAppearListener }) => {
     }
   }, [
     clipboard,
+    focusListener,
     handleSetSeedPhrase,
     isClipboardValidSecret,
     isSecretValid,
+    navigate,
     seedPhrase,
+    setAppearListener,
     toggleImporting,
   ]);
 
   useEffect(() => {
-    if (isImporting) {
-      startAnalyticsTimeout(() => {
-        initializeWallet(seedPhrase.trim())
+    if (!wasImporting && isImporting) {
+      startAnalyticsTimeout(async () => {
+        const input = resolvedAddress ? resolvedAddress : seedPhrase.trim();
+        initializeWallet(input, color, name ? name : '')
           .then(success => {
             if (success) {
-              toggleImporting(false);
               analytics.track('Imported seed phrase', {
                 hadPreviousAddressWithValue: isEmpty,
               });
@@ -201,45 +244,55 @@ const ImportSeedPhraseSheet = ({ isEmpty, setAppearListener }) => {
       }, 50);
     }
   }, [
+    color,
     initializeWallet,
     isEmpty,
     isImporting,
+    name,
     navigate,
+    resolvedAddress,
     seedPhrase,
     startAnalyticsTimeout,
     toggleImporting,
+    wasImporting,
   ]);
 
   return (
     <Container>
       <StatusBar barStyle="light-content" />
-      <HandleIcon />
+      <SheetHandle marginBottom={7} marginTop={6} />
       <Text size="large" weight="bold">
-        Import
+        Add Wallet
       </Text>
       <KeyboardAvoidingView
         behavior="padding"
         keyboardVerticalOffset={keyboardVerticalOffset}
       >
-        <Centered css={padding(0, 50)} flex={1}>
+        <Centered css={padding(0, 42)} flex={1}>
           <StyledInput
             align="center"
             autoCapitalize="none"
             autoCorrect={false}
             autoFocus
+            color={isSecretValid ? 'appleBlue' : 'dark'}
             enablesReturnKeyAutomatically
             keyboardType={
               Platform.OS === 'android' ? 'visible-password' : 'default'
             }
             lineHeight="looser"
             multiline
-            numberOfLines={7}
+            numberOfLines={3}
             onChangeText={handleSetSeedPhrase}
             onSubmitEditing={onPressImportButton}
-            placeholder="Seed phrase or private key"
-            ref={isNativeStackAvailable ? inputRef : inputRefListener}
+            placeholder="Seed phrase, private key, Ethereum address or ENS name"
+            ref={
+              isNativeStackAvailable || Platform.OS === 'android'
+                ? inputRef
+                : inputRefListener
+            }
             returnKeyType="done"
             size="large"
+            spellCheck={false}
             value={seedPhrase}
             weight="semibold"
             width="100%"
@@ -268,5 +321,4 @@ ImportSeedPhraseSheet.propTypes = {
   setAppearListener: PropTypes.func,
 };
 
-const neverRerender = () => true;
-export default React.memo(ImportSeedPhraseSheet, neverRerender);
+export default ImportSeedPhraseSheet;

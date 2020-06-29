@@ -3,91 +3,101 @@ import { isNil } from 'lodash';
 import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useDispatch } from 'react-redux';
-import { getAccountInfo } from '../handlers/localstorage/accountLocal';
+import useHideSplashScreen from '../helpers/hideSplashScreen';
 import runMigrations from '../model/migrations';
 import { walletInit } from '../model/wallet';
-import { setIsWalletEthZero } from '../redux/isWalletEthZero';
 import {
   settingsLoadNetwork,
   settingsUpdateAccountAddress,
-  settingsUpdateAccountColor,
-  settingsUpdateAccountName,
 } from '../redux/settings';
+import { walletsLoadState } from '../redux/wallets';
 import { logger } from '../utils';
 import useAccountSettings from './useAccountSettings';
-import useCheckEthBalance from './useCheckEthBalance';
-import useClearAccountData from './useClearAccountData';
-import useHideSplashScreen from './useHideSplashScreen';
 import useInitializeAccountData from './useInitializeAccountData';
 import useLoadAccountData from './useLoadAccountData';
+import useLoadGlobalData from './useLoadGlobalData';
+import useResetAccountState from './useResetAccountState';
 
 export default function useInitializeWallet() {
   const dispatch = useDispatch();
-  const onHideSplashScreen = useHideSplashScreen();
-  const clearAccountData = useClearAccountData();
+  const resetAccountState = useResetAccountState();
   const loadAccountData = useLoadAccountData();
+  const loadGlobalData = useLoadGlobalData();
   const initializeAccountData = useInitializeAccountData();
 
-  const checkEthBalance = useCheckEthBalance();
-
   const { network } = useAccountSettings();
+  const hideSplashScreen = useHideSplashScreen();
 
   const initializeWallet = useCallback(
-    async seedPhrase => {
+    async (
+      seedPhrase,
+      color = null,
+      name = null,
+      shouldRunMigrations = false
+    ) => {
       try {
         logger.sentry('Start wallet setup');
+
+        await resetAccountState();
+
+        const isImported = !!seedPhrase;
+
+        if (shouldRunMigrations && !seedPhrase) {
+          await dispatch(walletsLoadState());
+          await runMigrations();
+        }
+
         // Load the network first
         await dispatch(settingsLoadNetwork());
 
-        const { isImported, isNew, walletAddress } = await walletInit(
-          seedPhrase
+        const { isNew, walletAddress } = await walletInit(
+          seedPhrase,
+          color,
+          name
         );
-        const info = await getAccountInfo(walletAddress, network);
-        if (info.name && info.color) {
-          dispatch(settingsUpdateAccountName(info.name));
-          dispatch(settingsUpdateAccountColor(info.color));
+
+        if (seedPhrase || isNew) {
+          await dispatch(walletsLoadState());
         }
+
         if (isNil(walletAddress)) {
           Alert.alert(
             'Import failed due to an invalid private key. Please try again.'
           );
           return null;
         }
-        if (isImported) {
-          await clearAccountData();
+
+        if (!(isNew || isImported)) {
+          await loadGlobalData();
         }
-        dispatch(settingsUpdateAccountAddress(walletAddress));
-        if (isNew) {
-          dispatch(setIsWalletEthZero(true));
-        } else if (isImported) {
-          try {
-            await checkEthBalance(walletAddress);
-            // eslint-disable-next-line no-empty
-          } catch (error) {}
-        } else {
-          await loadAccountData();
+
+        await dispatch(settingsUpdateAccountAddress(walletAddress));
+
+        if (!(isNew || isImported)) {
+          await loadAccountData(network);
         }
-        await runMigrations();
-        onHideSplashScreen();
+
+        hideSplashScreen();
         logger.sentry('Hide splash screen');
         initializeAccountData();
         return walletAddress;
       } catch (error) {
+        logger.sentry('Error while initializing wallet');
         // TODO specify error states more granular
-        onHideSplashScreen();
+        hideSplashScreen();
         captureException(error);
         Alert.alert('Something went wrong while importing. Please try again!');
         return null;
       }
     },
     [
-      checkEthBalance,
-      clearAccountData,
+      resetAccountState,
       dispatch,
+      hideSplashScreen,
       initializeAccountData,
+      loadGlobalData,
       loadAccountData,
       network,
-      onHideSplashScreen,
     ]
   );
 

@@ -1,31 +1,59 @@
-import PropTypes from 'prop-types';
+import { toUpper } from 'lodash';
 import React from 'react';
+import ShadowStack from 'react-native-shadow-stack/dist/ShadowStack';
 import { borders, colors } from '../../styles';
 import { getFirstGrapheme } from '../../utils';
 import { Centered } from '../layout';
 import { Text } from '../text';
 
-const ContactAvatar = ({ color, large, value, ...props }) => (
-  <Centered
-    {...props}
-    {...borders.buildCircleAsObject(large ? 60 : 40)}
-    backgroundColor={colors.avatarColor[color]}
-  >
-    <Text
-      align="center"
-      color="white"
-      size={large ? 'biggest' : 'large'}
-      weight="semibold"
-    >
-      {getFirstGrapheme(value)}
-    </Text>
-  </Centered>
-);
+const defaultShadow = [
+  [0, 4, 6, colors.dark, 0.04],
+  [0, 1, 3, colors.dark, 0.08],
+];
 
-ContactAvatar.propTypes = {
-  color: PropTypes.number,
-  large: PropTypes.bool,
-  value: PropTypes.string,
+const sizeTypes = {
+  large: 'large',
+  medium: 'medium',
+  small: 'small',
+};
+
+const ContactAvatar = ({ color, size = sizeTypes.medium, value, ...props }) => {
+  const sizeConfigs = {
+    large: {
+      dimensions: 60,
+      shadows: defaultShadow,
+      textSize: 'bigger',
+    },
+    medium: {
+      dimensions: 40,
+      shadows: defaultShadow,
+      textSize: 'larger',
+    },
+    small: {
+      dimensions: 34,
+      shadows: [
+        [0, 3, 5, colors.dark, 0.14],
+        [0, 6, 10, colors.avatarColor[color] || color, 0.2],
+      ],
+      textSize: 'large',
+    },
+  };
+  const { dimensions, shadows, textSize } = sizeConfigs[size];
+
+  return (
+    <ShadowStack
+      {...props}
+      {...borders.buildCircleAsObject(dimensions)}
+      backgroundColor={colors.avatarColor[color] || color}
+      shadows={shadows}
+    >
+      <Centered flex={1}>
+        <Text align="center" color="white" size={textSize} weight="bold">
+          {value && getFirstGrapheme(toUpper(value))}
+        </Text>
+      </Centered>
+    </ShadowStack>
+  );
 };
 
 export default React.memo(ContactAvatar);

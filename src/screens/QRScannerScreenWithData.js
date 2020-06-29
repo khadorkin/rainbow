@@ -4,23 +4,25 @@ import lang from 'i18n-js';
 import { get } from 'lodash';
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
-import { Platform, Vibration } from 'react-native';
+import { Alert as NativeAlert, Platform, Vibration } from 'react-native';
 import { isEmulatorSync } from 'react-native-device-info';
 import { PERMISSIONS, request } from 'react-native-permissions';
-import { withNavigationFocus } from 'react-navigation';
 import { compose } from 'recompact';
 import { Alert, Prompt } from '../components/alerts';
+import WalletTypes from '../helpers/walletTypes';
 import {
   withWalletConnectConnections,
   withWalletConnectOnSessionRequest,
 } from '../hoc';
+import { checkPushNotificationPermissions } from '../model/firebase';
+import { withNavigationFocus } from '../navigation/Navigation';
+import Routes from '../navigation/routesNames';
+import store from '../redux/store';
 import { addressUtils } from '../utils';
 import QRScannerScreen from './QRScannerScreen';
-import Routes from './Routes/routesNames';
 
 class QRScannerScreenWithData extends Component {
   static propTypes = {
-    isFocused: PropTypes.bool,
     navigation: PropTypes.object,
     setSafeTimeout: PropTypes.func,
     walletConnectOnSessionRequest: PropTypes.func,
@@ -34,13 +36,13 @@ class QRScannerScreenWithData extends Component {
   };
 
   static getDerivedStateFromProps(props, state) {
-    const isFocused = props.navigation.isFocused();
+    const { isFocused } = props;
     return { ...state, isFocused };
   }
 
   componentDidUpdate = (prevProps, prevState) => {
-    const wasFocused = prevState.isFocused;
-    const isFocused = this.state.isFocused;
+    const wasFocused = prevProps.isFocused;
+    const isFocused = this.props.isFocused;
 
     if (isFocused && !wasFocused && Platform.OS === 'ios') {
       request(PERMISSIONS.IOS.CAMERA).then(permission => {
@@ -82,6 +84,11 @@ class QRScannerScreenWithData extends Component {
       setSafeTimeout,
     } = this.props;
 
+    const { selected } = store.getState().wallets;
+    const selectedWallet = selected || {};
+
+    const isReadOnlyWallet = selectedWallet.type === WalletTypes.readOnly;
+
     if (!data) return null;
     this.setState({ enableScanning: false });
     if (!isEmulatorSync()) {
@@ -91,6 +98,11 @@ class QRScannerScreenWithData extends Component {
     const address = await addressUtils.getEthereumAddressFromQRCodeData(data);
 
     if (address) {
+      if (isReadOnlyWallet) {
+        NativeAlert.alert(`You need to import the wallet in order to do this`);
+        return null;
+      }
+
       analytics.track('Scanned address QR code');
       navigation.navigate(Routes.WALLET_SCREEN);
       navigation.navigate(Routes.SEND_SHEET, { address });
@@ -99,7 +111,11 @@ class QRScannerScreenWithData extends Component {
 
     if (data.startsWith('wc:')) {
       analytics.track('Scanned WalletConnect QR code');
-      await walletConnectOnSessionRequest(data);
+      await walletConnectOnSessionRequest(data, async () => {
+        setTimeout(() => {
+          checkPushNotificationPermissions();
+        }, 1000);
+      });
       return setSafeTimeout(this.handleReenableScanning, 2000);
     }
 
@@ -118,8 +134,7 @@ class QRScannerScreenWithData extends Component {
       <QRScannerScreen
         {...this.props}
         {...this.state}
-        isFocused={this.state.isFocused}
-        enableScanning={this.state.enableScanning && this.state.isFocused}
+        enableScanning={this.state.enableScanning}
         onPressBackButton={this.handlePressBackButton}
         onPressPasteSessionUri={this.handlePressPasteSessionUri}
         onScanSuccess={this.handleScanSuccess}

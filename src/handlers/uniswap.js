@@ -8,18 +8,30 @@ import {
   tradeTokensForExactEthWithData,
   tradeTokensForExactTokensWithData,
 } from '@uniswap/sdk';
-import axios from 'axios';
+import { getUnixTime, sub } from 'date-fns';
 import contractMap from 'eth-contract-metadata';
 import { ethers } from 'ethers';
-import { get, map, mapKeys, mapValues, toLower, zipObject } from 'lodash';
+import {
+  findKey,
+  get,
+  map,
+  mapKeys,
+  mapValues,
+  toLower,
+  zipObject,
+} from 'lodash';
 import { uniswapClient } from '../apollo/client';
-import { UNISWAP_ALL_EXCHANGES_QUERY } from '../apollo/queries';
+import {
+  UNISWAP_ALL_EXCHANGES_QUERY,
+  UNISWAP_CHART_QUERY,
+} from '../apollo/queries';
+import ChartTypes from '../helpers/chartTypes';
 import {
   convertAmountToRawAmount,
   convertRawAmountToDecimalFormat,
+  convertStringToNumber,
   divide,
   fromWei,
-  greaterThan,
   multiply,
 } from '../helpers/utilities';
 import { loadWallet } from '../model/wallet';
@@ -32,41 +44,15 @@ import {
 import { logger } from '../utils';
 import { toHex, web3Provider } from './web3';
 
-const uniswapPairsEndpoint = axios.create({
-  baseURL:
-    'https://raw.githubusercontent.com/rainbow-me/asset-overrides/master/uniswap-pairs.json',
-  headers: {
-    Accept: 'application/json',
-  },
-  timeout: 20000, // 20 secs
-});
+const DefaultMaxSlippageInBips = 200;
+const SlippageBufferInBips = 100;
 
-export const getUniswapPairs = async tokenOverrides => {
-  try {
-    const data = await uniswapPairsEndpoint.get();
-    const pairs = get(data, 'data') || {};
-    const loweredPairs = mapKeys(pairs, (_, key) => toLower(key));
-    return mapValues(loweredPairs, (value, key) => ({
-      ...value,
-      ...tokenOverrides[key],
-    }));
-  } catch (error) {
-    logger.log('Error getting uniswap pairs', error);
-    throw error;
-  }
-};
-
-export const getTestnetUniswapPairs = async network => {
-  try {
-    const pairs = uniswapTestnetAssets[network];
-    const loweredPairs = mapKeys(pairs, (_, key) => toLower(key));
-    return mapValues(loweredPairs, value => ({
-      ...value,
-    }));
-  } catch (error) {
-    logger.log('Error getting uniswap testnet pairs', error);
-    throw error;
-  }
+export const getTestnetUniswapPairs = network => {
+  const pairs = get(uniswapTestnetAssets, network, {});
+  const loweredPairs = mapKeys(pairs, (_, key) => toLower(key));
+  return mapValues(loweredPairs, value => ({
+    ...value,
+  }));
 };
 
 const convertArgsForEthers = methodArguments =>
@@ -149,8 +135,15 @@ export const estimateSwapGasLimit = async (accountAddress, tradeDetails) => {
   }
 };
 
-export const getContractExecutionDetails = (tradeDetails, providerOrSigner) => {
-  const executionDetails = getExecutionDetails(tradeDetails);
+const getContractExecutionDetails = (tradeDetails, providerOrSigner) => {
+  const slippage = convertStringToNumber(
+    get(tradeDetails, 'executionRateSlippage', 0)
+  );
+  const maxSlippage = Math.max(
+    slippage + SlippageBufferInBips,
+    DefaultMaxSlippageInBips
+  );
+  const executionDetails = getExecutionDetails(tradeDetails, maxSlippage);
   const {
     exchangeAddress,
     methodArguments,
@@ -352,6 +345,53 @@ export const getLiquidityInfo = async (
   return zipObject(exchangeContracts, results);
 };
 
+export const getChart = async (exchangeAddress, timeframe) => {
+  const now = new Date();
+  const timeframeKey = findKey(ChartTypes, type => type === timeframe);
+  let startTime = getUnixTime(
+    sub(now, {
+      ...(timeframe === ChartTypes.max
+        ? { years: 2 }
+        : { [`${timeframeKey}s`]: 1 }),
+      seconds: 1, // -1 seconds because we filter on greater than in the query
+    })
+  );
+
+  let data = [];
+  try {
+    let dataEnd = false;
+    while (!dataEnd) {
+      const chartData = await uniswapClient
+        .query({
+          fetchPolicy: 'cache-first',
+          query: UNISWAP_CHART_QUERY,
+          variables: {
+            date: startTime,
+            exchangeAddress,
+          },
+        })
+        .then(({ data: { exchangeDayDatas } }) =>
+          exchangeDayDatas.map(({ date, tokenPriceUSD }) => [
+            date,
+            parseFloat(tokenPriceUSD),
+          ])
+        );
+
+      data = data.concat(chartData);
+
+      if (chartData.length !== 100) {
+        dataEnd = true;
+      } else {
+        startTime = chartData[chartData.length - 1][0];
+      }
+    }
+  } catch (err) {
+    logger.log('error: ', err);
+  }
+
+  return data;
+};
+
 export const getAllExchanges = async (tokenOverrides, excluded = []) => {
   const pageSize = 600;
   let allTokens = {};
@@ -379,18 +419,15 @@ export const getAllExchanges = async (tokenOverrides, excluded = []) => {
   }
   data.forEach(exchange => {
     const tokenAddress = toLower(exchange.tokenAddress);
-    const hasLiquidity = greaterThan(exchange.ethBalance, 0);
-    if (hasLiquidity) {
-      const tokenExchangeInfo = {
-        decimals: exchange.tokenDecimals,
-        ethBalance: exchange.ethBalance,
-        exchangeAddress: exchange.id,
-        name: exchange.tokenName,
-        symbol: exchange.tokenSymbol,
-        ...tokenOverrides[tokenAddress],
-      };
-      allTokens[tokenAddress] = tokenExchangeInfo;
-    }
+    const tokenExchangeInfo = {
+      decimals: exchange.tokenDecimals,
+      ethBalance: exchange.ethBalance,
+      exchangeAddress: exchange.id,
+      name: exchange.tokenName,
+      symbol: exchange.tokenSymbol,
+      ...tokenOverrides[tokenAddress],
+    };
+    allTokens[tokenAddress] = tokenExchangeInfo;
   });
   return allTokens;
 };

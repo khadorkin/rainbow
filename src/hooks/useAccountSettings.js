@@ -3,22 +3,28 @@ import {
   createLanguageSelector,
   createNativeCurrencySelector,
 } from '../hoc/accountSettingsSelectors';
+import {
+  settingsUpdateAccountColor,
+  settingsUpdateAccountName,
+} from '../redux/settings';
 
 export default function useAccountSettings() {
   const { language } = useSelector(createLanguageSelector);
   const { nativeCurrencySymbol } = useSelector(createNativeCurrencySelector);
-  return useSelector(
+  const settingsData = useSelector(
     ({
       settings: {
         accountAddress,
-        accountENS,
+        accountColor,
+        accountName,
         chainId,
         nativeCurrency,
         network,
       },
     }) => ({
       accountAddress,
-      accountENS,
+      accountColor,
+      accountName,
       chainId,
       language,
       nativeCurrency,
@@ -26,4 +32,9 @@ export default function useAccountSettings() {
       network,
     })
   );
+  return {
+    settingsUpdateAccountColor,
+    settingsUpdateAccountName,
+    ...settingsData,
+  };
 }
