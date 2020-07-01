@@ -9,6 +9,7 @@ import { isEmulatorSync } from 'react-native-device-info';
 import { PERMISSIONS, request } from 'react-native-permissions';
 import { compose } from 'recompact';
 import { Alert, Prompt } from '../components/alerts';
+import isNativeStackAvailable from '../helpers/isNativeStackAvailable';
 import WalletTypes from '../helpers/walletTypes';
 import {
   withWalletConnectConnections,
@@ -105,17 +106,23 @@ class QRScannerScreenWithData extends Component {
 
       analytics.track('Scanned address QR code');
       navigation.navigate(Routes.WALLET_SCREEN);
-      navigation.navigate(Routes.SEND_SHEET, { address });
+      navigation.navigate(
+        Routes.SEND_FLOW,
+        isNativeStackAvailable
+          ? {
+              params: { address },
+              screen: Routes.SEND_SHEET,
+            }
+          : { address }
+      );
       return setSafeTimeout(this.handleReenableScanning, 1000);
     }
 
     if (data.startsWith('wc:')) {
       analytics.track('Scanned WalletConnect QR code');
-      await walletConnectOnSessionRequest(data, async () => {
-        setTimeout(() => {
-          checkPushNotificationPermissions();
-        }, 1000);
-      });
+
+      await checkPushNotificationPermissions();
+      setTimeout(async () => await walletConnectOnSessionRequest(data), 1000);
       return setSafeTimeout(this.handleReenableScanning, 2000);
     }
 

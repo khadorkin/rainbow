@@ -21,6 +21,7 @@ import CoinName from './CoinName';
 import CoinRow from './CoinRow';
 
 const editTranslateOffset = 32;
+const AssetSheetHeight = 400;
 
 const formatPercentageString = percentString =>
   percentString ? percentString.split('-').join('- ') : '-';
@@ -104,7 +105,6 @@ const BalanceCoinRow = ({
   isFirstCoinRow,
   item,
   onPress,
-  onPressSend,
   pushSelectedCoin,
   recentlyPinnedCount,
   removeSelectedCoin,
@@ -132,12 +132,8 @@ const BalanceCoinRow = ({
   }, [item.uniqueId, pushSelectedCoin, removeSelectedCoin, setToggle, toggle]);
 
   const handlePress = useCallback(() => {
-    onPress && onPress(item);
+    onPress && onPress(item, { longFormHeight: AssetSheetHeight });
   }, [onPress, item]);
-
-  const handlePressSend = useCallback(() => {
-    onPressSend && onPressSend(item);
-  }, [onPressSend, item]);
 
   return (
     <Column flex={1} justify={isFirstCoinRow ? 'end' : 'start'}>
@@ -152,8 +148,6 @@ const BalanceCoinRow = ({
             isExpandedState ? containerExpandedStyles : containerStyles
           }
           isExpandedState={isExpandedState}
-          onPress={handlePress}
-          onPressSend={handlePressSend}
           bottomRowRender={BottomRow}
           topRowRender={TopRow}
           {...item}
