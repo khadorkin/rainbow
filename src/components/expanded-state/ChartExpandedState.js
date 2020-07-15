@@ -1,11 +1,8 @@
-import PropTypes from 'prop-types';
-import React from 'react';
-import styled from 'styled-components/native';
+import React, { useState } from 'react';
+import { chartExpandedAvailable } from '../../config/experimental';
 import AssetInputTypes from '../../helpers/assetInputTypes';
-import { colors } from '../../styles';
+import { useColorForAsset } from '../../hooks';
 import { magicMemo } from '../../utils';
-import { BalanceCoinRow } from '../coin-row';
-import { ColumnWithDividers } from '../layout';
 import {
   SendActionButton,
   SheetActionButtonRow,
@@ -13,32 +10,61 @@ import {
   SlackSheet,
   SwapActionButton,
 } from '../sheet';
+import {
+  TokenInfoBalanceValue,
+  TokenInfoItem,
+  TokenInfoRow,
+  TokenInfoSection,
+} from '../token-info';
+import Chart from '../value-chart/Chart';
+import { ChartExpandedStateHeader } from './chart';
 
-// import Chart from '../value-chart/Chart';
-import TemporaryChartPlaceholder from '../value-chart/TemporaryChartPlaceholder';
+export const ChartExpandedStateSheetHeight = 309;
 
-const Whitespace = styled.View`
-  background-color: ${colors.white};
-  flex: 1;
-  height: 300;
-`;
+const ChartExpandedState = ({ asset }) => {
+  const [chartPrice, setChartPrice] = useState(0);
+  const color = useColorForAsset(asset);
 
-const ChartExpandedState = ({ asset }) => (
-  <SlackSheet scrollEnabled={false}>
-    <BalanceCoinRow isExpandedState item={asset} />
-    <ColumnWithDividers dividerRenderer={SheetDivider}>
+  return (
+    <SlackSheet
+      contentHeight={ChartExpandedStateSheetHeight}
+      scrollEnabled={false}
+    >
+      <ChartExpandedStateHeader
+        {...asset}
+        change={asset?.price?.relative_change_24h || 0}
+        chartPrice={chartPrice}
+        color={color}
+        latestPrice={asset?.native?.price.display}
+      />
+      {chartExpandedAvailable && (
+        <Chart
+          asset={asset}
+          chartPrice={chartPrice}
+          color={color}
+          latestPrice={asset?.native?.price.amount}
+          setChartPrice={setChartPrice}
+        />
+      )}
+      <SheetDivider />
+      <TokenInfoSection>
+        <TokenInfoRow>
+          <TokenInfoItem asset={asset} title="Balance">
+            <TokenInfoBalanceValue />
+          </TokenInfoItem>
+          {asset?.native?.price.display && (
+            <TokenInfoItem title="Value" weight="bold">
+              {asset?.native?.balance.display}
+            </TokenInfoItem>
+          )}
+        </TokenInfoRow>
+      </TokenInfoSection>
       <SheetActionButtonRow>
-        <SwapActionButton inputType={AssetInputTypes.in} />
-        <SendActionButton />
+        <SwapActionButton color={color} inputType={AssetInputTypes.in} />
+        <SendActionButton color={color} />
       </SheetActionButtonRow>
-      <TemporaryChartPlaceholder asset={asset} />
-      <Whitespace />
-    </ColumnWithDividers>
-  </SlackSheet>
-);
-
-ChartExpandedState.propTypes = {
-  asset: PropTypes.object,
+    </SlackSheet>
+  );
 };
 
 export default magicMemo(ChartExpandedState, 'asset');

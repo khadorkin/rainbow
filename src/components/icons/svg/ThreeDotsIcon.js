@@ -1,14 +1,14 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import { Circle, G } from 'react-native-svg';
-import { colors } from '../../../styles';
 import Svg from '../Svg';
+import { colors } from '@rainbow-me/styles';
 
 const ThreeDotsIcon = ({ color, tightDots, ...props }) => (
   <Svg
     height="5"
-    width={tightDots ? 21 : 23}
     viewBox={tightDots ? '0 0 21 5' : '0 0 23 5'}
+    width={tightDots ? 21 : 23}
     {...props}
   >
     <G fill={color} fillRule="evenodd">

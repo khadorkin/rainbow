@@ -1,5 +1,5 @@
 import { Keyboard, Platform, StatusBar } from 'react-native';
-import { deviceUtils } from '../utils';
+import { deviceUtils, safeAreaInsetValues } from '../utils';
 import { onDidPop, onWillPop } from './Navigation';
 import { appearListener } from './nativeStackHelpers';
 
@@ -9,16 +9,14 @@ export const expandedAssetSheetConfig = {
     allowsTapToDismiss: true,
     backgroundOpacity: 0.7,
     blocksBackgroundTouches: true,
-    cornerRadius: 24,
+    cornerRadius: params.longFormHeight ? 39 : 30,
     customStack: true,
     gestureEnabled: true,
-    headerHeight: 50,
+    headerHeight: 25,
     longFormHeight: params.longFormHeight,
     onAppear: null,
     scrollEnabled: true,
-    springDamping: 0.8755,
-    topOffset: 0,
-    transitionDuration: 0.42,
+    topOffset: safeAreaInsetValues.top + 5,
   }),
 };
 
@@ -53,6 +51,7 @@ export const nativeStackConfig = {
 export const sharedCoolModalConfig = {
   options: {
     customStack: true,
+    ignoreBottomOffset: true,
     onAppear: null,
   },
 };

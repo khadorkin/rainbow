@@ -2,11 +2,11 @@ import React from 'react';
 import { Platform } from 'react-native';
 import { BorderlessButton } from 'react-native-gesture-handler';
 import styled from 'styled-components';
-import { colors } from '../../styles';
 import { Button } from '../buttons';
 import { Icon } from '../icons';
 import { Row } from '../layout';
 import { Text as UnstyledText } from '../text';
+import { colors } from '@rainbow-me/styles';
 
 const BackArrow = styled(Icon).attrs({
   color: colors.appleBlue,
@@ -46,8 +46,10 @@ const ModalHeaderButton = ({ label, onPress, side }) => (
     onPress={onPress}
     side={side}
   >
-    {side === 'left' && <BackArrow />}
-    <Text side={side}>{label}</Text>
+    <Row>
+      {side === 'left' && <BackArrow />}
+      <Text side={side}>{label}</Text>
+    </Row>
   </Container>
 );
 
