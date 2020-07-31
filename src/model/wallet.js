@@ -53,13 +53,14 @@ export function generateSeedPhrase() {
 export const walletInit = async (
   seedPhrase = null,
   color = null,
-  name = null
+  name = null,
+  overwrite = false
 ) => {
   let walletAddress = null;
   let isNew = false;
   // Importing a seedphrase
   if (!isEmpty(seedPhrase)) {
-    const wallet = await createWallet(seedPhrase, color, name);
+    const wallet = await createWallet(seedPhrase, color, name, overwrite);
     walletAddress = wallet.address;
     return { isNew, walletAddress };
   }
@@ -84,6 +85,7 @@ export const loadWallet = async () => {
 
 export const sendTransaction = async ({ transaction }) => {
   try {
+    logger.sentry('about to send transaction', transaction);
     const wallet = await loadWallet();
     if (!wallet) return null;
     try {
@@ -103,6 +105,7 @@ export const sendTransaction = async ({ transaction }) => {
 
 export const signTransaction = async ({ transaction }) => {
   try {
+    logger.sentry('about to sign transaction', transaction);
     const wallet = await loadWallet();
     if (!wallet) return null;
     try {
@@ -124,6 +127,7 @@ export const signMessage = async (
   authenticationPrompt = lang.t('wallet.authenticate.please')
 ) => {
   try {
+    logger.sentry('about to sign message', message);
     const wallet = await loadWallet(authenticationPrompt);
     try {
       const signingKey = new ethers.utils.SigningKey(wallet.privateKey);
@@ -147,6 +151,7 @@ export const signPersonalMessage = async (
   authenticationPrompt = lang.t('wallet.authenticate.please')
 ) => {
   try {
+    logger.sentry('about to sign personal message', message);
     const wallet = await loadWallet(authenticationPrompt);
     try {
       return wallet.signMessage(
@@ -169,6 +174,7 @@ export const signTypedDataMessage = async (
   authenticationPrompt = lang.t('wallet.authenticate.please')
 ) => {
   try {
+    logger.sentry('about to sign typed data  message', message);
     const wallet = await loadWallet(authenticationPrompt);
 
     try {
@@ -312,7 +318,12 @@ export const getWallet = walletSeed => {
   return { hdnode, isHDWallet, type, wallet };
 };
 
-export const createWallet = async (seed = null, color = null, name = null) => {
+export const createWallet = async (
+  seed = null,
+  color = null,
+  name = null,
+  overwrite = false
+) => {
   const isImported = !!seed;
   const walletSeed = seed || generateSeedPhrase();
   let addresses = [];
@@ -344,6 +355,7 @@ export const createWallet = async (seed = null, color = null, name = null) => {
         (alreadyExistingWallet?.type === WalletTypes.seed ||
           alreadyExistingWallet?.type === WalletTypes.mnemonic);
       if (
+        !overwrite &&
         alreadyExistingWallet &&
         (type === WalletTypes.readOnly || isPrivateKeyOverwritingSeedMnemonic)
       ) {
