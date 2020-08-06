@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/)
 
 ## [Unreleased]
 ### Added
+
+### Changed
+* Check if hasKey instead of loading it directly
+
+### Removed
+
+## [1.2.25](https://github.com/rainbow-me/rainbow/releases/tag/v1.2.25)
+### Changed
+* Support Wyre order reservations
+* Add migration v3
+
+## [1.2.24](https://github.com/rainbow-me/rainbow/releases/tag/v1.2.24)
+### Added
+* Keychain integrity checks
+* Prevent add funds actions when keychain integrity checks fail
 * Zerion charts integration
 
 ### Changed

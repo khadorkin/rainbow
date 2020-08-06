@@ -1,4 +1,4 @@
-import { captureException } from '@sentry/react-native';
+import { captureException, captureMessage } from '@sentry/react-native';
 import { signTypedData_v4, signTypedDataLegacy } from 'eth-sig-util';
 import { isValidAddress, toBuffer } from 'ethereumjs-util';
 import { ethers } from 'ethers';
@@ -20,6 +20,7 @@ import {
   toChecksumAddress,
   web3Provider,
 } from '../handlers/web3';
+import showWalletErrorAlert from '../helpers/support';
 import WalletTypes from '../helpers/walletTypes';
 import { ethereumUtils } from '../utils';
 
@@ -27,12 +28,12 @@ import * as keychain from './keychain';
 import { colors } from '@rainbow-me/styles';
 import logger from 'logger';
 
-const seedPhraseKey = 'rainbowSeedPhrase';
-const privateKeyKey = 'rainbowPrivateKey';
-const addressKey = 'rainbowAddressKey';
-const selectedWalletKey = 'rainbowSelectedWalletKey';
-const allWalletsKey = 'rainbowAllWalletsKey';
-const seedPhraseMigratedKey = 'rainbowSeedPhraseMigratedKey';
+export const seedPhraseKey = 'rainbowSeedPhrase';
+export const privateKeyKey = 'rainbowPrivateKey';
+export const addressKey = 'rainbowAddressKey';
+export const selectedWalletKey = 'rainbowSelectedWalletKey';
+export const allWalletsKey = 'rainbowAllWalletsKey';
+export const oldSeedPhraseMigratedKey = 'rainbowOldSeedPhraseMigratedKey';
 
 const privateKeyVersion = 1.0;
 const seedPhraseVersion = 1.0;
@@ -47,6 +48,7 @@ const publicAccessControlOptions = {
 };
 
 export function generateSeedPhrase() {
+  logger.sentry('Generating a new seed phrase');
   return ethers.utils.HDNode.entropyToMnemonic(ethers.utils.randomBytes(16));
 }
 
@@ -80,6 +82,7 @@ export const loadWallet = async () => {
   if (privateKey) {
     return new ethers.Wallet(privateKey, web3Provider);
   }
+  showWalletErrorAlert();
   return null;
 };
 
@@ -93,11 +96,15 @@ export const sendTransaction = async ({ transaction }) => {
       return result.hash;
     } catch (error) {
       Alert.alert(lang.t('wallet.transaction.alert.failed_transaction'));
+      logger.sentry('Failed to SEND transaction, alerted user');
       captureException(error);
       return null;
     }
   } catch (error) {
     Alert.alert(lang.t('wallet.transaction.alert.authentication'));
+    logger.sentry(
+      'Failed to SEND transaction due to authentication, alerted user'
+    );
     captureException(error);
     return null;
   }
@@ -112,11 +119,15 @@ export const signTransaction = async ({ transaction }) => {
       return wallet.sign(transaction);
     } catch (error) {
       Alert.alert(lang.t('wallet.transaction.alert.failed_transaction'));
+      logger.sentry('Failed to SIGN transaction, alerted user');
       captureException(error);
       return null;
     }
   } catch (error) {
     Alert.alert(lang.t('wallet.transaction.alert.authentication'));
+    logger.sentry(
+      'Failed to SIGN transaction due to authentication, alerted user'
+    );
     captureException(error);
     return null;
   }
@@ -136,11 +147,14 @@ export const signMessage = async (
       );
       return ethers.utils.joinSignature(sigParams);
     } catch (error) {
+      Alert.alert(lang.t('wallet.transaction.alert.failed_sign_message'));
+      logger.sentry('Failed to SIGN message, alerted user');
       captureException(error);
       return null;
     }
   } catch (error) {
     Alert.alert(lang.t('wallet.transaction.alert.authentication'));
+    logger.sentry('Failed to SIGN message due to authentication, alerted user');
     captureException(error);
     return null;
   }
@@ -158,11 +172,16 @@ export const signPersonalMessage = async (
         isHexString(message) ? ethers.utils.arrayify(message) : message
       );
     } catch (error) {
+      Alert.alert(lang.t('wallet.transaction.alert.failed_sign_message'));
+      logger.sentry('Failed to SIGN personal message, alerted user');
       captureException(error);
       return null;
     }
   } catch (error) {
     Alert.alert(lang.t('wallet.transaction.alert.authentication'));
+    logger.sentry(
+      'Failed to SIGN personal message due to authentication, alerted user'
+    );
     captureException(error);
     return null;
   }
@@ -205,11 +224,16 @@ export const signTypedDataMessage = async (
           return signTypedDataLegacy(pkeyBuffer, { data: parsedData });
       }
     } catch (error) {
+      Alert.alert(lang.t('wallet.transaction.alert.failed_sign_message'));
+      logger.sentry('Failed to SIGN typed data message, alerted user');
       captureException(error);
       return null;
     }
   } catch (error) {
     Alert.alert(lang.t('wallet.transaction.alert.authentication'));
+    logger.sentry(
+      'Failed to SIGN typed data message due to authentication, alerted user'
+    );
     captureException(error);
     return null;
   }
@@ -224,34 +248,33 @@ export const oldLoadSeedPhrase = async (
   return seedPhrase;
 };
 
-export const loadAddress = async () => {
-  try {
-    return keychain.loadString(addressKey);
-  } catch (error) {
-    captureException(error);
-    return null;
-  }
-};
+export const loadAddress = () => keychain.loadString(addressKey);
 
 const loadPrivateKey = async (
   authenticationPrompt = lang.t('wallet.authenticate.please')
 ) => {
   try {
     const isSeedPhraseMigrated = await keychain.loadString(
-      seedPhraseMigratedKey
+      oldSeedPhraseMigratedKey
     );
 
     // We need to migrate the seedphrase & private key first
     // In that case we regenerate the existing private key to store it with the new format
+    let privateKey = null;
     if (!isSeedPhraseMigrated) {
-      const { privateKey } = await migrateSecrets();
-      return privateKey;
-    } else {
-      const address = await loadAddress();
-      const { privateKey } = await getPrivateKey(address, authenticationPrompt);
-      return privateKey;
+      const migratedSecrets = await migrateSecrets();
+      privateKey = migratedSecrets?.privateKey;
     }
+
+    if (!privateKey) {
+      const address = await loadAddress();
+      const privateKeyData = await getPrivateKey(address, authenticationPrompt);
+      privateKey = privateKeyData?.privateKey;
+    }
+
+    return privateKey;
   } catch (error) {
+    logger.sentry('Error in loadPrivateKey');
     captureException(error);
     return null;
   }
@@ -264,25 +287,26 @@ export const saveAddress = async (
   await keychain.saveString(addressKey, address, accessControlOptions);
 };
 
-export const identifyWalletType = walletSeed => {
-  let type = null;
+const identifyWalletType = walletSeed => {
   if (
     isHexStringIgnorePrefix(walletSeed) &&
     addHexPrefix(walletSeed).length === 66
   ) {
-    type = WalletTypes.privateKey;
-    // 12 or 24 words seed phrase
-  } else if (isValidMnemonic(walletSeed)) {
-    type = WalletTypes.mnemonic;
-    // Public address (0x)
-  } else if (isValidAddress(walletSeed)) {
-    type = WalletTypes.readOnly;
-  } else {
-    // seed
-    type = WalletTypes.seed;
+    return WalletTypes.privateKey;
   }
 
-  return type;
+  // 12 or 24 words seed phrase
+  if (isValidMnemonic(walletSeed)) {
+    return WalletTypes.mnemonic;
+  }
+
+  // Public address (0x)
+  if (isValidAddress(walletSeed)) {
+    return WalletTypes.readOnly;
+  }
+
+  // seed
+  return WalletTypes.seed;
 };
 
 export const getWallet = walletSeed => {
@@ -290,7 +314,6 @@ export const getWallet = walletSeed => {
   let hdnode = null;
   let isHDWallet = false;
   const type = identifyWalletType(walletSeed);
-  if (!type) throw new Error('Unknown Wallet Type');
   switch (type) {
     case WalletTypes.privateKey:
       wallet = new ethers.Wallet(walletSeed);
@@ -325,18 +348,22 @@ export const createWallet = async (
   overwrite = false
 ) => {
   const isImported = !!seed;
+  logger.sentry('Creating wallet, isImported?', isImported);
   const walletSeed = seed || generateSeedPhrase();
   let addresses = [];
   try {
     const { hdnode, isHDWallet, type, wallet } = getWallet(walletSeed);
+    logger.sentry('[createWallet] - getWallet from seed');
 
     // Get all wallets
     const allWalletsResult = await getAllWallets();
+    logger.sentry('[createWallet] - getAllWallets');
     const allWallets = get(allWalletsResult, 'wallets', {});
 
     let existingWalletId = null;
     if (isImported) {
       // Checking if the generated account already exists and is visible
+      logger.sentry('[createWallet] - isImported >> true');
       const alreadyExistingWallet = find(allWallets, someWallet =>
         find(
           someWallet.addresses,
@@ -359,25 +386,33 @@ export const createWallet = async (
         alreadyExistingWallet &&
         (type === WalletTypes.readOnly || isPrivateKeyOverwritingSeedMnemonic)
       ) {
-        Alert.alert('Oops!', 'Looks like you already imported this wallet!');
+        setTimeout(
+          () =>
+            Alert.alert(
+              'Oops!',
+              'Looks like you already imported this wallet!'
+            ),
+          1
+        );
+        logger.sentry('[createWallet] - already imported this wallet');
         return null;
       }
     }
 
     const id = existingWalletId || `wallet_${Date.now()}`;
+    logger.sentry('[createWallet] - wallet ID', { id });
+
+    // Save seed - save this first
+    await saveSeedPhrase(walletSeed, id);
+    logger.sentry('[createWallet] - saved seed phrase');
 
     // Save address
     await saveAddress(wallet.address);
+    logger.sentry('[createWallet] - saved address');
+
     // Save private key
     await savePrivateKey(wallet.address, wallet.privateKey);
-    // Save seed
-    await saveSeedPhrase(walletSeed, id);
-    // Save migration flag
-    await keychain.saveString(
-      seedPhraseMigratedKey,
-      'true',
-      publicAccessControlOptions
-    );
+    logger.sentry('[createWallet] - saved private key');
 
     addresses.push({
       address: wallet.address,
@@ -389,6 +424,7 @@ export const createWallet = async (
     });
 
     if (isHDWallet && isImported) {
+      logger.sentry('[createWallet] - isHDWallet && isImported');
       let index = 1;
       let lookup = true;
       // Starting on index 1, we are gonna hit etherscan API and check the tx history
@@ -397,9 +433,15 @@ export const createWallet = async (
       while (lookup) {
         const node = hdnode.derivePath(`${DEFAULT_HD_PATH}/${index}`);
         const nextWallet = new ethers.Wallet(node.privateKey);
-        const hasTxHistory = await ethereumUtils.hasPreviousTransactions(
-          nextWallet.address
-        );
+        let hasTxHistory = false;
+        try {
+          hasTxHistory = await ethereumUtils.hasPreviousTransactions(
+            nextWallet.address
+          );
+        } catch (error) {
+          logger.sentry('[createWallet] - Error getting txn history');
+          captureException(error);
+        }
 
         let discoveredAccount = null;
         let discoveredWalletId = null;
@@ -434,6 +476,9 @@ export const createWallet = async (
         if (hasTxHistory) {
           // Save private key
           await savePrivateKey(nextWallet.address, nextWallet.privateKey);
+          logger.sentry(
+            `[createWallet] - saved private key for next wallet ${index}`
+          );
           addresses.push({
             address: nextWallet.address,
             avatar: null,
@@ -484,14 +529,17 @@ export const createWallet = async (
       type,
     };
 
-    setSelectedWallet(allWallets[id]);
+    await setSelectedWallet(allWallets[id]);
+    logger.sentry('[createWallet] - setSelectedWallet');
     await saveAllWallets(allWallets);
+    logger.sentry('[createWallet] - saveAllWallets');
 
     if (wallet) {
       return wallet;
     }
     return null;
   } catch (error) {
+    logger.sentry('Error in createWallet');
     captureException(error);
     return null;
   }
@@ -535,6 +583,7 @@ export const getPrivateKey = async (
       authenticationPrompt,
     });
   } catch (error) {
+    logger.sentry('Error in getPrivateKey');
     captureException(error);
     return null;
   }
@@ -578,6 +627,7 @@ export const getSeedPhrase = async (
       authenticationPrompt,
     });
   } catch (error) {
+    logger.sentry('Error in getSeedPhrase');
     captureException(error);
     return null;
   }
@@ -596,6 +646,7 @@ export const getSelectedWallet = async () => {
   try {
     return keychain.loadObject(selectedWalletKey);
   } catch (error) {
+    logger.sentry('Error in getSelectedWallet');
     captureException(error);
     return null;
   }
@@ -614,6 +665,7 @@ export const getAllWallets = async () => {
   try {
     return keychain.loadObject(allWalletsKey);
   } catch (error) {
+    logger.sentry('Error in getAllWallets');
     captureException(error);
     return null;
   }
@@ -622,28 +674,23 @@ export const getAllWallets = async () => {
 export const generateAccount = async (id, index) => {
   try {
     const isSeedPhraseMigrated = await keychain.loadString(
-      seedPhraseMigratedKey
+      oldSeedPhraseMigratedKey
     );
     let seedPhrase, hdnode;
     // We need to migrate the seedphrase & private key first
     // In that case we regenerate the existing private key to store it with the new format
     if (!isSeedPhraseMigrated) {
-      const {
-        hdnode: newHdnode,
-        seedPhrase: newSeedPhrase,
-      } = await migrateSecrets();
+      const migratedSecrets = await migrateSecrets();
+      hdnode = migratedSecrets?.hdnode;
+      seedPhrase = migratedSecrets?.seedPhrase;
+    }
 
-      if (newHdnode) {
-        hdnode = newHdnode;
-      }
-
-      if (newSeedPhrase) {
-        seedPhrase = newSeedPhrase;
-      }
-    } else {
+    if (!seedPhrase) {
       const seedData = await getSeedPhrase(id);
-      seedPhrase = seedData.seedphrase;
-      hdnode = ethers.utils.HDNode.fromMnemonic(seedPhrase);
+      seedPhrase = seedData?.seedphrase;
+      if (seedPhrase) {
+        hdnode = ethers.utils.HDNode.fromMnemonic(seedPhrase);
+      }
     }
 
     if (!seedPhrase) {
@@ -655,15 +702,33 @@ export const generateAccount = async (id, index) => {
     await savePrivateKey(newAccount.address, newAccount.privateKey);
     return newAccount;
   } catch (error) {
-    logger.log('Error generating account for keychain', id, error);
+    logger.sentry('Error generating account for keychain', id);
+    captureException(error);
   }
 };
 
-export const migrateSecrets = async () => {
+const migrateSecrets = async () => {
   try {
+    logger.sentry('migrating secrets!');
     const seedPhrase = await oldLoadSeedPhrase();
+
+    if (!seedPhrase) {
+      logger.sentry('old seed doesnt exist!');
+      // Save the migration flag to prevent this flow in the future
+      await keychain.saveString(
+        oldSeedPhraseMigratedKey,
+        'true',
+        publicAccessControlOptions
+      );
+      logger.sentry(
+        'Saved the migration flag to prevent this flow in the future'
+      );
+      return null;
+    }
+
+    logger.sentry('Got secret, now idenfifying wallet type');
     const type = identifyWalletType(seedPhrase);
-    if (!type) throw new Error('Unknown Wallet Type');
+    logger.sentry('Got type: ', type);
     let hdnode, node, existingAccount;
     switch (type) {
       case WalletTypes.privateKey:
@@ -679,21 +744,38 @@ export const migrateSecrets = async () => {
     }
 
     if (!existingAccount) {
+      logger.sentry('No existing account, so we have to derive it');
       node = hdnode.derivePath(`${DEFAULT_HD_PATH}/0`);
       existingAccount = new ethers.Wallet(node.privateKey);
+      logger.sentry('Got existing account');
     }
 
-    // Save the private key in the new format
-    await savePrivateKey(existingAccount.address, existingAccount.privateKey);
+    // Check that wasn't migrated already!
+    const pkeyExists = await keychain.hasKey(
+      `${existingAccount.address}_${privateKeyKey}`
+    );
+    if (!pkeyExists) {
+      logger.sentry('new pkey didnt exist so we should save it');
+      // Save the private key in the new format
+      await savePrivateKey(existingAccount.address, existingAccount.privateKey);
+      logger.sentry('new pkey saved');
+    }
     const { wallet } = await getSelectedWallet();
+
     // Save the seedphrase in the new format
-    await saveSeedPhrase(seedPhrase, wallet.id);
+    const seedExists = await keychain.hasKey(`${wallet.id}_${seedPhraseKey}`);
+    if (!seedExists) {
+      logger.sentry('new seed didnt exist so we should save it');
+      await saveSeedPhrase(seedPhrase, wallet.id);
+      logger.sentry('new seed saved');
+    }
     // Save the migration flag to prevent this flow in the future
     await keychain.saveString(
-      seedPhraseMigratedKey,
+      oldSeedPhraseMigratedKey,
       'true',
       publicAccessControlOptions
     );
+    logger.sentry('saved migrated key');
     return {
       hdnode,
       privateKey: existingAccount.privateKey,
@@ -701,28 +783,50 @@ export const migrateSecrets = async () => {
       type,
     };
   } catch (e) {
-    logger.log(e);
+    logger.sentry('Error while migrating secrets');
     captureException(e);
   }
 };
 
 export const loadSeedPhraseAndMigrateIfNeeded = async id => {
   try {
-    const isSeedPhraseMigrated = await keychain.loadString(
-      seedPhraseMigratedKey
-    );
+    let seedPhrase = null;
+    // First we need to check if that key already exists
+    const keyFound = await keychain.hasKey(`${id}_${seedPhraseKey}`);
+    if (!keyFound) {
+      logger.sentry('key not found, we should have a migration pending...');
+      // if it doesn't we might have a migration pending
+      const isSeedPhraseMigrated = await keychain.loadString(
+        oldSeedPhraseMigratedKey
+      );
 
-    // We need to migrate the seedphrase & private key first
-    // In that case we regenerate the existing private key to store it with the new format
-    if (!isSeedPhraseMigrated) {
-      const { seedPhrase } = await migrateSecrets();
-      return seedPhrase;
+      logger.sentry('Migration pending?', !isSeedPhraseMigrated);
+
+      // We need to migrate the seedphrase & private key first
+      // In that case we regenerate the existing private key to store it with the new format
+      if (!isSeedPhraseMigrated) {
+        const migratedSecrets = await migrateSecrets();
+        seedPhrase = migratedSecrets?.seedPhrase;
+      } else {
+        logger.sentry('Migrated flag was set but there is no key!', id);
+        captureMessage('Missing seed for wallet');
+      }
     } else {
+      logger.sentry('Getting seed directly');
       const seedData = await getSeedPhrase(id);
-      const seedPhrase = seedData.seedphrase;
-      return seedPhrase;
+      seedPhrase = seedData?.seedphrase;
+      if (seedPhrase) {
+        logger.sentry('got seed succesfully');
+      } else {
+        captureMessage(
+          'Missing seed for wallet - (Key exists but value isnt valid)!'
+        );
+      }
     }
+
+    return seedPhrase;
   } catch (error) {
+    logger.sentry('Error in loadSeedPhraseAndMigrateIfNeeded');
     captureException(error);
     return null;
   }
