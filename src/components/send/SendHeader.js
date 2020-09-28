@@ -14,7 +14,7 @@ import { colors, padding } from '@rainbow-me/styles';
 import { showActionSheetWithOptions } from '@rainbow-me/utils';
 
 const AddressInputContainer = styled(Row).attrs({ align: 'center' })`
-  ${({ isTinyPhone }) => (isTinyPhone ? padding(12, 15) : padding(19, 15))};
+  ${({ isSmallPhone }) => (isSmallPhone ? padding(12, 15) : padding(19, 15))};
   background-color: ${colors.white};
   overflow: hidden;
   width: 100%;
@@ -28,6 +28,7 @@ const AddressFieldLabel = styled(Label)`
 const SheetHandle = styled(Icon).attrs({
   color: colors.sendScreen.grey,
   name: 'handle',
+  testID: 'sheet-handle',
 })`
   height: 11;
   margin-top: 13;
@@ -52,7 +53,7 @@ export default function SendHeader({
   showAssetList,
 }) {
   const { setClipboard } = useClipboard();
-  const { isTinyPhone } = useDimensions();
+  const { isSmallPhone } = useDimensions();
   const { navigate } = useNavigation();
 
   const contact = useMemo(() => {
@@ -123,7 +124,7 @@ export default function SendHeader({
   return (
     <Fragment>
       <SheetHandle />
-      <AddressInputContainer isTinyPhone={isTinyPhone}>
+      <AddressInputContainer isSmallPhone={isSmallPhone}>
         <AddressFieldLabel>To:</AddressFieldLabel>
         <AddressField
           address={recipient}
@@ -132,6 +133,7 @@ export default function SendHeader({
           onChange={onChangeAddressInput}
           onFocus={onFocus}
           ref={recipientFieldRef}
+          testID="send-asset-form-field"
         />
         {isValidAddress && (
           <AddContactButton

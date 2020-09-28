@@ -17,6 +17,7 @@
 #import <RNCPushNotificationIOS.h>
 #import <Sentry/Sentry.h>
 #import "RNSplashScreen.h"
+#import "ReaHeader.h"
 #ifndef DISABLE_REANIMATED
 #import <React/RCTCxxBridgeDelegate.h>
 #import <ReactCommon/RCTTurboModuleManager.h>
@@ -99,9 +100,6 @@ RCT_EXPORT_METHOD(hideAnimated) {
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
-  #ifndef DISABLE_REANIMATED
-  RCTEnableTurboModule(YES);
-  #endif
   #if DEBUG
     InitializeFlipper(application);
   #endif
