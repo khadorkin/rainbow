@@ -1,22 +1,29 @@
-import React, { useCallback } from 'react';
-import { Platform, TouchableWithoutFeedback } from 'react-native';
+import React, { useCallback, useEffect } from 'react';
+import { TouchableWithoutFeedback } from 'react-native';
 import styled from 'styled-components/primitives';
 import { TokenSelectionButton } from '../buttons';
-import { CoinIcon } from '../coin-icon';
+import { CoinIcon, CoinIconSize } from '../coin-icon';
 import { Row, RowWithMargins } from '../layout';
 import { EnDash } from '../text';
 import ExchangeInput from './ExchangeInput';
-import { colors } from '@rainbow-me/styles';
+import { useColorForAsset } from '@rainbow-me/hooks';
+import { borders, colors } from '@rainbow-me/styles';
 
-const CoinSize = 40;
-const ExchangeFieldHeight = Platform.OS === 'android' ? 64 : 38;
-const ExchangeFieldPadding = 19;
+const ExchangeFieldHeight = android ? 64 : 38;
+const ExchangeFieldPadding = android ? 15 : 19;
 const skeletonColor = colors.alpha(colors.blueGreyDark, 0.1);
+
+const CoinIconSkeleton = styled.View`
+  ${borders.buildCircle(CoinIconSize)};
+  background-color: ${skeletonColor};
+`;
 
 const Container = styled(Row).attrs({
   align: 'center',
+  justify: 'flex-end',
 })`
   width: 100%;
+  padding-right: ${ExchangeFieldPadding};
 `;
 
 const FieldRow = styled(RowWithMargins).attrs({
@@ -32,7 +39,8 @@ const FieldRow = styled(RowWithMargins).attrs({
 const Input = styled(ExchangeInput).attrs({
   letterSpacing: 'roundedTightest',
 })`
-  height: ${ExchangeFieldHeight};
+  margin-vertical: -10;
+  height: ${ExchangeFieldHeight + (android ? 20 : 0)};
 `;
 
 const ExchangeField = (
@@ -46,22 +54,28 @@ const ExchangeField = (
     setAmount,
     symbol,
     testID,
+    autoFocus,
+    useCustomAndroidMask = false,
     ...props
   },
   ref
 ) => {
+  const colorForAsset = useColorForAsset({ address });
   const handleFocusField = useCallback(() => ref?.current?.focus(), [ref]);
-
+  useEffect(() => {
+    autoFocus && handleFocusField();
+  }, [autoFocus, handleFocusField]);
   return (
     <Container {...props}>
       <TouchableWithoutFeedback onPress={handleFocusField}>
         <FieldRow disableCurrencySelection={disableCurrencySelection}>
           {symbol ? (
-            <CoinIcon address={address} size={CoinSize} symbol={symbol} />
+            <CoinIcon address={address} symbol={symbol} />
           ) : (
-            <CoinIcon bgColor={skeletonColor} size={CoinSize} />
+            <CoinIconSkeleton />
           )}
           <Input
+            color={colorForAsset}
             editable={!!symbol}
             onBlur={onBlur}
             onChangeText={setAmount}
@@ -70,12 +84,14 @@ const ExchangeField = (
             placeholderTextColor={symbol ? undefined : skeletonColor}
             ref={ref}
             testID={amount ? `${testID}-${amount}` : testID}
+            useCustomAndroidMask={useCustomAndroidMask}
             value={amount}
           />
         </FieldRow>
       </TouchableWithoutFeedback>
       {!disableCurrencySelection && (
         <TokenSelectionButton
+          address={address}
           onPress={onPressSelectCurrency}
           symbol={symbol}
           testID={testID + '-selection-button'}

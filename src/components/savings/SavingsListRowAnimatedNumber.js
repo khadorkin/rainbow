@@ -1,13 +1,9 @@
 import PropTypes from 'prop-types';
 import React, { useCallback } from 'react';
-import {
-  Platform,
-  requireNativeComponent,
-  StyleSheet,
-  Text,
-} from 'react-native';
-import useRainbowTextAvailable from '../../helpers/isRainbowTextAvailable';
+import { requireNativeComponent, StyleSheet } from 'react-native';
+import isRainbowTextAvailable from '../../helpers/isRainbowTextAvailable';
 import { formatSavingsAmount, isSymbolStablecoin } from '../../helpers/savings';
+import AndroidText from './AndroidAnimatedNumbers';
 import { colors, fonts } from '@rainbow-me/styles';
 
 const sx = StyleSheet.create({
@@ -15,9 +11,9 @@ const sx = StyleSheet.create({
     height: 30,
   },
   animatedNumberAndroid: {
-    paddingLeft: 35,
+    left: 35,
     position: 'absolute',
-    top: 12,
+    top: 4,
   },
   text: {
     color: colors.dark,
@@ -41,22 +37,18 @@ const SavingsListRowAnimatedNumber = ({
   value,
 }) => {
   const formatter = useCallback(
-    val =>
-      isSymbolStablecoin(symbol)
-        ? `$${formatSavingsAmount(val)}`
-        : `${formatSavingsAmount(val)} ${symbol}`,
+    val => `${formatSavingsAmount(val)} ${symbol} `,
     [symbol]
   );
 
-  const isRainbowTextAvailable = useRainbowTextAvailable();
   const TextComponent = isRainbowTextAvailable
     ? requireNativeComponent('RainbowText')
-    : Text;
+    : AndroidText;
 
   return (
     <TextComponent
       animationConfig={{
-        color: '#2CCC00', // HEX
+        color: ios ? '#2CCC00' : '#2CFF00', // HEX
         decimals: 10,
         duration: 800, // in intervals
         initialValue: Number(initialValue),
@@ -71,7 +63,7 @@ const SavingsListRowAnimatedNumber = ({
       style={[
         sx.text,
         isRainbowTextAvailable ? sx.animatedNumber : null,
-        Platform.OS === 'android' ? sx.animatedNumberAndroid : null,
+        android ? sx.animatedNumberAndroid : null,
       ]}
       time={interval}
       value={Number(value)}

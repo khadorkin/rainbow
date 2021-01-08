@@ -45,6 +45,7 @@ const SavingsListHeader = ({
   return (
     <ButtonPressAnimation
       key={`${emoji}_${isOpen}`}
+      marginBottom={title === 'Pools' ? -6 : 0}
       onPress={onPress}
       scaleTo={1.05}
     >
@@ -55,13 +56,13 @@ const SavingsListHeader = ({
         paddingHorizontal={19}
         width="100%"
       >
-        <RowWithMargins align="center" margin={emoji ? 3.5 : 9}>
+        <RowWithMargins align="center" margin={emoji ? 5 : 9}>
           <ListHeaderEmoji name={emoji} />
           <TruncatedText
             letterSpacing="roundedMedium"
             lineHeight="normal"
             size="large"
-            weight="semibold"
+            weight="bold"
           >
             {title}
           </TruncatedText>
@@ -77,7 +78,7 @@ const SavingsListHeader = ({
               }}
             >
               <SumValueText>
-                {Number(savingsSumValue)
+                {Number(savingsSumValue) || Number(savingsSumValue) === 0
                   ? convertAmountToNativeDisplay(
                       savingsSumValue,
                       nativeCurrency
@@ -90,9 +91,9 @@ const SavingsListHeader = ({
             resizeMode={FastImage.resizeMode.contain}
             source={CaretImageSource}
             style={{
-              height: 17,
+              height: 18,
               marginBottom: 1,
-              right: 4,
+              right: 5,
               transform: [
                 {
                   rotate: toRad(
@@ -103,7 +104,7 @@ const SavingsListHeader = ({
                   ),
                 },
               ],
-              width: 9,
+              width: 8,
             }}
           />
         </RowWithMargins>

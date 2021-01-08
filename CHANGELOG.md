@@ -7,24 +7,103 @@ and this project adheres to [Semantic Versioning](http://semver.org/)
 
 ## [Unreleased]
 ### Added
-* Add biometry icon to backup button
 
 ### Changed
-* Move rn-nodeify to dev deps
-* Change dapp names and hide swap button for not swappable tokens
-* Deps clean up
 
 ### Removed
 
+## [1.2.43](https://github.com/rainbow-me/rainbow/releases/tag/v1.2.43)
+### Added
+* Speed up & cancel transactions
+* Add WBTC to default favorites
+
+### Changed
+* Fix 0 ETH scenarios
+
+## [1.2.42](https://github.com/rainbow-me/rainbow/releases/tag/v1.2.42)
+### Added
+* Alert for unverified tokens
+
+### Changed
+* Swap and approval gas estimation improvements
+* Fix for invisible charts issue
+
+## [1.2.41](https://github.com/rainbow-me/rainbow/releases/tag/v1.2.41)
+### Added
+* Android support merged
+
+### Changed
+* Fix for savings
+* Android UI fixes
+
+## [1.2.40](https://github.com/rainbow-me/rainbow/releases/tag/v1.2.40)
+### Added
+* Uniswap LP token charts
+* Enable searching by token contract addresses in swap
+
+### Changed
+* Fix cloud backup issues
+* Fix avatar issues
+* Fix small balances/pinning issues
+* Fix limited transaction history
+
+## [1.2.39](https://github.com/rainbow-me/rainbow/releases/tag/v1.2.39)
+### Added
+* Surface Uniswap V2 LP tokens
+* Add swap search spinner
+
+## [1.2.38](https://github.com/rainbow-me/rainbow/releases/tag/v1.2.38)
+### Added
+* Uniswap V2 support
+
+### Changed
+* Fix custom gas issues
+
+## [1.2.36](https://github.com/rainbow-me/rainbow/releases/tag/v1.2.36)
+### Added
+* Handle interrupted wallet creation
+* Fallback data provider
+* Top Movers
+
+### Changed
+* Update Wyre order minimums and limits
+
+## [1.2.35](https://github.com/rainbow-me/rainbow/releases/tag/v1.2.35)
+### Added
+* Custom gas
+* iCloud Backup
+
+## [1.2.34](https://github.com/rainbow-me/rainbow/releases/tag/v1.2.34)
+### Changed
+* Improvements to charts
+* Improvements to animations
+
+## [1.2.33](https://github.com/rainbow-me/rainbow/releases/tag/v1.2.33)
+### Changed
+* Improvements to charts
+
+## [1.2.30](https://github.com/rainbow-me/rainbow/releases/tag/v1.2.30)
+### Added
+* Ganache support
+
+## [1.2.29](https://github.com/rainbow-me/rainbow/releases/tag/v1.2.29)
+### Changed
+* Fix WalletConnect gas problems
+* Crash fixes
+
+## [1.2.28](https://github.com/rainbow-me/rainbow/releases/tag/v1.2.28)
+### Changed
+* Check on chain balance while selecting asset in send flow
+
 ## [1.2.27](https://github.com/rainbow-me/rainbow/releases/tag/v1.2.27)
-## Added 
+### Added
 * Migration v5
 
 ## [1.2.26](https://github.com/rainbow-me/rainbow/releases/tag/v1.2.26)
-## Added 
+### Added
 * Migration v4
 
-## Changed
+### Changed
 * check if hasKey instead of loading it directly
 * Sort experimental keys in Dev Section
 
@@ -250,7 +329,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/)
 
 ## [1.2.2-4](https://github.com/rainbow-me/rainbow/releases/tag/v1.2.2-4)
 ### Added
-* Uniswap support 
+* Uniswap support
 * Add to contacts
 * Support for deep linking
 * Support for Sentry

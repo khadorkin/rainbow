@@ -9,7 +9,7 @@ import { colors, shadow as shadowUtil } from '@rainbow-me/styles';
 const UniqueTokenCardBorderRadius = 20;
 const UniqueTokenCardShadow = [0, 2, 6, colors.dark, 0.08];
 
-const Container = styled(ButtonPressAnimation)`
+const Container = styled.View`
   ${({ shadow }) => shadowUtil.build(...shadow)};
 `;
 
@@ -42,6 +42,7 @@ const UniqueTokenCard = ({
 
   return (
     <Container
+      as={ButtonPressAnimation}
       disabled={disabled}
       enableHapticFeedback={enableHapticFeedback}
       onPress={handlePress}

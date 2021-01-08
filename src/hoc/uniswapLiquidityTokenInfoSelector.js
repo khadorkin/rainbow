@@ -1,74 +1,68 @@
 import {
   compact,
-  floor,
-  get,
   isEmpty,
+  join,
   map,
   orderBy,
   sumBy,
+  toLower,
   values,
 } from 'lodash';
 import { createSelector } from 'reselect';
 import {
-  convertAmountAndPriceToNativeDisplay,
   convertAmountToNativeDisplay,
   divide,
+  handleSignificantDecimals,
+  handleSignificantDecimalsWithThreshold,
   multiply,
-} from '../helpers/utilities';
-import { ethereumUtils } from '../utils';
+} from '@rainbow-me/helpers/utilities';
+import { RAINBOW_TOKEN_LIST } from '@rainbow-me/references';
 
 const assetsSelector = state => state.data.assets;
 const nativeCurrencySelector = state => state.settings.nativeCurrency;
 const uniswapLiquidityTokenInfoSelector = state =>
-  state.uniswap.uniswapLiquidityTokenInfo;
+  state.uniswapLiquidity.uniswapLiquidityTokenInfo;
 
-export const transformPool = (liquidityPool, ethPrice, nativeCurrency) => {
+const transformPool = (liquidityPool, nativeCurrency) => {
   if (isEmpty(liquidityPool)) {
     return null;
   }
 
-  const {
-    balance,
-    ethBalance,
-    token: { balance: tokenBalance, name: tokenName, symbol: tokenSymbol },
-    tokenAddress,
-    totalSupply,
-    uniqueId,
-  } = liquidityPool;
+  const { balance, price, tokens, totalSupply } = liquidityPool;
+  const balanceAmount = balance.amount;
 
-  const percentageOwned = multiply(divide(balance, totalSupply), 100);
-  const {
-    amount: balanceAmount,
-    display: nativeDisplay,
-  } = convertAmountAndPriceToNativeDisplay(
-    ethBalance,
-    ethPrice,
-    nativeCurrency
-  );
-  const totalBalanceAmount = multiply(balanceAmount, 2);
+  const percentageOwned = multiply(divide(balanceAmount, totalSupply), 100);
+
+  const totalBalancePrice = multiply(balanceAmount, price?.value || 0);
   const totalNativeDisplay = convertAmountToNativeDisplay(
-    totalBalanceAmount,
+    totalBalancePrice,
     nativeCurrency
   );
   const pricePerShare = convertAmountToNativeDisplay(
-    divide(totalBalanceAmount, balance),
+    divide(totalBalancePrice, balanceAmount),
     nativeCurrency
   );
 
+  const formattedTokens = map(tokens, token => ({
+    ...token,
+    ...(token?.address ? RAINBOW_TOKEN_LIST[toLower(token.address)] : {}),
+    value: handleSignificantDecimalsWithThreshold(token.balance, 4),
+  }));
+
+  const tokenNames = join(
+    map(formattedTokens, token => token.symbol),
+    '-'
+  );
+
   return {
-    ethBalance: floor(parseFloat(ethBalance), 4) || '< 0.0001',
-    nativeDisplay,
+    ...liquidityPool,
     percentageOwned,
     pricePerShare,
-    tokenAddress,
-    tokenBalance: floor(parseFloat(tokenBalance), 4) || '< 0.0001',
-    tokenName,
-    tokenSymbol,
-    totalBalanceAmount,
+    tokenNames,
+    tokens: formattedTokens,
+    totalBalancePrice,
     totalNativeDisplay,
-    uniBalance: floor(balance, 7),
-    uniqueId,
-    uniTotalSupply: floor(totalSupply, 7),
+    uniBalance: handleSignificantDecimals(balanceAmount, 3),
   };
 };
 
@@ -77,30 +71,28 @@ const buildUniswapCards = (
   assets,
   uniswapLiquidityTokenInfo
 ) => {
-  const ethPrice = get(ethereumUtils.getAsset(assets), 'price.value', 0);
-
   const uniswapPools = compact(
     map(values(uniswapLiquidityTokenInfo), liquidityPool =>
-      transformPool(liquidityPool, ethPrice, nativeCurrency)
+      transformPool(liquidityPool, nativeCurrency)
     )
   );
   const orderedUniswapPools = orderBy(
     uniswapPools,
-    [({ totalBalanceAmount }) => Number(totalBalanceAmount)],
+    [({ totalBalancePrice }) => Number(totalBalancePrice)],
     ['desc']
   );
 
   let uniswapTotal = 0;
 
   if (Array.isArray(orderedUniswapPools) && orderedUniswapPools.length) {
-    uniswapTotal = sumBy(orderedUniswapPools, ({ totalBalanceAmount }) =>
-      Number(totalBalanceAmount)
+    uniswapTotal = sumBy(orderedUniswapPools, ({ totalBalancePrice }) =>
+      Number(totalBalancePrice)
     );
   }
 
   return {
     uniswap: orderedUniswapPools,
-    uniswapTotal: convertAmountToNativeDisplay(uniswapTotal, nativeCurrency),
+    uniswapTotal,
   };
 };
 

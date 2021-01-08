@@ -1,8 +1,10 @@
 import { useRoute } from '@react-navigation/core';
 import { get } from 'lodash';
 import React, { useEffect, useMemo, useState } from 'react';
+import { StatusBar } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useValue } from 'react-native-redash';
+import { useDispatch } from 'react-redux';
 import styled from 'styled-components/primitives';
 import { OpacityToggler } from '../components/animations';
 import { AssetList } from '../components/asset-list';
@@ -14,7 +16,6 @@ import {
   ProfileHeaderButton,
 } from '../components/header';
 import { Page } from '../components/layout';
-import { LoadingOverlay } from '../components/modal';
 import useExperimentalFlag, {
   DISCOVER_SHEET,
 } from '../config/experimentalHooks';
@@ -28,9 +29,8 @@ import {
   useWallets,
   useWalletSectionsData,
 } from '../hooks';
-import { sheetVerticalOffset } from '../navigation/effects';
+import { updateRefetchSavings } from '../redux/data';
 import { position } from '@rainbow-me/styles';
-import { usePortal } from 'react-native-cool-modals/Portal';
 
 const HeaderOpacityToggler = styled(OpacityToggler).attrs(({ isVisible }) => ({
   endingOpacity: 0.4,
@@ -53,10 +53,26 @@ export default function WalletScreen() {
   const refreshAccountData = useRefreshAccountData();
   const { isCoinListEdited } = useCoinListEdited();
   const scrollViewTracker = useValue(0);
-  const { isWalletLoading, isReadOnlyWallet } = useWallets();
+  const { isReadOnlyWallet } = useWallets();
   const { isEmpty } = useAccountEmptyState();
   const { network } = useAccountSettings();
-  const { isWalletEthZero, sections } = useWalletSectionsData();
+  const {
+    isWalletEthZero,
+    refetchSavings,
+    sections,
+    shouldRefetchSavings,
+  } = useWalletSectionsData();
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    const fetchAndResetFetchSavings = async () => {
+      await refetchSavings();
+      dispatch(updateRefetchSavings(false));
+    };
+    if (shouldRefetchSavings) {
+      fetchAndResetFetchSavings();
+    }
+  }, [dispatch, refetchSavings, shouldRefetchSavings]);
 
   useEffect(() => {
     if (!initialized) {
@@ -76,28 +92,15 @@ export default function WalletScreen() {
     [network]
   );
 
-  const { setComponent, hide } = usePortal();
-
-  useEffect(() => {
-    if (isWalletLoading) {
-      setComponent(
-        <LoadingOverlay
-          paddingTop={sheetVerticalOffset}
-          title={isWalletLoading}
-        />,
-        true
-      );
-    }
-    return hide;
-  }, [hide, isWalletLoading, setComponent]);
-
   return (
     <WalletPage testID="wallet-screen">
+      <StatusBar barStyle="dark-content" />
+
       {/* Line below appears to be needed for having scrollViewTracker persistent while
       reattaching of react subviews */}
       <Animated.Code exec={scrollViewTracker} />
       <FabWrapper
-        disabled={isWalletEthZero}
+        disabled={isEmpty || !!params?.emptyWallet}
         fabs={fabs}
         isCoinListEdited={isCoinListEdited}
         isReadOnlyWallet={isReadOnlyWallet}

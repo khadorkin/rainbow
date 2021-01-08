@@ -38,10 +38,10 @@ const RotatingArrowIcon = styled(AnimatedFastImage).attrs({
   resizeMode: FastImage.resizeMode.contain,
   source: CaretImageSource,
 })`
-  height: 17;
+  height: 18;
   margin-bottom: 1;
-  right: 4;
-  width: 9;
+  right: 5;
+  width: 8;
 `;
 
 const TitleText = styled(TruncatedText).attrs({
@@ -49,7 +49,7 @@ const TitleText = styled(TruncatedText).attrs({
   letterSpacing: 'roundedMedium',
   lineHeight: 'normal',
   size: 'large',
-  weight: 'semibold',
+  weight: 'bold',
 })`
   flex: 1;
   margin-bottom: 1;
@@ -64,6 +64,7 @@ const TokenFamilyHeader = ({
   isCoinRow,
   isOpen,
   onPress,
+  testID,
   title,
 }) => {
   const animation = useTimingTransition(!isOpen, {
@@ -80,9 +81,10 @@ const TokenFamilyHeader = ({
 
   return (
     <ButtonPressAnimation
-      key={`${emoji || familyImage || title}_${isOpen}`}
+      key={`token_family_header_${emoji || familyImage || title}`}
       onPress={onPress}
       scaleTo={1.05}
+      testID={testID}
     >
       <Content isCoinRow={isCoinRow}>
         <RowWithMargins align="center" margin={emoji ? 5 : 9}>

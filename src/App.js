@@ -1,7 +1,7 @@
 import PushNotificationIOS from '@react-native-community/push-notification-ios';
 import messaging from '@react-native-firebase/messaging';
 import analytics from '@segment/analytics-react-native';
-import { init as initSentry, setRelease } from '@sentry/react-native';
+import * as Sentry from '@sentry/react-native';
 import { get } from 'lodash';
 import nanoid from 'nanoid/non-secure';
 import PropTypes from 'prop-types';
@@ -9,10 +9,10 @@ import React, { Component } from 'react';
 import {
   AppRegistry,
   AppState,
+  Linking,
+  LogBox,
   NativeModules,
-  Platform,
   StatusBar,
-  unstable_enableLogBox,
 } from 'react-native';
 import branch from 'react-native-branch';
 // eslint-disable-next-line import/default
@@ -30,11 +30,11 @@ import { enableScreens } from 'react-native-screens';
 import VersionNumber from 'react-native-version-number';
 import { connect, Provider } from 'react-redux';
 import { compose, withProps } from 'recompact';
+import PortalConsumer from './components/PortalConsumer';
 import { FlexItem } from './components/layout';
-import { OfflineToast, TestnetToast } from './components/toasts';
+import { OfflineToast } from './components/toasts';
 import {
   reactNativeDisableYellowBox,
-  reactNativeEnableLogbox,
   showNetworkRequests,
   showNetworkResponses,
 } from './config/debug';
@@ -64,21 +64,36 @@ const WALLETCONNECT_SYNC_DELAY = 500;
 StatusBar.pushStackEntry({ animated: true, barStyle: 'dark-content' });
 
 if (__DEV__) {
-  console.disableYellowBox = reactNativeDisableYellowBox;
-  reactNativeEnableLogbox && unstable_enableLogBox();
+  reactNativeDisableYellowBox && LogBox.ignoreAllLogs();
   (showNetworkRequests || showNetworkResponses) &&
     monitorNetwork(showNetworkRequests, showNetworkResponses);
 } else {
-  initSentry({ dsn: SENTRY_ENDPOINT, environment: SENTRY_ENVIRONMENT });
+  let sentryOptions = {
+    dsn: SENTRY_ENDPOINT,
+    enableAutoSessionTracking: true,
+    environment: SENTRY_ENVIRONMENT,
+    release: `me.rainbow-${VersionNumber.appVersion}`,
+  };
+
+  if (android) {
+    const dist = VersionNumber.buildVersion;
+    // In order for sourcemaps to work on android,
+    // the release needs to be named with the following format
+    // me.rainbow@1.0+4
+    const releaseName = `me.rainbow@${VersionNumber.appVersion}+${dist}`;
+    sentryOptions.release = releaseName;
+    // and we also need to manually set the dist to the versionCode value
+    sentryOptions.dist = dist.toString();
+  }
+  Sentry.init(sentryOptions);
 }
 
 CodePush.getUpdateMetadata(CodePush.UpdateState.RUNNING).then(update => {
   if (update) {
-    setRelease(
+    // eslint-disable-next-line import/no-deprecated
+    Sentry.setRelease(
       `me.rainbow-${VersionNumber.appVersion}-codepush:${update.label}`
     );
-  } else {
-    setRelease(`me.rainbow-${VersionNumber.appVersion}`);
   }
 });
 
@@ -132,6 +147,21 @@ class App extends Component {
         handleDeeplink(uri);
       }
     });
+
+    // Walletconnect uses direct deeplinks
+    if (android) {
+      try {
+        const initialUrl = await Linking.getInitialURL();
+        if (initialUrl) {
+          handleDeeplink(initialUrl);
+        }
+      } catch (e) {
+        logger.log('Error opening deeplink', e);
+      }
+      Linking.addEventListener('url', ({ url }) => {
+        handleDeeplink(url);
+      });
+    }
   }
 
   componentDidUpdate(prevProps) {
@@ -139,18 +169,16 @@ class App extends Component {
       // Everything we need to do after the wallet is ready goes here
       logger.sentry('✅ Wallet ready!');
       runKeychainIntegrityChecks();
-      if (Platform.OS === 'ios') {
-        runWalletBackupStatusChecks();
-      }
+      runWalletBackupStatusChecks();
     }
   }
 
   componentWillUnmount() {
     AppState.removeEventListener('change', this.handleAppStateChange);
-    this.onTokenRefreshListener();
-    this.foregroundNotificationListener();
-    this.backgroundNotificationListener();
-    this.branchListener();
+    this.onTokenRefreshListener?.();
+    this.foregroundNotificationListener?.();
+    this.backgroundNotificationListener?.();
+    this.branchListener?.();
   }
 
   identifyFlow = async () => {
@@ -239,10 +267,10 @@ class App extends Component {
               {this.state.initialRoute && (
                 <InitialRouteContext.Provider value={this.state.initialRoute}>
                   <RoutesComponent ref={this.handleNavigatorRef} />
+                  <PortalConsumer />
                 </InitialRouteContext.Provider>
               )}
               <OfflineToast />
-              <TestnetToast network={this.props.network} />
             </FlexItem>
           </Provider>
         </SafeAreaProvider>

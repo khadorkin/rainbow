@@ -6,7 +6,6 @@ import { Text } from '../text';
 import { useDimensions } from '@rainbow-me/hooks';
 
 export default function SendAssetFormField({
-  animatedKey,
   autoFocus,
   format,
   label,
@@ -38,7 +37,6 @@ export default function SendAssetFormField({
       {...props}
     >
       <UnderlineField
-        animatedKey={animatedKey}
         autoFocus={autoFocus}
         buttonText="Max"
         format={format}
@@ -48,10 +46,14 @@ export default function SendAssetFormField({
         onFocus={onFocus}
         onPressButton={handlePressButton}
         placeholder={placeholder}
-        testID={testID + '-input'}
+        testID={testID}
         value={value}
       />
-      <Text align="right" color="dark" size={isTinyPhone ? 'bigger' : 'h3'}>
+      <Text
+        align="right"
+        color="dark"
+        size={isTinyPhone || android ? 'bigger' : 'h3'}
+      >
         {label.length > labelMaxLength
           ? label.substring(0, labelMaxLength)
           : label}

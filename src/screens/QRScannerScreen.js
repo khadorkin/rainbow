@@ -1,4 +1,5 @@
-import React, { useCallback, useState } from 'react';
+import { useIsFocused } from '@react-navigation/native';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import Animated, { useCode } from 'react-native-reanimated';
 import styled from 'styled-components/primitives';
@@ -66,8 +67,10 @@ function useFocusFromSwipe() {
 
 export default function QRScannerScreen() {
   const discoverSheetAvailable = useExperimentalFlag(DISCOVER_SHEET);
-  const isFocused = useFocusFromSwipe();
+  const isFocusedIOS = useFocusFromSwipe();
+  const isFocusedAndroid = useIsFocused();
   const [sheetHeight, onSheetLayout] = useHeight(240);
+  const [initializeCamera, setInitializeCamera] = useState(ios ? true : false);
   const { navigate } = useNavigation();
   const {
     walletConnectorsByDappName,
@@ -79,19 +82,29 @@ export default function QRScannerScreen() {
     [navigate]
   );
 
+  useEffect(() => {
+    isFocusedAndroid && !initializeCamera && setInitializeCamera(true);
+  }, [initializeCamera, isFocusedAndroid]);
+
   return (
     <View>
-      {discoverSheetAvailable ? <DiscoverSheet /> : null}
+      {discoverSheetAvailable && ios ? <DiscoverSheet /> : null}
       <ScannerContainer>
         <Background />
         <CameraDimmer>
-          <QRCodeScanner
-            contentPositionBottom={sheetHeight}
-            contentPositionTop={HeaderHeight}
-            enableCamera={isFocused}
-          />
+          {initializeCamera && (
+            <QRCodeScanner
+              contentPositionBottom={sheetHeight}
+              contentPositionTop={HeaderHeight}
+              enableCamera={ios ? isFocusedIOS : isFocusedAndroid}
+            />
+          )}
         </CameraDimmer>
-        {discoverSheetAvailable ? null : (
+        {discoverSheetAvailable ? (
+          android ? (
+            <DiscoverSheet />
+          ) : null
+        ) : (
           <BubbleSheet onLayout={onSheetLayout}>
             {walletConnectorsCount ? (
               <WalletConnectList items={walletConnectorsByDappName} />

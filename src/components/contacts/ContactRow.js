@@ -1,5 +1,4 @@
 import React from 'react';
-import { Platform } from 'react-native';
 import styled from 'styled-components/primitives';
 import { removeFirstEmojiFromString } from '../../helpers/emojiHandler';
 import { useDimensions } from '../../hooks';
@@ -40,9 +39,9 @@ const ContactRow = ({ address, color, nickname, ...props }, ref) => {
       scaleTo={0.98}
       {...props}
     >
-      <RowWithMargins css={margin(17, 15, 5)} height={40} margin={10}>
+      <RowWithMargins css={margin(0, 15, 22)} height={40} margin={15}>
         <ContactAvatar color={color} size="medium" value={nickname} />
-        <Column justify={Platform.OS === 'ios' ? 'space-between' : 'center'}>
+        <Column justify={ios ? 'space-between' : 'center'}>
           <ContactName deviceWidth={deviceWidth}>
             {removeFirstEmojiFromString(nickname)}
           </ContactName>

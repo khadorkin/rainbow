@@ -9,6 +9,7 @@ import { CoinIcon } from '../coin-icon';
 import { Centered, ColumnWithMargins } from '../layout';
 import { SheetActionButton } from '../sheet';
 import { Br, GradientText, Text } from '../text';
+import { DAI_ADDRESS } from '@rainbow-me/references';
 import Routes from '@rainbow-me/routes';
 import { colors, padding } from '@rainbow-me/styles';
 
@@ -64,7 +65,7 @@ const SavingsSheetEmptyState = ({
 
   return (
     <Centered direction="column" paddingTop={9}>
-      <CoinIcon size={50} symbol="DAI" />
+      <CoinIcon address={DAI_ADDRESS} size={50} symbol="DAI" />
       <Centered marginBottom={12} marginTop={15}>
         <APYHeadingText>Get </APYHeadingText>
         <GradientAPYHeadingText>{apy}%</GradientAPYHeadingText>
@@ -78,9 +79,11 @@ const SavingsSheetEmptyState = ({
       <ColumnWithMargins css={padding(19, 15)} margin={19} width="100%">
         <SheetActionButton
           color={colors.swapPurple}
+          fullWidth
           label="􀁍 Deposit from Wallet"
           onPress={onDeposit}
           size="big"
+          weight="bold"
         />
         {/*
           <SheetActionButton

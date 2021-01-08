@@ -10,6 +10,7 @@ import RainbowButtonBackground from './RainbowButtonBackground';
 import RainbowButtonTypes from './RainbowButtonTypes';
 import { useDimensions } from '@rainbow-me/hooks';
 import { colors, position, shadow } from '@rainbow-me/styles';
+import ShadowView from 'react-native-shadow-stack/ShadowView';
 
 const AddCashIcon = styled(FastImage).attrs({
   resizeMode: FastImage.resizeMode.contain,
@@ -48,17 +49,17 @@ const ButtonLabel = styled(Text).attrs(({ type }) => ({
 const OuterButton = styled.View`
   ${shadow.build(0, 5, 15, colors.dark, 0.4)};
   background-color: ${colors.dark};
-  border-radius: ${({ height }) => height / 2};
+  border-radius: ${({ height, strokeWidth }) => height / 2 + strokeWidth};
   height: ${({ height }) => height};
   width: ${({ width }) => width};
 `;
 
-const Shadow = styled.View`
+const Shadow = styled(ShadowView)`
   ${shadow.build(0, 10, 30, colors.dark, 1)};
   background-color: ${colors.white};
-  border-radius: ${({ height }) => height / 2};
+  border-radius: ${({ height, strokeWidth }) => height / 2 + strokeWidth};
   height: ${({ height }) => height};
-  opacity: 0.2;
+  opacity: ${android ? 1 : 0.2};
   position: absolute;
   width: ${({ width }) => width};
 `;
@@ -71,6 +72,8 @@ const RainbowButton = ({
   strokeWidth = 1,
   type,
   width,
+  overflowMargin = 35,
+  skipTopMargin = true,
   ...props
 }) => {
   const { width: deviceWidth } = useDimensions();
@@ -80,17 +83,22 @@ const RainbowButton = ({
   strokeWidth = disabled ? 0.5 : strokeWidth;
   width = type === RainbowButtonTypes.addCash ? 155 : width || maxButtonWidth;
 
-  const outerButtonMask = <OuterButton height={height} width={width} />;
+  const outerButtonMask = (
+    <OuterButton height={height} strokeWidth={strokeWidth} width={width} />
+  );
 
   return (
     <ButtonPressAnimation
       {...props}
       disabled={disabled}
       onPress={onPress}
+      overflowMargin={overflowMargin}
       scaleTo={0.9}
+      skipTopMargin={skipTopMargin}
     >
-      <Shadow height={height} width={width} />
+      <Shadow height={height} strokeWidth={strokeWidth} width={width} />
       <ButtonContainer
+        elevation={5}
         height={height}
         maskElement={outerButtonMask}
         width={width}

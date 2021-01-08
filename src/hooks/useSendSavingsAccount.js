@@ -1,25 +1,21 @@
-import { get, map } from 'lodash';
-import { formatDepositAmount } from '../helpers/savings';
+import { map } from 'lodash';
+import { useSelector } from 'react-redux';
 import { convertAmountToNativeDisplay, multiply } from '../helpers/utilities';
-import { ethereumUtils } from '../utils';
-import useAccountAssets from './useAccountAssets';
 import useAccountSettings from './useAccountSettings';
 import useSavingsAccount from './useSavingsAccount';
+import { ethereumUtils } from '@rainbow-me/utils';
 
 export default function useSendSavingsAccount() {
-  const { allAssets } = useAccountAssets();
   const { nativeCurrency } = useAccountSettings();
-  let savings = useSavingsAccount();
-  const eth = ethereumUtils.getAsset(allAssets);
-  const priceOfEther = get(eth, 'native.price.amount', null);
+  let { savings } = useSavingsAccount();
+  const { genericAssets } = useSelector(({ data: { genericAssets } }) => ({
+    genericAssets,
+  }));
+  const priceOfEther = ethereumUtils.getEthPriceUnit(genericAssets);
   if (priceOfEther) {
     savings = map(savings, asset => {
       const { cToken, cTokenBalance, exchangeRate, underlyingPrice } = asset;
-      const cTokenBalanceDisplay = formatDepositAmount(
-        cTokenBalance,
-        cToken.symbol,
-        false
-      );
+      const cTokenBalanceDisplay = `${cTokenBalance} ${cToken.symbol}`;
 
       const underlyingNativePrice = multiply(underlyingPrice, priceOfEther);
       const cTokenNativePrice = multiply(exchangeRate, underlyingNativePrice);

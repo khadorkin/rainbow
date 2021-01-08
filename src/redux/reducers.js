@@ -12,15 +12,19 @@ import fallbackExplorer from './fallbackExplorer';
 import gas from './gas';
 import imageMetadata from './imageMetadata';
 import keyboardHeight from './keyboardHeight';
+import multicall from './multicall';
 import nonce from './nonce';
-import openStateSettings from './openStateSettings';
+import openStateSettings, {
+  openSavingsReducer,
+  openSmallBalancesReducer,
+} from './openStateSettings';
 import raps from './raps';
 import requests from './requests';
-import savings from './savings';
 import settings from './settings';
 import showcaseTokens from './showcaseTokens';
 import uniqueTokens from './uniqueTokens';
 import uniswap from './uniswap';
+import uniswapLiquidity from './uniswapLiquidity';
 import walletconnect from './walletconnect';
 import wallets from './wallets';
 
@@ -37,15 +41,18 @@ export default combineReducers({
   gas,
   imageMetadata,
   keyboardHeight,
+  multicall,
   nonce,
+  openSavings: openSavingsReducer,
+  openSmallBalances: openSmallBalancesReducer,
   openStateSettings,
   raps,
   requests,
-  savings,
   settings,
   showcaseTokens,
   uniqueTokens,
   uniswap,
+  uniswapLiquidity,
   walletconnect,
   wallets,
 });

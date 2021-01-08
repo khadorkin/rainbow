@@ -7,6 +7,7 @@ import {
   LayoutProvider,
   RecyclerListView,
 } from 'recyclerlistview';
+
 import styled from 'styled-components/primitives';
 import { buildCoinsList } from '../../helpers/assets';
 import networkTypes from '../../helpers/networkTypes';
@@ -34,7 +35,7 @@ const smallBalancesHeader = 36;
 const SendAssetListCoinDividerOpenButton = styled(CoinDividerOpenButton).attrs({
   coinDividerHeight: 30,
 })`
-  margin-left: 16;
+  margin-left: ${android ? 0 : 16};
 `;
 
 const SendAssetRecyclerListView = styled(RecyclerListView)`
@@ -81,8 +82,14 @@ export default class SendAssetList extends React.Component {
     }
 
     const visibleAssetsLength = assets.length;
+
     this.data = assets;
+
     if (smallBalances.assets.length > 0) {
+      //check for placeholder ETH & remove
+      smallBalances.assets = smallBalances.assets.filter(
+        asset => !asset?.isPlaceholder
+      );
       this.data.push(smallBalances);
     }
 
@@ -351,6 +358,7 @@ export default class SendAssetList extends React.Component {
           onPress={() => {
             this.changeOpenTab(item.familyId);
           }}
+          testID={`${item.name}-family-header`}
           title={item.name}
         />
         {this.state.openCards[item.familyId] && this.mapTokens(item.data)}
@@ -378,6 +386,7 @@ export default class SendAssetList extends React.Component {
     return (
       <View marginTop={dividerMargin}>
         <SendAssetListCoinDividerOpenButton
+          isSendSheet
           isSmallBalancesOpen={openShitcoins}
           onPress={this.changeOpenShitcoins}
         />

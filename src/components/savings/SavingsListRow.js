@@ -1,10 +1,9 @@
 import analytics from '@segment/analytics-react-native';
 import BigNumber from 'bignumber.js';
-import PropTypes from 'prop-types';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { InteractionManager } from 'react-native';
+import { IS_TESTING } from 'react-native-dotenv';
 import LinearGradient from 'react-native-linear-gradient';
-import ShadowStack from 'react-native-shadow-stack';
 import styled from 'styled-components/primitives';
 import {
   SavingsSheetEmptyHeight,
@@ -25,6 +24,7 @@ import { useDimensions } from '@rainbow-me/hooks';
 import { useNavigation } from '@rainbow-me/navigation';
 import Routes from '@rainbow-me/routes';
 import { colors, padding, position } from '@rainbow-me/styles';
+import ShadowStack from 'react-native-shadow-stack';
 
 const MS_IN_1_DAY = 1000 * 60 * 60 * 24;
 const ANIMATE_NUMBER_INTERVAL = 60;
@@ -33,6 +33,8 @@ const SavingsListRowShadows = [
   [0, 10, 30, colors.dark, 0.1],
   [0, 5, 15, colors.dark, 0.04],
 ];
+
+const NOOP = () => undefined;
 
 const neverRerender = () => true;
 // eslint-disable-next-line react/display-name
@@ -57,9 +59,7 @@ const SavingsListRowShadowStack = styled(ShadowStack).attrs(
     shadows: SavingsListRowShadows,
     width: deviceWidth - 38,
   })
-)`
-  elevation: 15;
-`;
+)``;
 
 const SavingsListRow = ({
   cTokenBalance,
@@ -151,7 +151,11 @@ const SavingsListRow = ({
   const displayValue = formatSavingsAmount(value);
 
   return !underlying || !underlying.address ? null : (
-    <ButtonPressAnimation onPress={onButtonPress} scaleTo={0.96}>
+    <ButtonPressAnimation
+      onPress={onButtonPress}
+      overflowMargin={10}
+      scaleTo={0.96}
+    >
       <Centered direction="column" marginBottom={15}>
         <SavingsListRowShadowStack deviceWidth={deviceWidth}>
           <SavingsListRowGradient />
@@ -159,13 +163,21 @@ const SavingsListRow = ({
             align="center"
             css={padding(9, 10, 10, 11)}
             justify="space-between"
+            onPress={onButtonPress}
+            scaleTo={0.96}
           >
             {underlying.symbol && supplyBalanceUnderlying ? (
               <Centered>
-                <CoinIcon size={26} symbol={underlying.symbol} />
+                <CoinIcon
+                  address={underlying.address}
+                  size={26}
+                  symbol={underlying.symbol}
+                />
               </Centered>
             ) : null}
-            {supplyBalanceUnderlying && !isNaN(displayValue) ? (
+            {supplyBalanceUnderlying &&
+            !isNaN(displayValue) &&
+            IS_TESTING !== 'true' ? (
               <SavingsListRowAnimatedNumber
                 initialValue={initialValue}
                 interval={ANIMATE_NUMBER_INTERVAL}
@@ -174,7 +186,7 @@ const SavingsListRow = ({
                 value={displayValue}
               />
             ) : (
-              <SavingsListRowEmptyState onPress={onButtonPress} />
+              <SavingsListRowEmptyState onPress={NOOP} />
             )}
             <APYPill value={apyTruncated} />
           </Row>
@@ -182,16 +194,6 @@ const SavingsListRow = ({
       </Centered>
     </ButtonPressAnimation>
   );
-};
-
-SavingsListRow.propTypes = {
-  cTokenBalance: PropTypes.string,
-  lifetimeSupplyInterestAccrued: PropTypes.string,
-  supplyBalanceUnderlying: PropTypes.string,
-  supplyRate: PropTypes.string,
-  underlying: PropTypes.object,
-  underlyingBalanceNativeValue: PropTypes.string,
-  underlyingPrice: PropTypes.string,
 };
 
 export default React.memo(SavingsListRow);

@@ -42,7 +42,7 @@
   _interval = ((NSNumber*) config[@"interval"]).doubleValue;
   _stepPerDay = ((NSNumber*) config[@"stepPerDay"]).floatValue;
   _duration = ((NSNumber*) config[@"duration"]).intValue;
-  NSString* color = ((NSNumber*) config[@"color"]).stringValue;
+  NSString* color = ((NSString*) config[@"color"]);
   _isSymbolStablecoin = ((NSNumber*) config[@"isSymbolStablecoin"]).boolValue;
   _symbol = config[@"symbol"];
   _timer = [NSTimer scheduledTimerWithTimeInterval:_interval / 1000  target:self selector:@selector(animate) userInfo:nil repeats:YES];
@@ -90,12 +90,8 @@
   double diff = NSDate.date.timeIntervalSince1970 - _time;
   double value = _initialValue + _stepPerDay * diff / 24 / 60 / 60;
 
-  NSString *newValue;
-  if (_isSymbolStablecoin) {
-    newValue = [NSString stringWithFormat:@"$%@", [_fmt stringFromNumber:@(value)]];
-  } else {
-    newValue = [NSString stringWithFormat:@"%@ %@", [_fmt stringFromNumber:@(value)], _symbol];
-  }
+  NSString *newValue = [NSString stringWithFormat:@"%@ %@", [_fmt stringFromNumber:@(value)], _symbol];
+
 
   NSMutableAttributedString *attributedText = [[NSMutableAttributedString alloc] initWithString:newValue attributes: @{
     NSKernAttributeName:@(0.2f)
@@ -123,7 +119,7 @@
     for (int colorIdx = 0; colorIdx < queueLen; colorIdx++) {
       NSArray *changedIdxs = _annealingColor[colorIdx];
       for (NSNumber *inx in changedIdxs) {
-        [attributedText  setAttributes:@{NSForegroundColorAttributeName:_colorsMap[_annealingColor.count - colorIdx - 1], NSKernAttributeName:@(0.2f)} range:NSMakeRange(inx.intValue, len - inx.intValue - (_isSymbolStablecoin ? 0 : _symbol.length))];
+        [attributedText  setAttributes:@{NSForegroundColorAttributeName:_colorsMap[_annealingColor.count - colorIdx - 1], NSKernAttributeName:@(0.2f)} range:NSMakeRange(inx.intValue, len - inx.intValue - _symbol.length)];
       }
     }
   }

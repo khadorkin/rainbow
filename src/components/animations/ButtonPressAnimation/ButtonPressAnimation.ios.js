@@ -1,6 +1,5 @@
 import PropTypes from 'prop-types';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Platform } from 'react-native';
 import {
   createNativeWrapper,
   PureNativeButton,
@@ -49,7 +48,6 @@ const AnimatedRawButton = createNativeWrapper(
   createAnimatedComponent(PureNativeButton),
   {
     shouldActivateOnStart: true,
-    shouldCancelWhenOutside: true,
   }
 );
 
@@ -87,7 +85,7 @@ function usePressHandler({
   return [handlePress, createHandle, removeHandle];
 }
 
-const maybeProc = Platform.OS === 'ios' ? a => a : proc;
+const maybeProc = ios ? a => a : proc;
 
 const ButtonPressAnimationProc = maybeProc(function(
   animationState,
@@ -211,6 +209,7 @@ function ButtonPressAnimationJS({
   onPressStart,
   scaleTo,
   style,
+  testID,
   transformOrigin,
 }) {
   const [createHandle, removeHandle, interactionHandle] = useInteraction();
@@ -357,6 +356,7 @@ function ButtonPressAnimationJS({
       enabled={!disabled}
       onHandlerStateChange={onGestureEvent}
       onLayout={onLayout}
+      testID={testID}
     >
       <Animated.View
         accessible

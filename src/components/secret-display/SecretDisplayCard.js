@@ -1,13 +1,15 @@
 import { times } from 'lodash';
 import React, { useMemo } from 'react';
 import LinearGradient from 'react-native-linear-gradient';
-import ShadowStack from 'react-native-shadow-stack/dist/ShadowStack';
 import styled from 'styled-components/primitives';
 import CopyTooltip from '../copy-tooltip';
 import { Centered, ColumnWithMargins, Row, RowWithMargins } from '../layout';
 import { Text } from '../text';
 import WalletTypes from '@rainbow-me/helpers/walletTypes';
 import { colors, fonts, padding, position } from '@rainbow-me/styles';
+import ShadowStack from 'react-native-shadow-stack';
+
+const CardBorderRadius = 25;
 
 const BackgroundGradient = styled(LinearGradient).attrs({
   colors: colors.gradients.offWhite,
@@ -15,11 +17,12 @@ const BackgroundGradient = styled(LinearGradient).attrs({
   start: { x: 0.5, y: 0 },
 })`
   ${position.cover};
+  border-radius: ${CardBorderRadius};
 `;
 
 const CardShadow = styled(ShadowStack).attrs({
   ...position.coverAsObject,
-  borderRadius: 25,
+  borderRadius: CardBorderRadius,
   shadows: [
     [0, 10, 30, colors.dark, 0.1],
     [0, 5, 15, colors.dark, 0.04],
@@ -88,8 +91,12 @@ function SeedWordGrid({ seed }) {
 export default function SecretDisplayCard({ seed, type }) {
   return (
     <Centered>
-      <CardShadow />
-      <BackgroundGradient />
+      {ios && (
+        <>
+          <CardShadow />
+          <BackgroundGradient />
+        </>
+      )}
       <Content>
         <CopyTooltip textToCopy={seed} tooltipText="Copy to clipboard">
           {seed && type === WalletTypes.mnemonic && (

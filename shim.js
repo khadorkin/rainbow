@@ -1,12 +1,18 @@
+import 'react-native-get-random-values';
+import '@ethersproject/shims';
 import AsyncStorage from '@react-native-community/async-storage';
 // eslint-disable-next-line import/default
 import ReactNative from 'react-native';
+import Animated from 'react-native-reanimated';
 import Storage from 'react-native-storage';
 import logger from 'logger';
 
+ReactNative.Platform.OS === 'ios' &&
+  Animated.addWhitelistedNativeProps({ d: true });
+
 const storage = new Storage({
   defaultExpires: null,
-  enableCache: true,
+  enableCache: ReactNative.Platform.OS === 'ios',
   size: 10000,
   storageBackend: AsyncStorage,
 });
@@ -22,7 +28,9 @@ if (
       return { value: init };
     },
     makeRemote() {},
-    makeShareable() {},
+    makeShareable() {
+      return () => {};
+    },
     registerEventHandler() {},
     startMapper() {},
     stopMapper() {},
@@ -32,15 +40,31 @@ if (
 
 global.storage = storage;
 
+Object.defineProperty(global, 'android', {
+  get: () => ReactNative.Platform.OS === 'android',
+  set: () => {
+    throw new Error('Trying to override internal Rainbow var');
+  },
+});
+
+Object.defineProperty(global, 'ios', {
+  get: () => ReactNative.Platform.OS === 'ios',
+  set: () => {
+    throw new Error('Trying to override internal Rainbow var');
+  },
+});
+
 const SHORTEN_PROP_TYPES_ERROR = true;
 
 if (SHORTEN_PROP_TYPES_ERROR) {
-  const oldConsoleError = console.error;
+  const oldConsoleError = console.error; // eslint-disable-line no-console
+  // eslint-disable-next-line no-console
   console.error = function() {
     if (
       typeof arguments[0] === 'string' &&
       arguments[0].startsWith('Warning: Failed prop type')
     ) {
+      // eslint-disable-next-line no-console
       console.log(
         `PropTypes error in: ${arguments[0]
           .match(/\w+.js:[0-9]+/g)
@@ -64,6 +88,10 @@ if (typeof process === 'undefined') {
     }
   }
 }
+
+export const dismissingScreenListener = { current: undefined };
+
+global.__rainbowDismissScreen = () => dismissingScreenListener.current?.();
 
 process.browser = false;
 if (typeof Buffer === 'undefined') global.Buffer = require('buffer').Buffer;

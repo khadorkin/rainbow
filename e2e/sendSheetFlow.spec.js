@@ -4,7 +4,7 @@ import * as Helpers from './helpers';
 
 describe('Send Sheet Interaction Flow', () => {
   it('Should show the welcome screen', async () => {
-    await device.disableSynchronization();
+    await Helpers.disableSynchronization();
     await Helpers.checkIfVisible('welcome-screen');
   });
 
@@ -32,7 +32,7 @@ describe('Send Sheet Interaction Flow', () => {
 
   it('Should show the "Add wallet modal" after tapping import with a valid seed"', async () => {
     await Helpers.clearField('import-sheet-input');
-    await Helpers.typeText('import-sheet-input', process.env.DEV_SEEDS, false);
+    await Helpers.typeText('import-sheet-input', process.env.TEST_SEEDS, false);
     await Helpers.delay(1500);
     await Helpers.checkIfElementHasString(
       'import-sheet-button-label',
@@ -45,6 +45,13 @@ describe('Send Sheet Interaction Flow', () => {
   it('Should navigate to the Wallet screen after tapping on "Import Wallet"', async () => {
     await Helpers.delay(2000);
     await Helpers.tap('wallet-info-submit-button');
+    if (device.getPlatform() === 'android') {
+      await Helpers.checkIfVisible('pin-authentication-screen');
+      // Set the pin
+      await Helpers.authenticatePin('1234');
+      // Confirm it
+      await Helpers.authenticatePin('1234');
+    }
     await Helpers.delay(3000);
     await Helpers.checkIfVisible('wallet-screen');
   });
@@ -55,7 +62,33 @@ describe('Send Sheet Interaction Flow', () => {
   //   await Helpers.checkIfVisible('backup-sheet');
   //   await Helpers.tap('backup-sheet-imported-cancel-button');
   // });
+  /*
+  it('Should open expanded state', async () => {
+    await Helpers.delay(8000);
+    await Helpers.tap('balance-coin-row-Ethereum');
+    await Helpers.delay(8000);
+  });
 
+  it('Should tap through chart timeseries', async () => {
+    await Helpers.tap('chart-timespan-h');
+    await Helpers.delay(6000);
+    await Helpers.tap('chart-timespan-d');
+    await Helpers.delay(6000);
+    await Helpers.tap('chart-timespan-w');
+    await Helpers.delay(6000);
+    await Helpers.tap('chart-timespan-m');
+    await Helpers.delay(6000);
+    await Helpers.tap('chart-timespan-y');
+    await Helpers.delay(6000);
+  });
+
+  it('Should close Expanded State and navigate to wallet screen', async () => {
+    await Helpers.delay(1000);
+    await Helpers.swipe('expanded-state-header', 'down');
+    await Helpers.delay(1000);
+    await Helpers.checkIfVisible('wallet-screen');
+  });
+  */
   it('Should show all wallet sections', async () => {
     await Helpers.delay(5000);
     await Helpers.checkIfElementByTextIsVisible('Pools');
@@ -67,7 +100,11 @@ describe('Send Sheet Interaction Flow', () => {
     await Helpers.delay(1000);
     await Helpers.swipe('wallet-screen', 'right');
     await Helpers.delay(2000);
-    await Helpers.checkIfElementByTextIsVisible('poopcoin.eth');
+    if (device.getPlatform() === 'android') {
+      await Helpers.checkIfElementByTextToExist('0x3C...D3f608');
+    } else {
+      await Helpers.checkIfElementByTextIsVisible('0x3C...D3f608');
+    }
     await Helpers.swipe('profile-screen', 'left');
   });
 
@@ -82,8 +119,8 @@ describe('Send Sheet Interaction Flow', () => {
     await Helpers.delay(1000);
     await Helpers.checkIfVisible('send-asset-form-field');
     await Helpers.typeText('send-asset-form-field', 'gvuabefhiwdnomks', false);
-    await Helpers.delay(1000);
-    await Helpers.checkIfVisible('paste-address-button');
+    await Helpers.delay(2000);
+    await Helpers.checkIfNotVisible('send-asset-ETH');
   });
 
   it('Should show show Contact Button & Asset List on valid public address', async () => {
@@ -104,22 +141,22 @@ describe('Send Sheet Interaction Flow', () => {
     await Helpers.clearField('send-asset-form-field');
     await Helpers.delay(1000);
     await Helpers.checkIfVisible('send-asset-form-field');
-    await Helpers.typeText('send-asset-form-field', 'poopcoin.eth', false);
+    await Helpers.typeText('send-asset-form-field', 'poopcoin.eth\n', false);
     await Helpers.checkIfVisible('add-contact-button');
     await Helpers.checkIfVisible('send-asset-list');
   });
 
   it('Should display Asset Form after tapping on savings asset', async () => {
     await Helpers.delay(1500);
-    await Helpers.checkIfVisible('send-savings-cSAI');
-    await Helpers.tap('send-savings-cSAI');
+    await Helpers.checkIfVisible('send-savings-cDAI');
+    await Helpers.tap('send-savings-cDAI');
     await Helpers.delay(2000);
     await Helpers.checkIfVisible('selected-asset-field-input');
   });
 
   it('Should go back to Asset List after tapping on savings asset', async () => {
     await Helpers.delay(1000);
-    await Helpers.tap('send-asset-form-cSAI');
+    await Helpers.tap('send-asset-form-cDAI');
     await Helpers.delay(2000);
     await Helpers.checkIfVisible('send-asset-list');
   });
@@ -152,9 +189,13 @@ describe('Send Sheet Interaction Flow', () => {
     await Helpers.delay(1000);
     await Helpers.checkIfVisible('selected-asset-field-input');
     await Helpers.tap('selected-asset-field-input');
-    await Helpers.typeText('selected-asset-field-input', '9999', true);
+    await Helpers.typeText('selected-asset-field-input', '9999', false);
     await Helpers.delay(1000);
-    await Helpers.checkIfElementByTextIsVisible('Insufficient Funds');
+    if (device.getPlatform() === 'android') {
+      await Helpers.checkIfElementByTextToExist('Insufficient Funds');
+    } else {
+      await Helpers.checkIfElementByTextIsVisible('Insufficient Funds');
+    }
   });
 
   it('Should prepend a 0 to quantity field on input of .', async () => {
@@ -294,7 +335,11 @@ describe('Send Sheet Interaction Flow', () => {
 
   it('Should load contacts if contacts exist', async () => {
     await Helpers.delay(5000);
-    await Helpers.swipe('send-asset-form-field', 'down', 'slow');
+    if (device.getPlatform() === 'android') {
+      await device.pressBack();
+    } else {
+      await Helpers.swipe('send-asset-form-field', 'down', 'slow');
+    }
     await Helpers.delay(1000);
     await Helpers.tap('send-fab');
     await Helpers.delay(2000);
@@ -308,9 +353,9 @@ describe('Send Sheet Interaction Flow', () => {
     await Helpers.delay(1000);
     await Helpers.checkIfVisible('edit-contact-button');
     await Helpers.tap('edit-contact-button');
-    await Helpers.delay(1000);
+    await Helpers.delay(2000);
     await Helpers.tapByText('Delete Contact');
-    await Helpers.delay(1000);
+    await Helpers.delay(2000);
     await Helpers.tapByText('Delete Contact');
     await Helpers.delay(1000);
     await Helpers.checkIfVisible('add-contact-button');

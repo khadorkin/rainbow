@@ -9,6 +9,7 @@ const ProfileAvatarButton = ({
   setColor,
   testID,
   value,
+  radiusAndroid,
 }) => {
   const handleChangeColor = useCallback(
     () => setColor?.(prevColor => (prevColor + 1) % colors.avatarColor.length),
@@ -18,6 +19,8 @@ const ProfileAvatarButton = ({
   return (
     <ButtonPressAnimation
       onPress={handleChangeColor}
+      overflowMargin={15}
+      radiusAndroid={radiusAndroid}
       scaleTo={0.96}
       testID={testID}
     >

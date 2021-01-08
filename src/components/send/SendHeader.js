@@ -7,6 +7,7 @@ import { AddContactButton, PasteAddressButton } from '../buttons';
 import { AddressField } from '../fields';
 import { Icon } from '../icons';
 import { Row } from '../layout';
+import { SheetHandle as SheetHandleAndroid } from '../sheet';
 import { Label } from '../text';
 import { useClipboard, useDimensions } from '@rainbow-me/hooks';
 import Routes from '@rainbow-me/routes';
@@ -14,7 +15,12 @@ import { colors, padding } from '@rainbow-me/styles';
 import { showActionSheetWithOptions } from '@rainbow-me/utils';
 
 const AddressInputContainer = styled(Row).attrs({ align: 'center' })`
-  ${({ isSmallPhone }) => (isSmallPhone ? padding(12, 15) : padding(19, 15))};
+  ${({ isSmallPhone }) =>
+    isSmallPhone
+      ? padding(12, 15)
+      : android
+      ? padding(5, 15)
+      : padding(19, 15)};
   background-color: ${colors.white};
   overflow: hidden;
   width: 100%;
@@ -25,14 +31,18 @@ const AddressFieldLabel = styled(Label)`
   opacity: 0.45;
 `;
 
-const SheetHandle = styled(Icon).attrs({
-  color: colors.sendScreen.grey,
-  name: 'handle',
-  testID: 'sheet-handle',
-})`
-  height: 11;
-  margin-top: 13;
-`;
+const SheetHandle = android
+  ? styled(SheetHandleAndroid)`
+      margin-top: 6;
+    `
+  : styled(Icon).attrs({
+      color: colors.sendScreen.grey,
+      name: 'handle',
+      testID: 'sheet-handle',
+    })`
+      height: 11;
+      margin-top: 13;
+    `;
 
 const DefaultContactItem = {
   address: '',

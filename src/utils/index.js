@@ -15,8 +15,10 @@ export { default as directionPropType } from './directionPropType';
 export { default as ethereumUtils } from './ethereumUtils';
 export { default as gasUtils } from './gas';
 export { default as getDominantColorFromImage } from './getDominantColorFromImage';
+export { default as getTokenMetadata } from './getTokenMetadata';
 export { default as getUrlForTrustIconFallback } from './getUrlForTrustIconFallback';
 export { default as haptics } from './haptics';
+export { default as isETH } from './isETH';
 export { default as isLowerCaseMatch } from './isLowerCaseMatch';
 export { default as isNewValueForObjectPaths } from './isNewValueForObjectPaths';
 export { default as isNewValueForPath } from './isNewValueForPath';
@@ -34,5 +36,11 @@ export { default as sentryUtils } from './sentry';
 export { default as showActionSheetWithOptions } from './actionsheet';
 export { default as simplifyChartData } from './simplifyChartData';
 export { default as statusBar } from './statusBar';
+export { default as urlConstants } from './urlConstants';
 export { filterList, filterScams } from './search';
-export { getFirstGrapheme, initials, removeLeadingZeros } from './formatters';
+export {
+  getFirstGrapheme,
+  initials,
+  removeLeadingZeros,
+  sanitizeSeedPhrase,
+} from './formatters';

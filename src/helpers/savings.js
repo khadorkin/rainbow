@@ -31,23 +31,18 @@ const formatSavingsAmount = amount => {
   return amountBN.toFixed(MAX_DECIMALS_TO_SHOW);
 };
 
-const formatDepositAmount = (value, symbol, useUSDForStablecoin = true) => {
-  let prettyAmount = value;
-  if (useUSDForStablecoin && isSymbolStablecoin(symbol)) {
-    prettyAmount = BigNumber(value).toFixed(2);
-    return `$${prettyAmount}`;
-  }
-  return `${prettyAmount} ${symbol}`;
-};
-
 const isSymbolStablecoin = symbol => STABLECOINS.indexOf(symbol) !== -1;
+const isSymbolStablecoinWorklet = symbol => {
+  'worklet';
+  return STABLECOINS.indexOf(symbol) !== -1;
+};
 
 export {
   APPROX_BLOCK_TIME,
   calculateAPY,
   calculateCompoundInterestInDays,
   calculateEarningsInDays,
-  formatDepositAmount,
   formatSavingsAmount,
   isSymbolStablecoin,
+  isSymbolStablecoinWorklet,
 };

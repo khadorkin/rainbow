@@ -26,13 +26,19 @@ const CaretIcon = styled(FastImage).attrs({
   source: Caret,
   tintColor: colors.blueGreyDark,
 })`
-  height: 17;
-  width: 9;
+  height: 18;
+  width: 8;
 `;
 
-const ContainerButton = styled(ButtonPressAnimation).attrs({
-  scaleTo: 0.9,
-})`
+const ContainerButton = styled(ButtonPressAnimation).attrs(
+  ({ isSmallBalancesOpen, isSendSheet }) => ({
+    scaleTo: 0.9,
+    wrapperStyle: {
+      marginLeft: isSendSheet && android ? 16 : 0,
+      width: isSmallBalancesOpen ? 80 - (android ? 4 : 0) : closedWidth - 4,
+    },
+  })
+)`
   width: ${({ isSmallBalancesOpen }) =>
     isSmallBalancesOpen ? 80 : closedWidth};
 `;
@@ -52,12 +58,15 @@ const CoinDividerOpenButton = ({
   isSmallBalancesOpen,
   isVisible,
   onPress,
+  isSendSheet,
   ...props
 }) => (
   <ContainerButton
     {...props}
+    isSendSheet={isSendSheet}
     isSmallBalancesOpen={isSmallBalancesOpen}
     onPress={onPress}
+    radiusAndroid={RoundButtonCapSize / 2}
   >
     <OpacityToggler isVisible={isVisible}>
       <Content height={coinDividerHeight}>

@@ -12,7 +12,14 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import com.microsoft.codepush.react.CodePush;
 import io.branch.rnbranch.RNBranchModule;
+import me.rainbow.NativeModules.RNBip39.RNBip39Package;
+import me.rainbow.NativeModules.RNBackHandler.RNBackHandlerPackage;
+import me.rainbow.NativeModules.RNReview.RNReviewPackage;
+import me.rainbow.NativeModules.RNTextAnimatorPackage.RNTextAnimatorPackage;
+import me.rainbow.NativeModules.RNZoomableButton.RNZoomableButtonPackage;
+
 import com.facebook.react.bridge.JSIModulePackage;
+import com.swmansion.gesturehandler.react.RNZoomableButtonManager;
 import com.swmansion.reanimated.ReanimatedJSIModulePackage;
 
 
@@ -30,7 +37,11 @@ public class MainApplication extends Application implements ReactApplication {
           @SuppressWarnings("UnnecessaryLocalVariable")
           List<ReactPackage> packages = new PackageList(this).getPackages();
           // Packages that cannot be autolinked yet can be added manually here, for example:
-          // packages.add(new MyReactNativePackage());
+          packages.add(new RNBip39Package());
+          packages.add(new RNReviewPackage());
+          packages.add(new RNBackHandlerPackage());
+          packages.add(new RNTextAnimatorPackage());
+          packages.add(new RNZoomableButtonPackage());
           return packages;
         }
 
@@ -39,10 +50,13 @@ public class MainApplication extends Application implements ReactApplication {
           return "index";
         }
 
-        @Override
-        protected JSIModulePackage getJSIModulePackage() {
-          return new ReanimatedJSIModulePackage(); // <- add
-        }
+         //_REA /* REA
+         @Override
+         protected JSIModulePackage getJSIModulePackage() {
+           return new ReanimatedJSIModulePackage();
+         }
+         // */
+
 
         @Override
         protected String getJSBundleFile() {

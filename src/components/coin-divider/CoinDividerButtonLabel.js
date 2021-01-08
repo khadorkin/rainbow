@@ -1,5 +1,4 @@
 import React from 'react';
-import { Platform } from 'react-native';
 import styled from 'styled-components/primitives';
 import { magicMemo } from '../../utils';
 import { OpacityToggler } from '../animations';
@@ -10,10 +9,10 @@ const LabelText = styled(Text).attrs({
   color: colors.alpha(colors.blueGreyDark, 0.6),
   letterSpacing: 'roundedTight',
   size: 'lmedium',
-  weight: 'semibold',
+  weight: 'bold',
 })`
   position: absolute;
-  top: ${Platform.OS === 'android' ? -15.25 : -10.25};
+  top: ${android ? -15.25 : -10.25};
 `;
 
 const CoinDividerButtonLabel = ({ isVisible, label }) => (

@@ -1,9 +1,9 @@
 import { useRoute } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import React, { useCallback, useEffect } from 'react';
-import { Animated, InteractionManager, Platform, View } from 'react-native';
+import { Animated, InteractionManager, View } from 'react-native';
 import styled from 'styled-components/native';
-import { Icon } from '../components/icons';
+import BackButton from '../components/header/BackButton';
 import { Modal } from '../components/modal';
 import ModalHeaderButton from '../components/modal/ModalHeaderButton';
 import {
@@ -16,10 +16,12 @@ import SettingsBackupView from '../components/settings-menu/BackupSection/Settin
 import ShowSecretView from '../components/settings-menu/BackupSection/ShowSecretView';
 import WalletSelectionView from '../components/settings-menu/BackupSection/WalletSelectionView';
 import DevSection from '../components/settings-menu/DevSection';
+import { Text } from '../components/text';
 import WalletTypes from '../helpers/walletTypes';
 import { useDimensions, useWallets } from '../hooks';
-import { useNavigation } from '../navigation/Navigation';
-import { colors, fonts } from '@rainbow-me/styles';
+import { settingsOptions } from '../navigation/config';
+import { useNavigation } from '@rainbow-me/navigation';
+import { colors } from '@rainbow-me/styles';
 
 function cardStyleInterpolator({
   current,
@@ -88,17 +90,9 @@ const SettingsPages = {
   },
 };
 
-const BackArrow = styled(Icon).attrs({
-  color: colors.appleBlue,
-  direction: 'left',
-  name: 'caret',
-})`
-  margin-left: 15;
-  margin-right: 5;
-  margin-top: ${Platform.OS === 'android' ? 2 : 0.5};
+const EmptyButtonPlaceholder = styled.View`
+  flex: 1;
 `;
-const BackImage = () => <BackArrow />;
-
 const Container = styled.View`
   flex: 1;
   overflow: hidden;
@@ -106,20 +100,25 @@ const Container = styled.View`
 
 const Stack = createStackNavigator();
 
-const transitionConfig = {
-  damping: 35,
-  mass: 1,
-  overshootClamping: false,
-  restDisplacementThreshold: 0.01,
-  restSpeedThreshold: 0.01,
-  stiffness: 450,
+const SettingsTitle = ({ children }) => {
+  return (
+    <Text
+      align="center"
+      color={colors.dark}
+      letterSpacing="roundedMedium"
+      size="large"
+      weight="bold"
+    >
+      {children}
+    </Text>
+  );
 };
 
 export default function SettingsModal() {
   const { goBack, navigate } = useNavigation();
   const { wallets, selectedWallet } = useWallets();
   const { params } = useRoute();
-  const { isTinyPhone, width: deviceWidth } = useDimensions();
+  const { isTinyPhone } = useDimensions();
 
   const getRealRoute = useCallback(
     key => {
@@ -156,7 +155,10 @@ export default function SettingsModal() {
   );
 
   const renderHeaderRight = useCallback(
-    () => <ModalHeaderButton label="Done" onPress={goBack} side="right" />,
+    () =>
+      ios ? (
+        <ModalHeaderButton label="Done" onPress={goBack} side="right" />
+      ) : null,
     [goBack]
   );
 
@@ -174,59 +176,30 @@ export default function SettingsModal() {
       minHeight={isTinyPhone ? 500 : 600}
       onCloseModal={goBack}
       radius={18}
+      showDoneButton={ios}
+      skipStatusBar={android}
       testID="settings-modal"
     >
       <Container>
         <Stack.Navigator
           screenOptions={{
-            cardShadowEnabled: false,
-            cardStyle: { backgroundColor: colors.white, overflow: 'visible' },
-            gestureEnabled: true,
-            gestureResponseDistance: { horizontal: deviceWidth },
-            headerBackImage: BackImage,
-            headerBackTitle: 'Back',
-            headerBackTitleStyle: {
-              fontFamily: fonts.family.SFProRounded,
-              fontSize: parseFloat(fonts.size.large),
-              fontWeight: fonts.weight.medium,
-              letterSpacing: fonts.letterSpacing.roundedMedium,
-            },
+            ...settingsOptions,
             headerRight: renderHeaderRight,
-            ...(Platform.OS === 'android' && {
-              headerRightContainerStyle: {
-                paddingTop: 6,
-              },
+            ...(android && {
+              // eslint-disable-next-line react/display-name
+              headerRight: () => <EmptyButtonPlaceholder />,
+              // eslint-disable-next-line react/display-name
+              headerTitle: props => <SettingsTitle {...props} />,
+              ...(android && {
+                // eslint-disable-next-line react/display-name
+                headerLeft: props => <BackButton {...props} textChevron />,
+              }),
             }),
-            headerStatusBarHeight: 0,
-            headerStyle: {
-              backgroundColor: 'transparent',
-              elevation: 0,
-              height: 49,
-              shadowColor: 'transparent',
-            },
-            headerTitleAlign: 'center',
-            headerTitleStyle: {
-              fontFamily: fonts.family.SFProRounded,
-              fontSize: parseFloat(fonts.size.large),
-              fontWeight: fonts.weight.bold,
-              letterSpacing: fonts.letterSpacing.roundedMedium,
-            },
-            transitionSpec: {
-              close: {
-                animation: 'spring',
-                config: transitionConfig,
-              },
-              open: {
-                animation: 'spring',
-                config: transitionConfig,
-              },
-            },
           }}
         >
           <Stack.Screen
             name="SettingsSection"
             options={{
-              ...(Platform.OS === 'android' && { headerLeft: null }),
               title: 'Settings',
             }}
           >

@@ -1,35 +1,69 @@
 import React, { useCallback, useRef } from 'react';
+import { Alert } from 'react-native';
 import { SectionList } from 'react-native-gesture-handler';
+import LinearGradient from 'react-native-linear-gradient';
 import styled from 'styled-components/primitives';
+import tokenSectionTypes from '../../helpers/tokenSectionTypes';
 import { usePrevious } from '../../hooks';
-import { exchangeModalBorderRadius } from '../../screens/ExchangeModal';
-import { magicMemo } from '../../utils';
 import { CoinRowHeight, ExchangeCoinRow } from '../coin-row';
-import { Text } from '../text';
+import { GradientText, Text } from '../text';
 import { colors, padding } from '@rainbow-me/styles';
+import { deviceUtils, magicMemo } from '@rainbow-me/utils';
+
+const deviceWidth = deviceUtils.dimensions.width;
 
 const Header = styled.View`
-  ${padding(12, 19, 6)};
-  background-color: ${colors.white};
+  ${padding(11, 0, 2.5, 19)};
+  position: relative;
+`;
+
+const HeaderBackground = styled(LinearGradient).attrs({
+  colors: [colors.white, colors.alpha(colors.white, 0)],
+  end: { x: 0.5, y: 1 },
+  locations: [0.55, 1],
+  start: { x: 0.5, y: 0 },
+})`
+  height: 40px;
+  position: absolute;
+  width: ${deviceWidth};
 `;
 
 const HeaderTitle = styled(Text).attrs({
-  color: colors.blueGreyDark,
-  opacity: 0.4,
-  size: 'smaller',
-  weight: 'semibold',
+  color: colors.blueGreyDark50,
+  letterSpacing: 'roundedMedium',
+  size: 'smedium',
+  weight: 'heavy',
 })``;
 
-const ExchangeAssetSectionListHeader = ({ section }) =>
-  section?.title ? (
+const HeaderTitleGradient = styled(GradientText).attrs({
+  colors: ['#6AA2E3', '#FF54BB', '#FFA230'],
+  letterSpacing: 'roundedMedium',
+  size: 'smedium',
+  steps: [0, 0.2867132868, 1],
+  weight: 'heavy',
+})``;
+
+const HeaderTitleWrapper = styled.View`
+  width: ${android ? '150' : '143'}px;
+`;
+
+const ExchangeAssetSectionListHeader = ({ section }) => {
+  const TitleComponent = section.useGradientText
+    ? HeaderTitleGradient
+    : HeaderTitle;
+  return section?.title ? (
     <Header>
-      <HeaderTitle>{section.title}</HeaderTitle>
+      <HeaderBackground />
+      <HeaderTitleWrapper>
+        <TitleComponent>{section.title}</TitleComponent>
+      </HeaderTitleWrapper>
     </Header>
   ) : null;
+};
 
-const contentContainerStyle = { paddingBottom: exchangeModalBorderRadius };
+const contentContainerStyle = { paddingBottom: 9.5 };
 const keyExtractor = ({ uniqueId }) => `ExchangeAssetList-${uniqueId}`;
-const scrollIndicatorInsets = { bottom: exchangeModalBorderRadius };
+const scrollIndicatorInsets = { bottom: 24 };
 const getItemLayout = ({ showBalance }, index) => {
   const height = showBalance ? CoinRowHeight + 1 : CoinRowHeight;
   return {
@@ -44,13 +78,14 @@ const ExchangeAssetSectionList = styled(SectionList).attrs({
   contentContainerStyle,
   directionalLockEnabled: true,
   getItemLayout,
-  initialNumToRender: 8,
+  initialNumToRender: 10,
   keyboardDismissMode: 'none',
   keyboardShouldPersistTaps: 'always',
   keyExtractor,
+  maxToRenderPerBatch: 50,
   scrollEventThrottle: 32,
   scrollIndicatorInsets,
-  windowSize: 11,
+  windowSize: 41,
 })`
   height: 100%;
 `;
@@ -74,8 +109,38 @@ const ExchangeAssetList = ({ itemProps, items, onLayout, query }) => {
     itemProps,
   ]);
 
+  const handleUnverifiedTokenPress = useCallback(
+    item => {
+      Alert.alert(
+        `Unverified Token`,
+        'This token has not been verified! Rainbow surfaces all tokens that exist on Uniswap. Anyone can create a token, including fake versions of existing tokens and tokens that claim to represent projects that do not have a token. Please do your own research and be careful when interacting with unverified tokens!',
+        [
+          {
+            onPress: () => itemProps.onPress(item),
+            text: `Proceed Anyway`,
+          },
+          {
+            style: 'cancel',
+            text: 'Go Back',
+          },
+        ]
+      );
+    },
+    [itemProps]
+  );
+
   const renderItemCallback = useCallback(
-    ({ item }) => <ExchangeCoinRow {...itemProps} item={item} />,
+    ({ item, section: { title: sectionTitle } }) => (
+      <ExchangeCoinRow
+        {...itemProps}
+        isVerified={
+          !sectionTitle ||
+          sectionTitle === tokenSectionTypes.verifiedTokenSection
+        }
+        item={item}
+        onUnverifiedTokenPress={handleUnverifiedTokenPress}
+      />
+    ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );

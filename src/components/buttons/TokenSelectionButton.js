@@ -1,18 +1,23 @@
-import PropTypes from 'prop-types';
-import React from 'react';
+import React, { useMemo } from 'react';
 import FastImage from 'react-native-fast-image';
-import ShadowStack from 'react-native-shadow-stack';
 import styled from 'styled-components/primitives';
-import CaretImageSource from '../../assets/family-dropdown-arrow.png';
-import { magicMemo } from '../../utils';
 import { ButtonPressAnimation } from '../animations';
-import { InnerBorder, Row, RowWithMargins } from '../layout';
+import { InnerBorder, RowWithMargins } from '../layout';
 import { Text } from '../text';
-import { colors, margin, padding, position } from '@rainbow-me/styles';
+import CaretImageSource from '@rainbow-me/assets/family-dropdown-arrow.png';
+import { useColorForAsset } from '@rainbow-me/hooks';
+import { colors, padding, position } from '@rainbow-me/styles';
+import ShadowStack from 'react-native-shadow-stack';
 
-const Content = styled(RowWithMargins).attrs({ align: 'center', margin: 7 })`
+const TokenSelectionButtonHeight = 46;
+const TokenSelectionButtonElevation = ios ? 0 : 8;
+
+const Content = styled(RowWithMargins).attrs({
+  align: 'center',
+  margin: 7,
+})`
   ${padding(11, 14, 14, 16)};
-  height: 46;
+  height: ${TokenSelectionButtonHeight};
   z-index: 1;
 `;
 
@@ -21,34 +26,48 @@ const CaretIcon = styled(FastImage).attrs({
   source: CaretImageSource,
   tintColor: colors.white,
 })`
-  height: 17;
-  right: -0.5;
+  height: 18;
   top: 0.5;
-  width: 9;
+  width: 8;
 `;
 
-const ButtonShadows = styled(ShadowStack).attrs(({ symbol }) => ({
-  shadows: [
-    [0, 10, 30, colors.dark, 0.2],
-    [0, 5, 15, symbol ? colors.dark : colors.appleBlue, 0.4],
-  ],
-}))``;
-
-const TokenSelectionButton = ({
-  borderRadius,
+export default function TokenSelectionButton({
+  address,
+  borderRadius = 30,
   onPress,
-  shadows,
   symbol,
   testID,
-}) => (
-  <ButtonPressAnimation onPress={onPress} testID={testID} throttle>
-    <Row accessible css={margin(0, 19)}>
-      <ButtonShadows
+}) {
+  const colorForAsset = useColorForAsset(
+    { address },
+    address ? undefined : colors.appleBlue
+  );
+
+  const shadowsForAsset = useMemo(
+    () => [
+      [0, 10, 30, colors.dark, 0.2],
+      [0, 5, 15, colorForAsset, 0.4],
+    ],
+    [colorForAsset]
+  );
+
+  return (
+    <ButtonPressAnimation
+      borderRadius={borderRadius}
+      contentContainerStyle={{
+        backgroundColor: colorForAsset,
+        borderRadius,
+      }}
+      onPress={onPress}
+      radiusAndroid={borderRadius}
+      testID={testID}
+    >
+      <ShadowStack
         {...position.coverAsObject}
-        backgroundColor={symbol ? colors.dark : colors.appleBlue}
+        backgroundColor={colorForAsset}
         borderRadius={borderRadius}
-        shadows={shadows}
-        symbol={symbol}
+        elevation={TokenSelectionButtonElevation}
+        shadows={shadowsForAsset}
       />
       <Content>
         <Text
@@ -63,24 +82,6 @@ const TokenSelectionButton = ({
         <CaretIcon />
       </Content>
       <InnerBorder radius={borderRadius} />
-    </Row>
-  </ButtonPressAnimation>
-);
-
-TokenSelectionButton.propTypes = {
-  borderRadius: PropTypes.number,
-  onPress: PropTypes.func,
-  shadows: PropTypes.arrayOf(PropTypes.array),
-  showLockIcon: PropTypes.bool,
-  symbol: PropTypes.string,
-};
-
-TokenSelectionButton.defaultProps = {
-  borderRadius: 30,
-};
-
-export default magicMemo(TokenSelectionButton, [
-  'onPress',
-  'showLockIcon',
-  'symbol',
-]);
+    </ButtonPressAnimation>
+  );
+}

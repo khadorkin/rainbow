@@ -1,4 +1,3 @@
-import PropTypes from 'prop-types';
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { ButtonPressAnimation } from '../animations';
@@ -34,6 +33,7 @@ const SavingsListRowEmptyState = ({ onPress }) => (
     </Text>
     <ButtonPressAnimation onPress={onPress} scaleTo={0.92} style={sx.button}>
       <Text
+        align="center"
         color={colors.white}
         letterSpacing="roundedTight"
         size="lmedium"
@@ -45,10 +45,6 @@ const SavingsListRowEmptyState = ({ onPress }) => (
     </ButtonPressAnimation>
   </RowWithMargins>
 );
-
-SavingsListRowEmptyState.propTypes = {
-  onPress: PropTypes.func,
-};
 
 const neverRerender = () => true;
 export default React.memo(SavingsListRowEmptyState, neverRerender);

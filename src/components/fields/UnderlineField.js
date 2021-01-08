@@ -35,10 +35,13 @@ const UnderlineInput = styled(ExchangeInput).attrs(({ isTinyPhone }) => ({
   disableTabularNums: true,
   keyboardAppearance: 'light',
   letterSpacing: 'roundedTightest',
-  size: isTinyPhone ? 'bigger' : 'h3',
+  size: isTinyPhone || android ? 'bigger' : 'h3',
   weight: 'medium',
 }))`
   padding-right: 8;
+  ${android ? 'height: 40;' : ''}
+  ${android ? 'padding-bottom: 0;' : ''}
+  ${android ? 'padding-top: 0;' : ''}
 `;
 
 const UnderlineContainer = styled(Row)`
@@ -52,7 +55,6 @@ const defaultFormatter = string => string;
 
 const UnderlineField = (
   {
-    animatedKey,
     autoFocus,
     buttonText,
     format = defaultFormatter,
@@ -64,6 +66,7 @@ const UnderlineField = (
     onFocus,
     onPressButton,
     placeholder,
+    testID,
     value: valueProp,
     ...props
   },
@@ -74,10 +77,7 @@ const UnderlineField = (
   const [isFocused, setIsFocused] = useState(autoFocus);
   const [value, setValue] = useState(valueProp);
   const [wasButtonPressed, setWasButtonPressed] = useState(false);
-  const underlineSize = useSharedValue(
-    autoFocus ? 1 : 0,
-    'underlineSize' + animatedKey
-  );
+  const underlineSize = useSharedValue(autoFocus ? 1 : 0);
 
   const ref = useRef();
   useImperativeHandle(forwardedRef, () => ref.current);
@@ -145,15 +145,11 @@ const UnderlineField = (
     }
   }, [forwardedRef, value, valueProp, wasButtonPressed]);
 
-  const animatedStyles = useAnimatedStyle(
-    () => {
-      return {
-        transform: [{ scale: underlineSize.value }],
-      };
-    },
-    [],
-    'UnderlineFieldAnimatedStyle' + animatedKey
-  );
+  const animatedStyles = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: underlineSize.value }],
+    };
+  });
 
   return (
     <ColumnWithMargins flex={1} margin={8} {...props}>
@@ -169,6 +165,7 @@ const UnderlineField = (
           onFocus={handleFocus}
           placeholder={placeholder}
           ref={ref}
+          testID={testID + '-input'}
           value={formattedValue}
         />
         {buttonText && isFocused && (

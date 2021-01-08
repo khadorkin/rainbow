@@ -1,9 +1,8 @@
 import React, { createElement } from 'react';
 import styled from 'styled-components/primitives';
-import { useAccountSettings, useCoinListEdited } from '../../hooks';
-import { CoinIcon, CoinIconSize } from '../coin-icon';
-import CoinIconGroup from '../coin-icon/CoinIconGroup';
+import { CoinIcon, CoinIconGroup, CoinIconSize } from '../coin-icon';
 import { Column, Row } from '../layout';
+import { useAccountSettings } from '@rainbow-me/hooks';
 import { padding } from '@rainbow-me/styles';
 
 const CoinRowPaddingTop = 9;
@@ -37,23 +36,22 @@ export default function CoinRow({
   isHidden,
   isPinned,
   isPool,
+  name,
   symbol,
   testID,
   topRowRender,
-  tokenSymbols,
+  tokens,
   ...props
 }) {
   const accountSettings = useAccountSettings();
-  const { isCoinListEdited } = useCoinListEdited();
 
   return (
     <Container css={containerStyles}>
       {isPool ? (
-        <CoinIconGroup tokens={tokenSymbols} />
+        <CoinIconGroup tokens={tokens} />
       ) : (
         createElement(coinIconRender, {
           address,
-          isCoinListEdited,
           isHidden,
           isPinned,
           symbol,
@@ -62,14 +60,10 @@ export default function CoinRow({
         })
       )}
       <Content isHidden={isHidden} justify="center" style={contentStyles}>
-        <Row
-          align="center"
-          justify="space-between"
-          testID={`${testID}-${symbol || ''}`}
-        >
-          {topRowRender({ symbol, ...accountSettings, ...props })}
+        <Row align="center" testID={`${testID}-${symbol || ''}`}>
+          {topRowRender({ name, symbol, ...accountSettings, ...props })}
         </Row>
-        <Row align="center" justify="space-between" marginBottom={0.5}>
+        <Row align="center" marginBottom={0.5}>
           {bottomRowRender({ symbol, ...accountSettings, ...props })}
         </Row>
       </Content>

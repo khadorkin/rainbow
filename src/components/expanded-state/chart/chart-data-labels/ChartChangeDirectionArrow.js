@@ -1,5 +1,5 @@
 import MaskedView from '@react-native-community/masked-view';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Animated, {
   useAnimatedStyle,
   useDerivedValue,
@@ -19,11 +19,6 @@ const ArrowIcon = styled(Icon).attrs({
 export default function ChartChangeDirectionArrow() {
   const ratio = useRatio('ChartChangeDirectionArrowRatio');
 
-  const [hidden, setHidden] = useState(true);
-  useEffect(() => {
-    setTimeout(() => setHidden(false), 1000);
-  }, []);
-
   const arrowColor = useDerivedValue(
     () =>
       ratio.value === 1
@@ -34,28 +29,20 @@ export default function ChartChangeDirectionArrow() {
     [],
     'ChartChangeDirectionArrowRatioColor'
   );
-  const arrowWrapperStyle = useAnimatedStyle(
-    () => {
-      return {
-        opacity: ratio.value === 1 ? 0 : 1,
-        transform: [{ rotate: ratio.value < 1 ? '180deg' : '0deg' }],
-      };
-    },
-    [],
-    'ChartChangeDirectionArrowRatioWrapperStyle'
-  );
+  const arrowWrapperStyle = useAnimatedStyle(() => {
+    return {
+      opacity: ratio.value === 1 ? 0 : 1,
+      transform: [{ rotate: ratio.value < 1 ? '180deg' : '0deg' }],
+    };
+  });
 
-  const arrowStyle = useAnimatedStyle(
-    () => {
-      return {
-        backgroundColor: arrowColor.value,
-      };
-    },
-    [],
-    'ChartChangeDirectionArrowRatioStyle'
-  );
+  const arrowStyle = useAnimatedStyle(() => {
+    return {
+      backgroundColor: arrowColor.value,
+    };
+  });
 
-  return hidden ? null : (
+  return (
     <Animated.View style={arrowWrapperStyle}>
       <AnimatedMaskedView
         maskElement={<ArrowIcon />}

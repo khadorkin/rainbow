@@ -23,6 +23,7 @@ const transition = (
 );
 
 const InfoButton = styled(ButtonPressAnimation).attrs({
+  opacityTouchable: true,
   scaleTo: 1.3,
 })`
   ${padding(0, 19)};
@@ -63,7 +64,7 @@ const ExchangeModalHeader = ({
   return (
     <Column align="center" css={padding(6, 0)} testID={testID}>
       <SheetHandle marginBottom={SheetHandleMargin} />
-      <Text align="center" lineHeight="loose" size="large" weight="bold">
+      <Text align="center" lineHeight="loose" size="large" weight="heavy">
         {title}
       </Text>
       <InfoButtonTransition ref={transitionRef} transition={transition}>

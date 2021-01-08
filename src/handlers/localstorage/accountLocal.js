@@ -3,7 +3,7 @@ import { getAccountLocal, saveAccountLocal } from './common';
 const assetPricesFromUniswapVersion = '0.1.0';
 const assetsVersion = '0.2.0';
 const purchaseTransactionsVersion = '0.1.0';
-const savingsVersion = '0.1.0';
+const savingsVersion = '0.2.0';
 const transactionsVersion = '0.2.5';
 const uniqueTokensVersion = '0.2.0';
 const accountEmptyVersion = '0.1.0';
@@ -13,7 +13,6 @@ const ACCOUNT_EMPTY = 'accountEmpty';
 const ASSET_PRICES_FROM_UNISWAP = 'assetPricesFromUniswap';
 const ASSETS = 'assets';
 const ACCOUNT_CHARTS = 'accountCharts';
-const ACCOUNT_FALLBACK_CHARTS = 'accountFallbackCharts';
 const OPEN_FAMILIES = 'openFamilies';
 const OPEN_INVESTMENT_CARDS = 'openInvestmentCards';
 const PURCHASE_TRANSACTIONS = 'purchaseTransactions';
@@ -31,7 +30,6 @@ export const accountLocalKeys = [
   ASSET_PRICES_FROM_UNISWAP,
   ASSETS,
   ACCOUNT_CHARTS,
-  ACCOUNT_FALLBACK_CHARTS,
   OPEN_FAMILIES,
   OPEN_INVESTMENT_CARDS,
   PURCHASE_TRANSACTIONS,
@@ -52,7 +50,7 @@ export const accountLocalKeys = [
  * @return {Object}
  */
 export const getSavings = (accountAddress, network) =>
-  getAccountLocal(SAVINGS, accountAddress, network, [], savingsVersion);
+  getAccountLocal(SAVINGS, accountAddress, network, {}, savingsVersion);
 
 /**
  * @desc save savings
@@ -196,24 +194,6 @@ export const getAccountCharts = (accountAddress, network) =>
  */
 export const saveAccountCharts = (charts, accountAddress, network) =>
   saveAccountLocal(ACCOUNT_CHARTS, charts, accountAddress, network);
-
-/**
- * @desc get fallback charts
- * @param  {String}   [address]
- * @param  {String}   [network]
- * @return {Object}
- */
-export const getAccountFallbackCharts = (accountAddress, network) =>
-  getAccountLocal(ACCOUNT_FALLBACK_CHARTS, accountAddress, network, {});
-
-/**
- * @desc save fallback charts data
- * @param  {Object}   [charts]
- * @param  {String}   [address]
- * @param  {String}   [network]
- */
-export const saveAccountFallbackCharts = (charts, accountAddress, network) =>
-  saveAccountLocal(ACCOUNT_FALLBACK_CHARTS, charts, accountAddress, network);
 
 /**
  * @desc get transactions
@@ -390,7 +370,7 @@ export const saveAccountInfo = (profileInfo, accountAddress, network) =>
  * @return {Array}
  */
 export const getPinnedCoins = (accountAddress, network) =>
-  getAccountLocal(PINNED_COINS, accountAddress, network, []);
+  getAccountLocal(PINNED_COINS, accountAddress, network, ['eth']);
 
 /**
  * @desc save pinned coins

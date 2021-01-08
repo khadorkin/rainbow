@@ -1,6 +1,8 @@
 import { forEach } from 'lodash';
 import React, { useEffect, useMemo } from 'react';
+import { IS_TESTING } from 'react-native-dotenv';
 import styled from 'styled-components';
+import { cloudPlatform } from '../../utils/platform';
 import Divider from '../Divider';
 import { ButtonPressAnimation } from '../animations';
 import { Icon } from '../icons';
@@ -37,19 +39,22 @@ const TitleRow = styled(RowWithMargins)`
   width: ${deviceWidth - 60};
 `;
 
-const RainbowText = styled(GradientText).attrs({
-  angle: false,
-  colors: colors.gradients.rainbow,
-  end: { x: 0, y: 0.5 },
-  start: { x: 1, y: 0.5 },
-  steps: [0, 0.774321, 1],
-})``;
+const RainbowText =
+  android && IS_TESTING === 'true'
+    ? Text
+    : styled(GradientText).attrs({
+        angle: false,
+        colors: colors.gradients.rainbow,
+        end: { x: 0, y: 0.5 },
+        start: { x: 1, y: 0.5 },
+        steps: [0, 0.774321, 1],
+      })``;
 
 const TextIcon = styled(Text).attrs({
   size: 29,
   weight: 'medium',
 })`
-  height: 35;
+  height: ${android ? 45 : 35};
   margin-bottom: 7;
   margin-top: 8;
 `;
@@ -76,7 +81,7 @@ const DescriptionText = styled(Text).attrs({
 `;
 
 export default function RestoreSheetFirstStep({
-  onIcloudRestore,
+  onCloudRestore,
   onManualRestore,
   onWatchAddress,
   userData,
@@ -93,7 +98,7 @@ export default function RestoreSheetFirstStep({
     return count;
   }, [userData]);
 
-  const enableCloudRestore = walletsBackedUp > 0;
+  const enableCloudRestore = android || walletsBackedUp > 0;
   useEffect(() => {
     setParams({ enableCloudRestore });
   }, [enableCloudRestore, setParams]);
@@ -102,7 +107,7 @@ export default function RestoreSheetFirstStep({
     <Container>
       {enableCloudRestore && (
         <React.Fragment>
-          <SheetRow as={ButtonPressAnimation} onPress={onIcloudRestore}>
+          <SheetRow as={ButtonPressAnimation} onPress={onCloudRestore}>
             <Column>
               <Row>
                 <RainbowText>
@@ -111,14 +116,16 @@ export default function RestoreSheetFirstStep({
               </Row>
               <TitleRow>
                 <RainbowText>
-                  <Title>Restore from iCloud</Title>
+                  <Title>Restore from {cloudPlatform}</Title>
                 </RainbowText>
                 <CaretIcon />
               </TitleRow>
               <DescriptionText>
-                {`You have ${walletsBackedUp} ${
-                  walletsBackedUp > 1 ? 'wallets' : 'wallet'
-                } backed up`}
+                {ios
+                  ? `You have ${walletsBackedUp} ${
+                      walletsBackedUp > 1 ? 'wallets' : 'wallet'
+                    } backed up`
+                  : `If you previously backed up your wallet on ${cloudPlatform} tap here to restore it.`}
               </DescriptionText>
             </Column>
           </SheetRow>

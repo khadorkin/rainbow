@@ -1,10 +1,12 @@
 import React, { useCallback } from 'react';
-import ShadowStack from 'react-native-shadow-stack';
 import styled from 'styled-components/primitives';
 import { magicMemo } from '../../utils';
-import ButtonPressAnimation from '../animations/ButtonPressAnimation';
+import ButtonPressAnimation, {
+  ScaleButtonZoomableAndroid,
+} from '../animations/ButtonPressAnimation';
 import { Centered, InnerBorder } from '../layout';
 import { borders, colors, position } from '@rainbow-me/styles';
+import ShadowStack from 'react-native-shadow-stack';
 
 export const FloatingActionButtonSize = 56;
 
@@ -19,6 +21,8 @@ const Content = styled(Centered)`
   background-color: ${({ backgroundColor }) => backgroundColor};
 `;
 
+const Wrapper = android ? ScaleButtonZoomableAndroid : ButtonPressAnimation;
+
 const FloatingActionButton = ({
   backgroundColor,
   children,
@@ -28,6 +32,7 @@ const FloatingActionButton = ({
   scaleTo = 0.86,
   shadows = FloatingActionButtonShadow,
   size = FloatingActionButtonSize,
+  testID,
   ...props
 }) => {
   const handlePress = useCallback(
@@ -45,11 +50,12 @@ const FloatingActionButton = ({
   );
 
   return (
-    <ButtonPressAnimation
-      disabled={disabled}
+    <Wrapper
+      disabled={disabled || android}
       hapticType="impactLight"
       onPress={handlePress}
       onPressIn={handlePressIn}
+      overflowMargin={25}
       scaleTo={scaleTo}
       useLateHaptic={false}
       {...props}
@@ -59,12 +65,22 @@ const FloatingActionButton = ({
         hideShadow={disabled}
         shadows={shadows}
       >
-        <Content backgroundColor={disabled ? colors.grey : backgroundColor}>
-          {typeof children === 'function' ? children({ size }) : children}
-          {!disabled && <InnerBorder opacity={0.06} radius={size / 2} />}
-        </Content>
+        <ButtonPressAnimation
+          disabled={disabled || ios}
+          onPress={handlePress}
+          reanimatedButton
+          style={{
+            height: size,
+          }}
+          testID={testID}
+        >
+          <Content backgroundColor={disabled ? colors.grey : backgroundColor}>
+            {typeof children === 'function' ? children({ size }) : children}
+            {!disabled && <InnerBorder opacity={0.06} radius={size / 2} />}
+          </Content>
+        </ButtonPressAnimation>
       </ShadowStack>
-    </ButtonPressAnimation>
+    </Wrapper>
   );
 };
 

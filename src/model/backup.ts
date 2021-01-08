@@ -11,6 +11,7 @@ import {
   getDataFromCloud,
 } from '../handlers/cloudBackup';
 import WalletBackupTypes from '../helpers/walletBackupTypes';
+import WalletTypes from '../helpers/walletTypes';
 import {
   allWalletsKey,
   privateKeyKey,
@@ -24,6 +25,7 @@ import {
   publicAccessControlOptions,
   RainbowWallet,
 } from './wallet';
+
 import logger from 'logger';
 
 type BackupPassword = string;
@@ -151,11 +153,27 @@ export async function restoreCloudBackup(
     if (!data) {
       throw new Error('Invalid password');
     }
+
+    // Restore only wallets that were backed up in cloud
+    // or wallets that are read-only
+    const walletsToRestore: AllRainbowWallets = {};
+    forEach(userData.wallets, wallet => {
+      if (
+        (wallet.backedUp &&
+          wallet.backupDate &&
+          wallet.backupFile &&
+          wallet.backupType === WalletBackupTypes.cloud) ||
+        wallet.type === WalletTypes.readOnly
+      ) {
+        walletsToRestore[wallet.id] = wallet;
+      }
+    });
+
     const dataToRestore = {
       // All wallets
       [allWalletsKey]: {
         version: allWalletsVersion,
-        wallets: userData.wallets,
+        wallets: walletsToRestore,
       },
       ...data.secrets,
     };
@@ -203,7 +221,9 @@ export async function saveBackupPassword(
   password: BackupPassword
 ): Promise<void> {
   try {
-    await setSharedWebCredentials('rainbow.me', 'Backup Password', password);
+    if (ios) {
+      await setSharedWebCredentials('rainbow.me', 'Backup Password', password);
+    }
   } catch (e) {
     logger.sentry('Error while backing up password');
     captureException(e);
@@ -212,6 +232,10 @@ export async function saveBackupPassword(
 
 // Attempts to fetch the password to decrypt the backup from the iCloud keychain
 export async function fetchBackupPassword(): Promise<null | BackupPassword> {
+  if (android) {
+    return null;
+  }
+
   try {
     const results = await requestSharedWebCredentials();
     if (results) {

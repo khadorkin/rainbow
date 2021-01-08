@@ -8,6 +8,7 @@ import {
   loadSeedPhraseAndMigrateIfNeeded,
 } from '../../model/wallet';
 import ActivityIndicator from '../ActivityIndicator';
+import Spinner from '../Spinner';
 import { BiometricButtonContent, Button } from '../buttons';
 import { CopyFloatingEmojis } from '../floating-emojis';
 import { Icon } from '../icons';
@@ -59,6 +60,8 @@ const ToggleSecretButton = styled(Button)`
   background-color: ${colors.appleBlue};
 `;
 
+const LoadingSpinner = android ? Spinner : ActivityIndicator;
+
 export default function SecretDisplaySection({
   onSecretLoaded,
   onWalletTypeIdentified,
@@ -91,14 +94,25 @@ export default function SecretDisplaySection({
   }, [onSecretLoaded, onWalletTypeIdentified, walletId]);
 
   useEffect(() => {
-    loadSeed();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // Android doesn't like to show the faceID prompt
+    // while the view isn't fully visible
+    // so we have to add a timeout to prevent the app from freezing
+    android
+      ? setTimeout(() => {
+          loadSeed();
+        }, 300)
+      : loadSeed();
+  }, [loadSeed]);
 
   const typeLabel = type === WalletTypes.privateKey ? 'key' : 'phrase';
 
   return (
-    <ColumnWithMargins align="center" justify="center" margin={24}>
+    <ColumnWithMargins
+      align="center"
+      justify="center"
+      margin={24}
+      paddingHorizontal={30}
+    >
       {visible ? (
         <Fragment>
           {seed ? (
@@ -112,7 +126,7 @@ export default function SecretDisplaySection({
               <SecretDisplayCard seed={seed} type={type} />
             </Fragment>
           ) : (
-            <ActivityIndicator color={colors.blueGreyDark50} />
+            <LoadingSpinner color={colors.blueGreyDark50} />
           )}
         </Fragment>
       ) : (

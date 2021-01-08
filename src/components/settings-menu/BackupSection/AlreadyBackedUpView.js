@@ -1,12 +1,15 @@
 import { useRoute } from '@react-navigation/native';
 import analytics from '@segment/analytics-react-native';
 import React, { Fragment, useCallback, useEffect, useMemo } from 'react';
-import { Platform, View } from 'react-native';
+import { Alert, View } from 'react-native';
+import { useDispatch } from 'react-redux';
 import styled from 'styled-components';
+import { deleteAllBackups } from '../../../handlers/cloudBackup';
+import { walletsUpdate } from '../../../redux/wallets';
+import { cloudPlatform } from '../../../utils/platform';
 import { DelayedAlert } from '../../alerts';
 import { ButtonPressAnimation } from '../../animations';
 import { Centered, Column } from '../../layout';
-import { LoadingOverlay } from '../../modal';
 import { SheetActionButton } from '../../sheet';
 import { Text } from '../../text';
 import WalletBackupStepTypes from '@rainbow-me/helpers/walletBackupStepTypes';
@@ -14,10 +17,9 @@ import WalletBackupTypes from '@rainbow-me/helpers/walletBackupTypes';
 import WalletTypes from '@rainbow-me/helpers/walletTypes';
 import { useWalletCloudBackup, useWallets } from '@rainbow-me/hooks';
 import { Navigation, useNavigation } from '@rainbow-me/navigation';
-import { sheetVerticalOffset } from '@rainbow-me/navigation/effects';
 import Routes from '@rainbow-me/routes';
 import { colors, fonts, padding, position, shadow } from '@rainbow-me/styles';
-import { usePortal } from 'react-native-cool-modals/Portal';
+import { showActionSheetWithOptions } from '@rainbow-me/utils';
 
 const WalletBackupStatus = {
   CLOUD_BACKUP: 0,
@@ -31,7 +33,7 @@ const CheckmarkIconContainer = styled(View)`
   background-color: ${({ color }) => color};
   border-radius: 25;
   margin-bottom: 19;
-  padding-top: 13;
+  padding-top: ${ios ? 13 : 7};
 `;
 
 const CheckmarkIconText = styled(Text).attrs({
@@ -91,30 +93,16 @@ const onError = error => DelayedAlert({ title: error }, 500);
 export default function AlreadyBackedUpView() {
   const { navigate } = useNavigation();
   const { params } = useRoute();
-  const { isWalletLoading, wallets, selectedWallet } = useWallets();
+  const dispatch = useDispatch();
+  const { wallets, selectedWallet } = useWallets();
   const walletCloudBackup = useWalletCloudBackup();
   const walletId = params?.walletId || selectedWallet.id;
-
-  const { setComponent, hide } = usePortal();
 
   useEffect(() => {
     analytics.track('Already Backed Up View', {
       category: 'settings backup',
     });
   }, []);
-
-  useEffect(() => {
-    if (isWalletLoading) {
-      setComponent(
-        <LoadingOverlay
-          paddingTop={sheetVerticalOffset}
-          title={isWalletLoading}
-        />,
-        false
-      );
-    }
-    return hide;
-  }, [hide, isWalletLoading, setComponent]);
 
   const walletStatus = useMemo(() => {
     let status = null;
@@ -131,19 +119,71 @@ export default function AlreadyBackedUpView() {
   }, [walletId, wallets]);
 
   const handleNoLatestBackup = useCallback(() => {
-    Navigation.handleAction(Routes.BACKUP_SHEET, {
-      step: WalletBackupStepTypes.cloud,
-      walletId,
-    });
+    Navigation.handleAction(
+      android ? Routes.BACKUP_SCREEN : Routes.BACKUP_SHEET,
+      {
+        nativeScreen: android,
+        step: WalletBackupStepTypes.cloud,
+        walletId,
+      }
+    );
   }, [walletId]);
 
   const handlePasswordNotFound = useCallback(() => {
-    Navigation.handleAction(Routes.BACKUP_SHEET, {
-      missingPassword: true,
-      step: WalletBackupStepTypes.cloud,
-      walletId,
-    });
+    Navigation.handleAction(
+      android ? Routes.BACKUP_SCREEN : Routes.BACKUP_SHEET,
+      {
+        missingPassword: true,
+        nativeScreen: android,
+        step: WalletBackupStepTypes.cloud,
+        walletId,
+      }
+    );
   }, [walletId]);
+
+  const manageCloudBackups = useCallback(() => {
+    const buttons = [`Delete All ${cloudPlatform} Backups`, 'Cancel'];
+
+    showActionSheetWithOptions(
+      {
+        cancelButtonIndex: 1,
+        destructiveButtonIndex: 0,
+        options: buttons,
+        title: `Manage ${cloudPlatform} Backups`,
+      },
+      buttonIndex => {
+        if (buttonIndex === 0) {
+          // Delete wallet with confirmation
+          showActionSheetWithOptions(
+            {
+              cancelButtonIndex: 1,
+              destructiveButtonIndex: 0,
+              message: `Are you sure you want to delete your ${cloudPlatform} wallet backups?`,
+              options: [`Confirm and Delete Backups`, 'Cancel'],
+            },
+            async buttonIndex => {
+              if (buttonIndex === 0) {
+                const newWallets = { ...wallets };
+                Object.keys(newWallets).forEach(key => {
+                  newWallets[key].backedUp = undefined;
+                  newWallets[key].backupDate = undefined;
+                  newWallets[key].backupFile = undefined;
+                  newWallets[key].backupType = undefined;
+                });
+
+                await dispatch(walletsUpdate(newWallets));
+
+                // Delete all backups (debugging)
+                await deleteAllBackups();
+
+                Alert.alert('Backups deleted succesfully');
+              }
+            }
+          );
+        }
+      }
+    );
+  }, [dispatch, wallets]);
 
   const handleIcloudBackup = useCallback(() => {
     if (
@@ -154,7 +194,7 @@ export default function AlreadyBackedUpView() {
       return;
     }
 
-    analytics.track('Back up to iCloud pressed', {
+    analytics.track(`Back up to ${cloudPlatform} pressed`, {
       category: 'settings backup',
     });
 
@@ -186,6 +226,11 @@ export default function AlreadyBackedUpView() {
       ? colors.green
       : colors.blueGreyDark50;
 
+  const hasMultipleWallets =
+    Object.keys(wallets).filter(
+      key => wallets[key].type !== WalletTypes.readOnly
+    ).length > 1;
+
   return (
     <Fragment>
       <Subtitle>
@@ -204,7 +249,7 @@ export default function AlreadyBackedUpView() {
           </Title>
           <DescriptionText>
             {(walletStatus === WalletBackupStatus.CLOUD_BACKUP &&
-              `If you lose this device, you can recover your encrypted wallet backup from iCloud.`) ||
+              `If you lose this device, you can recover your encrypted wallet backup from ${cloudPlatform}.`) ||
               (walletStatus === WalletBackupStatus.MANUAL_BACKUP &&
                 `If you lose this device, you can restore your wallet with the recovery phrase you saved.`) ||
               (walletStatus === WalletBackupStatus.IMPORTED &&
@@ -213,30 +258,43 @@ export default function AlreadyBackedUpView() {
         </Centered>
         <Column>
           <SheetActionButton
+            androidWidth={225}
             color={colors.white}
             label="🗝 View recovery key"
-            noFlex
             onPress={handleViewRecoveryPhrase}
             textColor={colors.alpha(colors.blueGreyDark, 0.8)}
           />
         </Column>
       </Content>
-      {Platform.OS === 'ios' &&
-        walletStatus !== WalletBackupStatus.CLOUD_BACKUP && (
-          <Footer>
-            <ButtonPressAnimation onPress={handleIcloudBackup}>
-              <Text
-                align="center"
-                color={colors.appleBlue}
-                letterSpacing="roundedMedium"
-                size="large"
-                weight="semibold"
-              >
-                􀙶 Back up to iCloud
-              </Text>
-            </ButtonPressAnimation>
-          </Footer>
-        )}
+      {walletStatus !== WalletBackupStatus.CLOUD_BACKUP ? (
+        <Footer>
+          <ButtonPressAnimation onPress={handleIcloudBackup}>
+            <Text
+              align="center"
+              color={colors.appleBlue}
+              letterSpacing="roundedMedium"
+              size="large"
+              weight="semibold"
+            >
+              􀙶 Back up to {cloudPlatform}
+            </Text>
+          </ButtonPressAnimation>
+        </Footer>
+      ) : !hasMultipleWallets ? (
+        <Footer>
+          <ButtonPressAnimation onPress={manageCloudBackups}>
+            <Text
+              align="center"
+              color={colors.alpha(colors.blueGreyDark, 0.6)}
+              letterSpacing="roundedMedium"
+              size="lmedium"
+              weight="semibold"
+            >
+              􀍢 Manage {cloudPlatform} Backups
+            </Text>
+          </ButtonPressAnimation>
+        </Footer>
+      ) : null}
     </Fragment>
   );
 }

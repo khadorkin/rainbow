@@ -1,27 +1,30 @@
 import { get } from 'lodash';
 import React, { Fragment, useCallback, useEffect, useState } from 'react';
+import Animated from 'react-native-reanimated';
 import { View } from 'react-primitives';
 import { compose } from 'recompact';
 import styled from 'styled-components/primitives';
 import {
-  withCoinListEdited,
   withCoinRecentlyPinned,
   withEditOptions,
   withOpenBalances,
 } from '../../hoc';
+import { useCoinListEditedValue } from '../../hooks/useCoinListEdited';
 import { ButtonPressAnimation } from '../animations';
-import { ChartExpandedStateSheetHeight } from '../expanded-state/ChartExpandedState';
-import { Column, FlexItem } from '../layout';
+import { initialChartExpandedStateSheetHeight } from '../expanded-state/ChartExpandedState';
+import { Column, FlexItem, Row } from '../layout';
 import BalanceText from './BalanceText';
 import BottomRowText from './BottomRowText';
 import CoinCheckButton from './CoinCheckButton';
 import CoinName from './CoinName';
 import CoinRow from './CoinRow';
 import { buildAssetUniqueIdentifier } from '@rainbow-me/helpers/assets';
+import { useCoinListEdited } from '@rainbow-me/hooks';
 import { colors } from '@rainbow-me/styles';
 import { isNewValueForObjectPaths, isNewValueForPath } from '@rainbow-me/utils';
 
-const editTranslateOffset = 32;
+const editTranslateOffsetInner = android ? -8 : 0;
+const editTranslateOffset = 32 - (android ? editTranslateOffsetInner : 0);
 
 const formatPercentageString = percentString =>
   percentString ? percentString.split('-').join('- ') : '-';
@@ -32,15 +35,30 @@ const BalanceCoinRowCoinCheckButton = styled(CoinCheckButton).attrs({
   top: ${({ top }) => top};
 `;
 
-const Content = styled(ButtonPressAnimation)`
-  padding-left: ${({ isEditMode }) => (isEditMode ? editTranslateOffset : 0)};
-`;
-
 const PercentageText = styled(BottomRowText).attrs({
   align: 'right',
 })`
   ${({ isPositive }) => (isPositive ? `color: ${colors.green};` : null)};
 `;
+
+const BottomRowContainer = ios
+  ? Fragment
+  : styled(Row).attrs({ marginBottom: 10, marginTop: -10 })``;
+
+const TopRowContainer = ios
+  ? Fragment
+  : styled(Row).attrs({
+      align: 'flex-start',
+      justify: 'flex-start',
+      marginTop: 0,
+    })``;
+
+const PriceContainer = ios
+  ? View
+  : styled(View)`
+      margin-top: -3;
+      margin-bottom: 3;
+    `;
 
 const BottomRow = ({ balance, native }) => {
   const percentChange = get(native, 'change');
@@ -49,7 +67,7 @@ const BottomRow = ({ balance, native }) => {
   const isPositive = percentChange && percentageChangeDisplay.charAt(0) !== '-';
 
   return (
-    <Fragment>
+    <BottomRowContainer>
       <FlexItem flex={1}>
         <BottomRowText>{get(balance, 'display', '')}</BottomRowText>
       </FlexItem>
@@ -58,7 +76,7 @@ const BottomRow = ({ balance, native }) => {
           {percentageChangeDisplay}
         </PercentageText>
       </View>
-    </Fragment>
+    </BottomRowContainer>
   );
 };
 
@@ -66,26 +84,24 @@ const TopRow = ({ name, native, nativeCurrencySymbol }) => {
   const nativeDisplay = get(native, 'balance.display');
 
   return (
-    <Fragment>
+    <TopRowContainer>
       <FlexItem flex={1}>
         <CoinName>{name}</CoinName>
       </FlexItem>
-      <View>
+      <PriceContainer>
         <BalanceText
           color={nativeDisplay ? null : colors.blueGreyLight}
           numberOfLines={1}
         >
           {nativeDisplay || `${nativeCurrencySymbol}0.00`}
         </BalanceText>
-      </View>
-    </Fragment>
+      </PriceContainer>
+    </TopRowContainer>
   );
 };
 
 const BalanceCoinRow = ({
   containerStyles,
-  firstCoinRowMarginTop,
-  isCoinListEdited,
   isFirstCoinRow,
   item,
   onPress,
@@ -96,8 +112,8 @@ const BalanceCoinRow = ({
 }) => {
   const [toggle, setToggle] = useState(false);
   const [previousPinned, setPreviousPinned] = useState(0);
-  const firstCoinRowCoinCheckMarginTop = firstCoinRowMarginTop + 9;
-
+  const { isCoinListEdited } = useCoinListEdited();
+  const isCoinListEditedValue = useCoinListEditedValue();
   useEffect(() => {
     if (toggle && (recentlyPinnedCount > previousPinned || !isCoinListEdited)) {
       setPreviousPinned(recentlyPinnedCount);
@@ -115,34 +131,60 @@ const BalanceCoinRow = ({
     setToggle(!toggle);
   }, [item.uniqueId, pushSelectedCoin, removeSelectedCoin, setToggle, toggle]);
 
-  const handlePress = useCallback(
-    () => onPress?.(item, { longFormHeight: ChartExpandedStateSheetHeight }),
-    [onPress, item]
-  );
+  const handlePress = useCallback(() => {
+    if (isCoinListEdited) {
+      handleEditModePress();
+    } else {
+      onPress?.(item, {
+        longFormHeight: initialChartExpandedStateSheetHeight,
+      });
+    }
+  }, [handleEditModePress, isCoinListEdited, item, onPress]);
 
   return (
     <Column flex={1} justify={isFirstCoinRow ? 'end' : 'start'}>
-      <Content
-        isEditMode={isCoinListEdited}
-        onPress={isCoinListEdited ? handleEditModePress : handlePress}
-        scaleTo={0.96}
+      <Animated.View
+        style={{
+          paddingLeft: Animated.multiply(
+            editTranslateOffset,
+            isCoinListEditedValue
+          ),
+        }}
       >
-        <CoinRow
-          bottomRowRender={BottomRow}
-          containerStyles={containerStyles}
+        <ButtonPressAnimation
           onPress={handlePress}
-          topRowRender={TopRow}
-          {...item}
-          {...props}
-        />
-      </Content>
-      {isCoinListEdited ? (
+          scaleTo={0.96}
+          testID={`balance-coin-row-${item.name}`}
+        >
+          <Animated.View
+            style={{
+              paddingLeft: Animated.multiply(
+                editTranslateOffsetInner,
+                isCoinListEditedValue
+              ),
+            }}
+          >
+            <CoinRow
+              bottomRowRender={BottomRow}
+              containerStyles={containerStyles}
+              onPress={handlePress}
+              topRowRender={TopRow}
+              {...item}
+              {...props}
+            />
+          </Animated.View>
+        </ButtonPressAnimation>
+      </Animated.View>
+      <Animated.View
+        style={{ opacity: isCoinListEditedValue, position: 'absolute' }}
+      >
         <BalanceCoinRowCoinCheckButton
           onPress={handleEditModePress}
+          pointerEvents={isCoinListEdited ? 'auto' : 'none'}
           toggle={toggle}
-          top={isFirstCoinRow ? firstCoinRowCoinCheckMarginTop : 9}
+          top={isFirstCoinRow ? -53 : 9}
         />
-      ) : null}
+      </Animated.View>
     </Column>
   );
 };
@@ -175,6 +217,5 @@ const MemoizedBalanceCoinRow = React.memo(BalanceCoinRow, arePropsEqual);
 export default compose(
   withOpenBalances,
   withEditOptions,
-  withCoinListEdited,
   withCoinRecentlyPinned
 )(MemoizedBalanceCoinRow);

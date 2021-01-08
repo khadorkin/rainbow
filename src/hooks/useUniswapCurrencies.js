@@ -1,17 +1,23 @@
 /* eslint-disable no-use-before-define */
 import { useRoute } from '@react-navigation/native';
 import analytics from '@segment/analytics-react-native';
-import { find, get } from 'lodash';
+import { find, get, isEmpty } from 'lodash';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { InteractionManager } from 'react-native';
-import CurrencySelectionTypes from '../helpers/currencySelectionTypes';
-import { multiply } from '../helpers/utilities';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '../navigation/Navigation';
 import useAccountAssets from './useAccountAssets';
+import useAccountSettings from './useAccountSettings';
 import { delayNext } from './useMagicAutofocus';
 import usePrevious from './usePrevious';
 import useUniswapAssetsInWallet from './useUniswapAssetsInWallet';
-import useUniswapCurrencyReserves from './useUniswapCurrencyReserves';
+import useUniswapCalls from './useUniswapCalls';
+import CurrencySelectionTypes from '@rainbow-me/helpers/currencySelectionTypes';
+import { multiply } from '@rainbow-me/helpers/utilities';
+import {
+  multicallAddListeners,
+  multicallUpdateOutdatedListeners,
+} from '@rainbow-me/redux/multicall';
 import Routes from '@rainbow-me/routes';
 import { ethereumUtils, isNewValueForPath } from '@rainbow-me/utils';
 import logger from 'logger';
@@ -50,7 +56,12 @@ export default function useUniswapCurrencies({
   type,
   underlyingPrice,
 }) {
+  const dispatch = useDispatch();
   const { allAssets } = useAccountAssets();
+  const { chainId } = useAccountSettings();
+  const { genericAssets } = useSelector(({ data: { genericAssets } }) => ({
+    genericAssets,
+  }));
   const { navigate, setParams, dangerouslyGetParent } = useNavigation();
   const {
     params: { blockInteractions },
@@ -73,8 +84,8 @@ export default function useUniswapCurrencies({
 
     // If default input asset not found in wallet, create the missing asset
     if (!defaultChosenInputItem && defaultInputAsset) {
-      const eth = ethereumUtils.getAsset(allAssets);
-      const priceOfEther = get(eth, 'native.price.amount', null);
+      const priceOfEther = ethereumUtils.getEthPriceUnit(genericAssets);
+
       defaultChosenInputItem = createMissingAsset(
         defaultInputAsset,
         underlyingPrice,
@@ -110,6 +121,7 @@ export default function useUniswapCurrencies({
     allAssets,
     defaultInputAddress,
     defaultInputAsset,
+    genericAssets,
     isDeposit,
     isWithdrawal,
     underlyingPrice,
@@ -118,37 +130,31 @@ export default function useUniswapCurrencies({
   const [inputCurrency, setInputCurrency] = useState(defaultInputItemInWallet);
   const [outputCurrency, setOutputCurrency] = useState(defaultOutputItem);
 
-  const prevDefaultOutputItem = usePrevious(defaultOutputItem);
-  const prevDefaultInputItemInWallet = usePrevious(defaultInputItemInWallet);
+  const { calls } = useUniswapCalls(inputCurrency, outputCurrency);
 
   const previousInputCurrency = usePrevious(inputCurrency);
   const previousOutputCurrency = usePrevious(outputCurrency);
 
   const { uniswapAssetsInWallet } = useUniswapAssetsInWallet();
-  const {
-    updateUniswapInputCurrency,
-    updateUniswapOutputCurrency,
-  } = useUniswapCurrencyReserves();
 
   useEffect(() => {
-    if (defaultOutputItem && !prevDefaultOutputItem) {
-      updateUniswapOutputCurrency(defaultOutputItem);
-    }
-  }, [
-    defaultInputItemInWallet,
-    defaultOutputItem,
-    prevDefaultOutputItem,
-    updateUniswapOutputCurrency,
-  ]);
+    if (!inputCurrency || !outputCurrency || isEmpty(calls)) return;
+    if (
+      isSameAsset(inputCurrency, previousInputCurrency) &&
+      isSameAsset(outputCurrency, previousOutputCurrency)
+    )
+      return;
 
-  useEffect(() => {
-    if (defaultInputItemInWallet && !prevDefaultInputItemInWallet) {
-      updateUniswapInputCurrency(defaultInputItemInWallet);
-    }
+    dispatch(multicallAddListeners({ calls, chainId }));
+    dispatch(multicallUpdateOutdatedListeners());
   }, [
-    defaultInputItemInWallet,
-    prevDefaultInputItemInWallet,
-    updateUniswapInputCurrency,
+    calls,
+    chainId,
+    dispatch,
+    inputCurrency,
+    outputCurrency,
+    previousInputCurrency,
+    previousOutputCurrency,
   ]);
 
   const updateInputCurrency = useCallback(
@@ -162,8 +168,6 @@ export default function useUniswapCurrencies({
       logger.log('[update input curr] prev input curr', previousInputCurrency);
 
       setInputCurrency(newInputCurrency);
-
-      updateUniswapInputCurrency(newInputCurrency);
 
       if (userSelected && isSameAsset(newInputCurrency, outputCurrency)) {
         logger.log(
@@ -206,7 +210,6 @@ export default function useUniswapCurrencies({
       previousInputCurrency,
       type,
       updateOutputCurrency,
-      updateUniswapInputCurrency,
     ]
   );
 
@@ -221,7 +224,6 @@ export default function useUniswapCurrencies({
         '[update output curr] input currency at the moment',
         inputCurrency
       );
-      updateUniswapOutputCurrency(newOutputCurrency);
 
       setOutputCurrency(newOutputCurrency);
 
@@ -239,7 +241,7 @@ export default function useUniswapCurrencies({
           logger.log(
             '[update output curr] updating input curr with prev output curr'
           );
-          updateInputCurrency(previousOutputCurrency, false);
+          updateInputCurrency(existsInWallet, false);
         } else {
           logger.log('[update output curr] updating input curr with nothing');
           updateInputCurrency(null, false);
@@ -262,7 +264,6 @@ export default function useUniswapCurrencies({
       type,
       uniswapAssetsInWallet,
       updateInputCurrency,
-      updateUniswapOutputCurrency,
     ]
   );
 

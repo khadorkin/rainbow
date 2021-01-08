@@ -7,7 +7,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { InteractionManager, Platform } from 'react-native';
+import { InteractionManager } from 'react-native';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import { useDispatch } from 'react-redux';
 import styled from 'styled-components';
@@ -55,11 +55,29 @@ const listPaddingBottom = 6;
 const walletRowHeight = 59;
 const maxListHeight = deviceHeight - 220;
 
-const EditButton = styled(ButtonPressAnimation).attrs({ scaleTo: 0.96 })`
+const EditButton = styled(ButtonPressAnimation).attrs(({ editMode }) => ({
+  radiusAndroid: 24,
+  scaleTo: 0.96,
+  wrapperStyle: {
+    alignSelf: 'flex-end',
+    height: 40,
+    marginRight: 7,
+    width: editMode ? 70 : 58,
+  },
+}))`
   padding: 12px;
+  ${ios
+    ? `
   position: absolute;
   right: 7px;
   top: 6px;
+  `
+    : `
+    position: relative;
+    right: 0px;
+    top: -10px;
+    z-index: 99999;
+  `}
 `;
 
 const EditButtonLabel = styled(Text).attrs(({ editMode }) => ({
@@ -112,13 +130,13 @@ export default function ChangeWalletSheet() {
 
   const walletRowCount = useMemo(() => getWalletRowCount(wallets), [wallets]);
 
-  let headerHeight = 30;
+  let headerHeight = android ? 0 : 30;
   let listHeight =
     walletRowHeight * walletRowCount + footerHeight + listPaddingBottom;
   let scrollEnabled = false;
   let showDividers = false;
   if (listHeight > maxListHeight) {
-    headerHeight = 42;
+    headerHeight = android ? 0 : 40;
     listHeight = maxListHeight;
     scrollEnabled = true;
     showDividers = true;
@@ -326,7 +344,7 @@ export default function ChangeWalletSheet() {
             isNewProfile: true,
             onCloseModal: async args => {
               if (args) {
-                setIsWalletLoading(WalletLoadingStates.CREATING_ACCOUNT);
+                setIsWalletLoading(WalletLoadingStates.CREATING_WALLET);
                 const name = get(args, 'name', '');
                 const color = get(args, 'color', colors.getRandomColor());
                 // Check if the selected wallet is the primary
@@ -437,14 +455,14 @@ export default function ChangeWalletSheet() {
 
   return (
     <Sheet borderRadius={30}>
-      {Platform.OS === 'android' && <Whitespace />}
+      {android && <Whitespace />}
       <Column height={headerHeight} justify="space-between">
         <SheetTitle>Wallets</SheetTitle>
         {showDividers && (
           <Divider color={colors.rowDividerExtraLight} inset={[0, 15]} />
         )}
       </Column>
-      <EditButton onPress={() => setEditMode(e => !e)}>
+      <EditButton editMode={editMode} onPress={() => setEditMode(e => !e)}>
         <EditButtonLabel editMode={editMode}>
           {editMode ? 'Done' : 'Edit'}
         </EditButtonLabel>

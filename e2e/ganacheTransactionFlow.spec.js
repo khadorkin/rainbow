@@ -1,10 +1,17 @@
 /* eslint-disable no-undef */
 /* eslint-disable jest/expect-expect */
+import { exec } from 'child_process';
 import * as Helpers from './helpers';
+
+beforeAll(async () => {
+  // Reset the app state
+  await exec('yarn ganache');
+  await Helpers.delay(10000);
+});
 
 describe('Ganache Transaction Flow', () => {
   it('Should show the welcome screen', async () => {
-    await device.disableSynchronization();
+    await Helpers.disableSynchronization();
     await Helpers.checkIfVisible('welcome-screen');
   });
 
@@ -34,8 +41,16 @@ describe('Ganache Transaction Flow', () => {
   it('Should navigate to the Wallet screen after tapping on "Import Wallet"', async () => {
     await Helpers.delay(2000);
     await Helpers.tap('wallet-info-submit-button');
+    if (device.getPlatform() === 'android') {
+      await Helpers.checkIfVisible('pin-authentication-screen');
+      // Set the pin
+      await Helpers.authenticatePin('1234');
+      // Confirm it
+      await Helpers.authenticatePin('1234');
+    }
     await Helpers.delay(3000);
     await Helpers.checkIfVisible('wallet-screen');
+    await Helpers.delay(5000);
   });
 
   it('Should navigate to the Profile screen after swiping right', async () => {
@@ -60,7 +75,7 @@ describe('Ganache Transaction Flow', () => {
 
   it('Should show Ganache Toast after pressing Connect To Ganache', async () => {
     await Helpers.tap('ganache-section');
-    await Helpers.delay(30000);
+    await Helpers.delay(10000);
     await Helpers.checkIfVisible('testnet-toast-Ganache');
     await Helpers.swipe('profile-screen', 'left', 'slow');
     await Helpers.delay(3000);
@@ -153,8 +168,8 @@ describe('Ganache Transaction Flow', () => {
     await Helpers.delay(3000);
     await Helpers.typeText('send-asset-form-field', 'poopcoin.eth', false);
     await Helpers.delay(3000);
-    await Helpers.tapByText('CryptoKitties');
-    await Helpers.delay(3000);
+    await Helpers.tap('CryptoKitties-family-header');
+    await Helpers.delay(2000);
     await Helpers.tapByText('Arun Cattybinky');
     await Helpers.delay(3000);
     await Helpers.tapAndLongPress('send-sheet-confirm');
@@ -177,7 +192,7 @@ describe('Ganache Transaction Flow', () => {
     await Helpers.swipe('profile-screen', 'left', 'slow');
   });
 
-  it('Should show completed send  ETH', async () => {
+  it('Should send ETH', async () => {
     await Helpers.delay(3000);
     await Helpers.tap('send-fab');
     await Helpers.delay(3000);
@@ -185,7 +200,7 @@ describe('Ganache Transaction Flow', () => {
     await Helpers.delay(3000);
     await Helpers.tap('send-asset-ETH');
     await Helpers.delay(3000);
-    await Helpers.typeText('selected-asset-field-input', '.01', true);
+    await Helpers.typeText('selected-asset-field-input', '.001', true);
     await Helpers.delay(3000);
     await Helpers.tapAndLongPress('send-sheet-confirm');
     await Helpers.delay(10000);
@@ -213,12 +228,11 @@ describe('Ganache Transaction Flow', () => {
       await Helpers.checkIfVisible('Sending-Compound Sai');
     }
   });*/
-
   it('Should show completed send ERC20 (cSAI)', async () => {
     try {
-      await Helpers.checkIfVisible('Sent-Compound Sai');
+      await Helpers.checkIfVisible('Sent-Compound SAI');
     } catch (e) {
-      await Helpers.checkIfVisible('Sending-Compound Sai');
+      await Helpers.checkIfVisible('Sending-Compound SAI');
     }
   });
 
@@ -249,5 +263,6 @@ describe('Ganache Transaction Flow', () => {
   afterAll(async () => {
     // Reset the app state
     await device.clearKeychain();
+    await exec('kill $(lsof -t -i:7545)');
   });
 });

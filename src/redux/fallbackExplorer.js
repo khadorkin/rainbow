@@ -1,6 +1,8 @@
-import { ethers } from 'ethers';
+import { BigNumber } from '@ethersproject/bignumber';
+import { Contract } from '@ethersproject/contracts';
 import { get, toLower, uniqBy } from 'lodash';
 import { web3Provider } from '../handlers/web3';
+import AssetTypes from '../helpers/assetTypes';
 import networkInfo from '../helpers/networkInfo';
 import networkTypes from '../helpers/networkTypes';
 import { delay } from '../helpers/utilities';
@@ -107,6 +109,17 @@ const findAssetsToWatch = async (address, latestTxBlockNumber, dispatch) => {
   ];
 };
 
+const getTokenType = tx => {
+  if (tx.tokenSymbol === 'UNI-V1') return AssetTypes.uniswap;
+  if (tx.tokenSymbol === 'UNI-V2') return AssetTypes.uniswapV2;
+  if (
+    toLower(tx.tokenName).indexOf('compound') !== -1 &&
+    tx.tokenSymbol !== 'COMP'
+  )
+    return AssetTypes.compound;
+  return undefined;
+};
+
 const discoverTokens = async (
   coingeckoIds,
   address,
@@ -151,15 +164,19 @@ const discoverTokens = async (
     });
 
     return uniqBy(
-      allTxs.map(tx => ({
-        asset: {
-          asset_code: getCurrentAddress(tx.contractAddress.toLowerCase()),
-          coingecko_id: coingeckoIds[tx.contractAddress.toLowerCase()],
-          decimals: tx.tokenDecimal,
-          name: tx.tokenName,
-          symbol: tx.tokenSymbol,
-        },
-      })),
+      allTxs.map(tx => {
+        const type = getTokenType(tx);
+        return {
+          asset: {
+            asset_code: getCurrentAddress(tx.contractAddress.toLowerCase()),
+            coingecko_id: coingeckoIds[tx.contractAddress.toLowerCase()],
+            decimals: Number(tx.tokenDecimal),
+            name: tx.tokenName,
+            symbol: tx.tokenSymbol,
+            type,
+          },
+        };
+      }),
       token => token.asset.asset_code
     );
   }
@@ -200,7 +217,7 @@ const fetchAssetPrices = async (coingeckoIds, nativeCurrency) => {
 };
 
 const fetchAssetBalances = async (tokens, address, network) => {
-  const balanceCheckerContract = new ethers.Contract(
+  const balanceCheckerContract = new Contract(
     get(networkInfo[network], 'balance_checker_contract_address'),
     balanceCheckerContractAbi,
     web3Provider
@@ -213,7 +230,7 @@ const fetchAssetBalances = async (tokens, address, network) => {
       balances[addr] = {};
       tokens.forEach((tokenAddr, tokenIdx) => {
         const balance = values[addrIdx * tokens.length + tokenIdx];
-        balances[addr][tokenAddr] = balance;
+        balances[addr][tokenAddr] = balance.toString();
       });
     });
     return balances[address];
@@ -298,7 +315,7 @@ export const fallbackExplorerInit = () => async (dispatch, getState) => {
       network
     );
 
-    let total = ethers.utils.bigNumberify(0);
+    let total = BigNumber.from(0);
 
     if (balances) {
       Object.keys(balances).forEach(key => {

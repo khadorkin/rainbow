@@ -1,8 +1,6 @@
-import { get, isNil, keys, map, toLower } from 'lodash';
+import { concat, get, isNil, keys, map, toLower } from 'lodash';
 import { DATA_API_KEY, DATA_ORIGIN } from 'react-native-dotenv';
 import io from 'socket.io-client';
-import { chartExpandedAvailable } from '../config/experimental';
-import NetworkTypes from '../helpers/networkTypes';
 import { assetChartsReceived, DEFAULT_CHART_TYPE } from './charts';
 import {
   addressAssetsReceived,
@@ -15,10 +13,8 @@ import {
   fallbackExplorerClearState,
   fallbackExplorerInit,
 } from './fallbackExplorer';
-import {
-  savingsDecrementNumberOfJustFinishedDepositsOrWithdrawals,
-  savingsIncrementNumberOfJustFinishedDepositsOrWithdrawals,
-} from './savings';
+import { disableCharts, forceFallbackProvider } from '@rainbow-me/config/debug';
+import NetworkTypes from '@rainbow-me/helpers/networkTypes';
 import logger from 'logger';
 
 // -- Constants --------------------------------------- //
@@ -29,7 +25,7 @@ const EXPLORER_DISABLE_FALLBACK = 'explorer/EXPLORER_DISABLE_FALLBACK';
 const EXPLORER_SET_FALLBACK_HANDLER = 'explorer/EXPLORER_SET_FALLBACK_HANDLER';
 
 const TRANSACTIONS_LIMIT = 1000;
-const ZERION_ASSETS_TIMEOUT = 10000; // 10 seconds
+const ZERION_ASSETS_TIMEOUT = 15000; // 15 seconds
 
 const messages = {
   ADDRESS_ASSETS: {
@@ -81,16 +77,19 @@ const addressSubscription = (address, currency, action = 'subscribe') => [
   },
 ];
 
-const assetsSubscription = (assetCodes, currency, action = 'subscribe') => [
-  action,
-  {
-    payload: {
-      asset_codes: assetCodes,
-      currency: toLower(currency),
+const assetsSubscription = (pairs, currency, action = 'subscribe') => {
+  const assetCodes = concat(keys(pairs), 'eth');
+  return [
+    action,
+    {
+      payload: {
+        asset_codes: assetCodes,
+        currency: toLower(currency),
+      },
+      scope: ['prices'],
     },
-    scope: ['prices'],
-  },
-];
+  ];
+};
 
 const chartsRetrieval = (assetCodes, currency, chartType, action = 'get') => [
   action,
@@ -120,7 +119,7 @@ const explorerUnsubscribe = () => (dispatch, getState) => {
   }
   if (!isNil(assetsSocket)) {
     assetsSocket.emit(
-      ...assetsSubscription(keys(pairs), nativeCurrency, 'unsubscribe')
+      ...assetsSubscription(pairs, nativeCurrency, 'unsubscribe')
     );
     assetsSocket.close();
   }
@@ -174,7 +173,7 @@ export const explorerInit = () => async (dispatch, getState) => {
 
   // Fallback to the testnet data provider
   // if we're not on mainnnet
-  if (network !== NetworkTypes.mainnet) {
+  if (network !== NetworkTypes.mainnet || forceFallbackProvider) {
     return dispatch(fallbackExplorerInit());
   }
 
@@ -200,7 +199,7 @@ export const explorerInit = () => async (dispatch, getState) => {
   dispatch(listenOnAssetMessages(newAssetsSocket));
 
   newAssetsSocket.on(messages.CONNECT, () => {
-    newAssetsSocket.emit(...assetsSubscription(keys(pairs), nativeCurrency));
+    newAssetsSocket.emit(...assetsSubscription(pairs, nativeCurrency));
   });
 
   if (network === NetworkTypes.mainnet) {
@@ -225,7 +224,6 @@ export const emitChartsRequest = (
   assetAddress,
   chartType = DEFAULT_CHART_TYPE
 ) => (dispatch, getState) => {
-  if (!chartExpandedAvailable) return;
   const { nativeCurrency } = getState().settings;
   const { assetsSocket } = getState().explorer;
 
@@ -234,7 +232,12 @@ export const emitChartsRequest = (
     assetCodes = [assetAddress];
   } else {
     const { assets } = getState().data;
-    assetCodes = map(assets, 'address');
+    const assetAddresses = map(assets, 'address');
+
+    const { liquidityTokens } = getState().uniswapLiquidity;
+    const lpTokenAddresses = map(liquidityTokens, token => token.address);
+
+    assetCodes = concat(assetAddresses, lpTokenAddresses);
   }
   assetsSocket?.emit?.(
     ...chartsRetrieval(assetCodes, nativeCurrency, chartType)
@@ -258,6 +261,7 @@ const listenOnAssetMessages = socket => dispatch => {
 
 const listenOnAddressMessages = socket => dispatch => {
   socket.on(messages.ADDRESS_TRANSACTIONS.RECEIVED, message => {
+    // logger.log('txns received', get(message, 'payload.transactions', []));
     dispatch(transactionsReceived(message));
   });
 
@@ -268,23 +272,6 @@ const listenOnAddressMessages = socket => dispatch => {
 
   socket.on(messages.ADDRESS_TRANSACTIONS.CHANGED, message => {
     logger.log('txns changed', get(message, 'payload.transactions', []));
-
-    const transactions = get(message, 'payload.transactions', []);
-    let isFoundConfirmed = false;
-    for (let transaction of transactions) {
-      if (
-        (transaction?.type === 'deposit' || transaction?.type === 'withdraw') &&
-        transaction?.status === 'confirmed'
-      ) {
-        isFoundConfirmed = true;
-      }
-    }
-    if (isFoundConfirmed) {
-      dispatch(savingsIncrementNumberOfJustFinishedDepositsOrWithdrawals());
-      setTimeout(() => {
-        dispatch(savingsDecrementNumberOfJustFinishedDepositsOrWithdrawals());
-      }, 60000);
-    }
     dispatch(transactionsReceived(message, true));
   });
 
@@ -295,7 +282,9 @@ const listenOnAddressMessages = socket => dispatch => {
 
   socket.on(messages.ADDRESS_ASSETS.RECEIVED, message => {
     dispatch(addressAssetsReceived(message));
-    dispatch(emitChartsRequest());
+    if (!disableCharts) {
+      dispatch(emitChartsRequest());
+    }
     if (isValidAssetsResponseFromZerion(message)) {
       logger.log(
         '😬 Cancelling fallback data provider listener. Zerion is good!'

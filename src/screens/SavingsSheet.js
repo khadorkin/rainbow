@@ -3,7 +3,7 @@ import analytics from '@segment/analytics-react-native';
 import React, { Fragment, useCallback, useEffect, useMemo } from 'react';
 import { Alert, StatusBar } from 'react-native';
 import { useSafeArea } from 'react-native-safe-area-context';
-import styled from 'styled-components/primitives';
+import styled from 'styled-components/native';
 import Divider from '../components/Divider';
 import { SavingsCoinRow } from '../components/coin-row';
 import {
@@ -33,7 +33,7 @@ import Routes from '@rainbow-me/routes';
 import { colors, position } from '@rainbow-me/styles';
 
 export const SavingsSheetEmptyHeight = 313;
-export const SavingsSheetHeight = 352;
+export const SavingsSheetHeight = android ? 410 : 352;
 
 const Container = styled(Centered).attrs({ direction: 'column' })`
   ${position.cover};
@@ -67,6 +67,7 @@ const SavingsSheet = () => {
 
   const savingsRowItem = useMemo(
     () => ({
+      address: underlying.address,
       lifetimeSupplyInterestAccrued,
       name: underlying.name,
       supplyBalanceUnderlying,
@@ -77,6 +78,7 @@ const SavingsSheet = () => {
       lifetimeSupplyInterestAccrued,
       supplyBalanceUnderlying,
       supplyRate,
+      underlying.address,
       underlying.name,
       underlying.symbol,
     ]
@@ -149,6 +151,7 @@ const SavingsSheet = () => {
     >
       <StatusBar barStyle="light-content" />
       <SlackSheet
+        additionalTopPadding={android}
         contentHeight={isEmpty ? SavingsSheetEmptyHeight : SavingsSheetHeight}
       >
         {isEmpty ? (
@@ -168,11 +171,15 @@ const SavingsSheet = () => {
                 color={colors.dark}
                 label="􀁏 Withdraw"
                 onPress={onWithdraw}
+                radiusAndroid={24}
+                weight="bold"
               />
               <SheetActionButton
                 color={colors.swapPurple}
                 label="􀁍 Deposit"
                 onPress={onDeposit}
+                radiusAndroid={24}
+                weight="bold"
               />
             </SheetActionButtonRow>
             <Divider color={colors.rowDividerLight} zIndex={0} />

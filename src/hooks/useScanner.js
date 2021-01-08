@@ -1,11 +1,7 @@
 import analytics from '@segment/analytics-react-native';
 import lang from 'i18n-js';
 import { useCallback, useEffect, useState } from 'react';
-import {
-  InteractionManager,
-  Alert as NativeAlert,
-  Platform,
-} from 'react-native';
+import { InteractionManager, Alert as NativeAlert } from 'react-native';
 import { PERMISSIONS, request } from 'react-native-permissions';
 import { Alert } from '../components/alerts';
 import isNativeStackAvailable from '../helpers/isNativeStackAvailable';
@@ -40,7 +36,7 @@ function useScannerState(enabled) {
   }, [enabled]);
 
   useEffect(() => {
-    if (enabled && !wasEnabled && Platform.OS === 'ios') {
+    if (enabled && !wasEnabled && ios) {
       request(PERMISSIONS.IOS.CAMERA).then(permission => {
         const result = permission === 'granted';
         if (isCameraAuthorized !== result) {
@@ -94,7 +90,7 @@ export default function useScanner(enabled) {
       navigate(Routes.WALLET_SCREEN);
 
       // And then navigate to Send sheet
-      if (isNativeStackAvailable) {
+      if (isNativeStackAvailable || android) {
         navigate(Routes.SEND_FLOW, {
           params: { address },
           screen: Routes.SEND_SHEET,

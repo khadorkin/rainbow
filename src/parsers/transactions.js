@@ -31,7 +31,7 @@ import {
   convertRawAmountToNativeDisplay,
 } from '../helpers/utilities';
 import { savingsAssetsList } from '../references';
-import { ethereumUtils } from '../utils';
+import { ethereumUtils, getTokenMetadata } from '../utils';
 
 const LAST_TXN_HASH_BUFFER = 20;
 
@@ -56,7 +56,6 @@ export const parseTransactions = (
   nativeCurrency,
   existingTransactions,
   purchaseTransactions,
-  tokenOverrides,
   network,
   appended = false
 ) => {
@@ -73,7 +72,6 @@ export const parseTransactions = (
         txn,
         accountAddress,
         nativeCurrency,
-        tokenOverrides,
         purchaseTransactionHashes,
         network
       )
@@ -153,7 +151,6 @@ const parseTransaction = (
   txn,
   accountAddress,
   nativeCurrency,
-  tokenOverrides,
   purchaseTransactions,
   network
 ) => {
@@ -186,7 +183,10 @@ const parseTransaction = (
     const assetInternalTransaction = {
       address_from: transaction.from,
       address_to: transaction.to,
-      asset,
+      asset: {
+        asset_code: asset.address,
+        ...asset,
+      },
       value: transaction.value,
     };
     internalTransactions = [assetInternalTransaction];
@@ -202,7 +202,7 @@ const parseTransaction = (
       address_from: transaction.from,
       address_to: transaction.to,
       asset: {
-        address: 'eth',
+        asset_code: 'eth',
         decimals: 18,
         name: 'Ethereum',
         symbol: 'ETH',
@@ -225,13 +225,13 @@ const parseTransaction = (
   if (
     isEmpty(internalTransactions) &&
     transaction.type === TransactionTypes.execution &&
-    txn.direction === 'self'
+    txn.direction === DirectionTypes.self
   ) {
     const ethInternalTransaction = {
       address_from: transaction.from,
       address_to: transaction.to,
       asset: {
-        address: 'eth',
+        asset_code: 'eth',
         decimals: 18,
         name: 'Ethereum',
         symbol: 'ETH',
@@ -246,12 +246,13 @@ const parseTransaction = (
   }
   internalTransactions = internalTransactions.map((internalTxn, index) => {
     const address = toLower(get(internalTxn, 'asset.asset_code'));
+    const metadata = getTokenMetadata(address);
     const updatedAsset = {
       address,
       decimals: get(internalTxn, 'asset.decimals'),
       name: get(internalTxn, 'asset.name'),
       symbol: toUpper(get(internalTxn, 'asset.symbol') || ''),
-      ...tokenOverrides[address],
+      ...metadata,
     };
     const priceUnit =
       internalTxn.price || get(internalTxn, 'asset.price.value') || 0;
@@ -289,7 +290,10 @@ const parseTransaction = (
 
     return {
       ...transaction,
-      address: toChecksumAddress(updatedAsset.address),
+      address:
+        updatedAsset.address.toLowerCase() === 'eth'
+          ? updatedAsset.address.toLowerCase()
+          : toChecksumAddress(updatedAsset.address),
       balance: convertRawAmountToBalance(valueUnit, updatedAsset),
       description,
       from: internalTxn.address_from,
@@ -374,6 +378,15 @@ export const getTransactionLabel = ({
   status,
   type,
 }) => {
+  if (status === TransactionStatusTypes.cancelling)
+    return TransactionStatusTypes.cancelling;
+
+  if (status === TransactionStatusTypes.cancelled)
+    return TransactionStatusTypes.cancelled;
+
+  if (status === TransactionStatusTypes.speeding_up)
+    return TransactionStatusTypes.speeding_up;
+
   if (pending && type === TransactionTypes.purchase)
     return TransactionStatusTypes.purchasing;
 

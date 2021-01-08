@@ -5,8 +5,10 @@ import { get, isEmpty, isString, toLower } from 'lodash';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { InteractionManager, Keyboard, StatusBar } from 'react-native';
 import { getStatusBarHeight, isIphoneX } from 'react-native-iphone-x-helper';
+import { KeyboardArea } from 'react-native-keyboard-area';
 import { useDispatch } from 'react-redux';
 import styled from 'styled-components/primitives';
+import { dismissingScreenListener } from '../../shim';
 import { Column } from '../components/layout';
 import {
   SendAssetForm,
@@ -48,7 +50,7 @@ import { borders, colors } from '@rainbow-me/styles';
 import { deviceUtils, gasUtils } from '@rainbow-me/utils';
 import logger from 'logger';
 
-const sheetHeight = deviceUtils.dimensions.height - 10;
+const sheetHeight = deviceUtils.dimensions.height - (android ? 30 : 10);
 const statusBarHeight = getStatusBarHeight(true);
 
 const Container = styled.View`
@@ -64,14 +66,20 @@ const SheetContainer = styled(Column).attrs({
 })`
   ${borders.buildRadius('top', isNativeStackAvailable ? 0 : 16)};
   background-color: ${colors.white};
-  height: ${isNativeStackAvailable ? sheetHeight : '100%'};
+  height: ${isNativeStackAvailable || android ? sheetHeight : '100%'};
   width: 100%;
+`;
+
+const KeyboardSizeView = styled(KeyboardArea)`
+  width: 100%;
+  background-color: ${({ showAssetForm }) =>
+    showAssetForm ? colors.lighterGrey : colors.white};
 `;
 
 export default function SendSheet(props) {
   const dispatch = useDispatch();
   const { isTinyPhone } = useDimensions();
-  const { navigate } = useNavigation();
+  const { navigate, addListener } = useNavigation();
   const { dataAddNewTransaction } = useTransactionConfirmation();
   const updateAssetOnchainBalanceIfNeeded = useUpdateAssetOnchainBalance();
   const { allAssets } = useAccountAssets();
@@ -87,6 +95,32 @@ export default function SendSheet(props) {
     updateGasPriceOption,
     updateTxFee,
   } = useGas();
+  const isDismissing = useRef(false);
+
+  const recipientFieldRef = useRef();
+
+  useEffect(() => {
+    if (ios) {
+      return;
+    }
+    dismissingScreenListener.current = () => {
+      Keyboard.dismiss();
+      isDismissing.current = true;
+    };
+    const unsubscribe = addListener(
+      'transitionEnd',
+      ({ data: { closing } }) => {
+        if (!closing && isDismissing.current) {
+          isDismissing.current = false;
+          recipientFieldRef?.current?.focus();
+        }
+      }
+    );
+    return () => {
+      unsubscribe();
+      dismissingScreenListener.current = undefined;
+    };
+  }, [addListener]);
   const { contacts, onRemoveContact, filteredContacts } = useContacts();
   const { sendableUniqueTokens } = useSendableUniqueTokens();
   const {
@@ -117,7 +151,6 @@ export default function SendSheet(props) {
   const showAssetForm = isValidAddress && !isEmpty(selected);
   const prevSelectedGasPrice = usePrevious(selectedGasPrice);
 
-  const recipientFieldRef = useRef();
   const { handleFocus, triggerFocus } = useMagicAutofocus(
     recipientFieldRef,
     useCallback(
@@ -312,6 +345,7 @@ export default function SendSheet(props) {
   ]);
 
   const submitTransaction = useCallback(async () => {
+    setIsAuthorizing(true);
     if (Number(amountDetails.assetAmount) <= 0) {
       logger.sentry('amountDetails.assetAmount ? ', amountDetails?.assetAmount);
       captureEvent('Preventing tx submit due to amount <= 0');
@@ -348,8 +382,6 @@ export default function SendSheet(props) {
   );
 
   const onLongPressSend = useCallback(() => {
-    setIsAuthorizing(true);
-
     if (isIphoneX()) {
       submitTransaction();
     } else {
@@ -430,7 +462,7 @@ export default function SendSheet(props) {
 
   return (
     <Container>
-      <StatusBar barStyle="light-content" />
+      {ios && <StatusBar barStyle="light-content" />}
       <SheetContainer>
         <SendHeader
           contacts={contacts}
@@ -501,6 +533,7 @@ export default function SendSheet(props) {
             }
           />
         )}
+        {android ? <KeyboardSizeView showAssetForm={showAssetForm} /> : null}
       </SheetContainer>
     </Container>
   );

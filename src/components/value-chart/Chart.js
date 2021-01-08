@@ -48,6 +48,7 @@ const ChartSpinner = styled(FastImage).attrs(({ color }) => ({
 
 const Container = styled(Column)`
   padding-bottom: 30px;
+  padding-top: ${ios ? 0 : 20}px;
   width: 100%;
 `;
 
@@ -106,6 +107,7 @@ export default function ChartWrapper({
   chartType,
   color,
   fetchingCharts,
+  isPool,
   updateChartType,
   showChart,
   showMonth,
@@ -118,9 +120,9 @@ export default function ChartWrapper({
   ]);
 
   const { progress } = useChartData();
-  const spinnerRotation = useSharedValue(0, 'spinnerRotation');
-  const spinnerScale = useSharedValue(0, 'spinnerScale');
-  const chartTimeSharedValue = useSharedValue('', 'chartTimeSharedValue');
+  const spinnerRotation = useSharedValue(0);
+  const spinnerScale = useSharedValue(0);
+  const chartTimeSharedValue = useSharedValue('');
 
   const { setOptions } = useNavigation();
   useEffect(
@@ -159,29 +161,21 @@ export default function ChartWrapper({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showLoadingState]);
 
-  const overlayStyle = useAnimatedStyle(
-    () => {
-      return {
-        opacity: spinnerScale.value,
-      };
-    },
-    [],
-    'overlayStyle'
-  );
+  const overlayStyle = useAnimatedStyle(() => {
+    return {
+      opacity: spinnerScale.value,
+    };
+  });
 
-  const spinnerStyle = useAnimatedStyle(
-    () => {
-      return {
-        opacity: spinnerScale.value,
-        transform: [
-          { rotate: `${spinnerRotation.value}deg` },
-          { scale: spinnerScale.value },
-        ],
-      };
-    },
-    undefined,
-    'spinnerStyle'
-  );
+  const spinnerStyle = useAnimatedStyle(() => {
+    return {
+      opacity: spinnerScale.value,
+      transform: [
+        { rotate: `${spinnerRotation.value}deg` },
+        { scale: spinnerScale.value },
+      ],
+    };
+  });
 
   const timespan = invert(ChartTypes)[chartType];
   const formattedTimespan =
@@ -204,6 +198,7 @@ export default function ChartWrapper({
         {...props}
         chartTimeSharedValue={chartTimeSharedValue}
         color={color}
+        isPool={isPool}
         showChart={showChart}
       />
       <ChartContainer showChart={showChart}>

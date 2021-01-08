@@ -1,14 +1,17 @@
 import { useIsFocused, useRoute } from '@react-navigation/native';
 import analytics from '@segment/analytics-react-native';
-import { concat, map } from 'lodash';
+import { concat, map, toLower } from 'lodash';
 import matchSorter from 'match-sorter';
 import React, {
+  Fragment,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from 'react';
+import { StatusBar } from 'react-native';
+import { IS_TESTING } from 'react-native-dotenv';
 import Animated, { Extrapolate } from 'react-native-reanimated';
 import styled from 'styled-components/primitives';
 import GestureBlocker from '../components/GestureBlocker';
@@ -20,7 +23,9 @@ import {
 } from '../components/exchange';
 import { Column, KeyboardFixedOpenLayout } from '../components/layout';
 import { Modal } from '../components/modal';
+import { addHexPrefix } from '../handlers/web3';
 import CurrencySelectionTypes from '../helpers/currencySelectionTypes';
+import tokenSectionTypes from '../helpers/tokenSectionTypes';
 import { delayNext } from '../hooks/useMagicAutofocus';
 import { useNavigation } from '../navigation/Navigation';
 import {
@@ -40,6 +45,22 @@ const TabTransitionAnimation = styled(Animated.View)`
 `;
 
 const headerlessSection = data => [{ data, title: '' }];
+const Wrapper = ios ? KeyboardFixedOpenLayout : Fragment;
+
+const searchCurrencyList = (searchList, query) => {
+  const isAddress = query.match(/^(0x)?[0-9a-fA-F]{40}$/);
+
+  if (isAddress) {
+    const formattedQuery = toLower(addHexPrefix(query));
+    return filterList(searchList, formattedQuery, ['address'], {
+      threshold: matchSorter.rankings.CASE_SENSITIVE_EQUAL,
+    });
+  }
+
+  return filterList(searchList, query, ['symbol', 'name'], {
+    threshold: matchSorter.rankings.CONTAINS,
+  });
+};
 
 export default function CurrencySelectModal() {
   const isFocused = useIsFocused();
@@ -58,10 +79,11 @@ export default function CurrencySelectModal() {
   } = useRoute();
 
   const searchInputRef = useRef();
-  const { handleFocus } = useMagicAutofocus(searchInputRef);
+  const { handleFocus } = useMagicAutofocus(searchInputRef, undefined, true);
 
   const [assetsToFavoriteQueue, setAssetsToFavoriteQueue] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
   const [searchQueryForSearch, setSearchQueryForSearch] = useState('');
   const searchQueryExists = useMemo(() => searchQuery.length > 0, [
     searchQuery,
@@ -72,7 +94,7 @@ export default function CurrencySelectModal() {
     favorites,
     globalHighLiquidityAssets,
     globalLowLiquidityAssets,
-    isInitialized,
+    loadingAllTokens,
     updateFavorites,
   } = useUniswapAssets();
   const { uniswapAssetsInWallet } = useUniswapAssetsInWallet();
@@ -82,11 +104,9 @@ export default function CurrencySelectModal() {
     if (type === CurrencySelectionTypes.input) {
       filteredList = headerlessSection(uniswapAssetsInWallet);
       if (searchQueryForSearch) {
-        filteredList = filterList(
+        filteredList = searchCurrencyList(
           uniswapAssetsInWallet,
-          searchQueryForSearch,
-          ['symbol', 'name'],
-          { threshold: matchSorter.rankings.CONTAINS }
+          searchQueryForSearch
         );
         filteredList = headerlessSection(filteredList);
       }
@@ -95,15 +115,16 @@ export default function CurrencySelectModal() {
       if (searchQueryForSearch) {
         const [filteredBest, filteredHigh, filteredLow] = map(
           [curatedSection, globalHighLiquidityAssets, globalLowLiquidityAssets],
-          section =>
-            filterList(section, searchQueryForSearch, ['symbol', 'name'], {
-              threshold: matchSorter.rankings.CONTAINS,
-            })
+          section => searchCurrencyList(section, searchQueryForSearch)
         );
 
         filteredList = [];
         filteredBest.length &&
-          filteredList.push({ data: filteredBest, title: '' });
+          filteredList.push({
+            data: filteredBest,
+            title: tokenSectionTypes.verifiedTokenSection,
+            useGradientText: IS_TESTING === 'true' ? false : true,
+          });
 
         const filteredHighWithoutScams = filterScams(
           filteredBest,
@@ -113,7 +134,7 @@ export default function CurrencySelectModal() {
         filteredHighWithoutScams.length &&
           filteredList.push({
             data: filteredHighWithoutScams,
-            title: filteredBest.length ? 'MORE RESULTS' : '',
+            title: tokenSectionTypes.unverifiedTokenSection,
           });
 
         const filteredLowWithoutScams = filterScams(filteredBest, filteredLow);
@@ -121,13 +142,19 @@ export default function CurrencySelectModal() {
         filteredLowWithoutScams.length &&
           filteredList.push({
             data: filteredLowWithoutScams,
-            title: 'LOW LIQUIDITY',
+            title: tokenSectionTypes.lowLiquidityTokenSection,
           });
       } else {
-        filteredList = headerlessSection(concat(favorites, curatedAssets));
+        filteredList = [
+          {
+            data: concat(favorites, curatedAssets),
+            title: tokenSectionTypes.verifiedTokenSection,
+            useGradientText: IS_TESTING === 'true' ? false : true,
+          },
+        ];
       }
     }
-
+    setIsSearching(false);
     return filteredList;
   }, [
     curatedAssets,
@@ -143,7 +170,10 @@ export default function CurrencySelectModal() {
   useEffect(() => {
     stopQueryDebounce();
     startQueryDebounce(
-      () => setSearchQueryForSearch(searchQuery),
+      () => {
+        setIsSearching(true);
+        setSearchQueryForSearch(searchQuery);
+      },
       searchQuery === '' ? 1 : 250
     );
   }, [searchQuery, startQueryDebounce, stopQueryDebounce]);
@@ -217,8 +247,9 @@ export default function CurrencySelectModal() {
   useEffect(() => {
     // on new focus state
     if (isFocused !== prevIsFocused) {
+      android && toggleGestureEnabled(!isFocused);
       startInteraction(() => {
-        toggleGestureEnabled(!isFocused);
+        ios && toggleGestureEnabled(!isFocused);
       });
     }
 
@@ -237,6 +268,8 @@ export default function CurrencySelectModal() {
     toggleGestureEnabled,
   ]);
 
+  const isFocusedAndroid = useIsFocused() && android;
+
   const shouldUpdateFavoritesRef = useRef(false);
   useEffect(() => {
     if (!searchQueryExists && shouldUpdateFavoritesRef.current) {
@@ -248,30 +281,43 @@ export default function CurrencySelectModal() {
   }, [assetsToFavoriteQueue, handleApplyFavoritesQueue, searchQueryExists]);
 
   return (
-    <KeyboardFixedOpenLayout>
+    <Wrapper>
       <TabTransitionAnimation
         style={{
-          opacity: interpolate(tabTransitionPosition, {
-            extrapolate: Extrapolate.CLAMP,
-            inputRange: [0, 1, 1],
-            outputRange: [0, 1, 1],
-          }),
+          opacity: android
+            ? 1
+            : interpolate(tabTransitionPosition, {
+                extrapolate: Extrapolate.CLAMP,
+                inputRange: [0, 1, 1],
+                outputRange: [0, 1, 1],
+              }),
           transform: [
             {
-              translateX: interpolate(tabTransitionPosition, {
-                extrapolate: Animated.Extrapolate.CLAMP,
-                inputRange: [0, 1, 1],
-                outputRange: [8, 0, 0],
-              }),
+              translateX: android
+                ? 0
+                : interpolate(tabTransitionPosition, {
+                    extrapolate: Animated.Extrapolate.CLAMP,
+                    inputRange: [0, 1, 1],
+                    outputRange: [8, 0, 0],
+                  }),
             },
           ],
         }}
       >
-        <Modal containerPadding={0} height="100%" overflow="hidden" radius={30}>
+        <Modal
+          containerPadding={0}
+          fullScreenOnAndroid
+          height="100%"
+          overflow="hidden"
+          radius={30}
+        >
+          {isFocusedAndroid && <StatusBar barStyle="dark-content" />}
           <GestureBlocker type="top" />
           <Column flex={1}>
             <CurrencySelectModalHeader testID="currency-select-header" />
             <ExchangeSearch
+              isFetching={loadingAllTokens}
+              isSearching={isSearching}
               onChangeText={setSearchQuery}
               onFocus={handleFocus}
               ref={searchInputRef}
@@ -282,7 +328,7 @@ export default function CurrencySelectModal() {
               <CurrencySelectionList
                 itemProps={itemProps}
                 listItems={currencyList}
-                loading={!isInitialized}
+                loading={loadingAllTokens}
                 query={searchQueryForSearch}
                 showList={isFocused}
                 testID="currency-select-list"
@@ -293,6 +339,6 @@ export default function CurrencySelectModal() {
           <GestureBlocker type="bottom" />
         </Modal>
       </TabTransitionAnimation>
-    </KeyboardFixedOpenLayout>
+    </Wrapper>
   );
 }

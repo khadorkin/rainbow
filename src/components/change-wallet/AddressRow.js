@@ -1,6 +1,5 @@
-import PropTypes from 'prop-types';
 import React, { useCallback } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { removeFirstEmojiFromString } from '../../helpers/emojiHandler';
 import { deviceUtils } from '../../utils';
@@ -15,6 +14,7 @@ import { TruncatedAddress, TruncatedText } from '../text';
 import { colors, fonts, getFontSize } from '@rainbow-me/styles';
 
 const maxAccountLabelWidth = deviceUtils.dimensions.width - 88;
+const NOOP = () => undefined;
 
 const sx = StyleSheet.create({
   accountLabel: {
@@ -87,7 +87,7 @@ const linearGradientProps = {
 const OptionsIcon = ({ onPress }) => (
   <ButtonPressAnimation onPress={onPress} scaleTo={0.9}>
     <Centered height={40} width={60}>
-      {Platform.OS === 'android' ? (
+      {android ? (
         <Icon circle color={colors.appleBlue} name="threeDots" tightDots />
       ) : (
         <Text style={sx.editIcon}>􀍡</Text>
@@ -129,7 +129,7 @@ export default function AddressRow({ data, editMode, onPress, onEditWallet }) {
       <ButtonPressAnimation
         enableHapticFeedback={!editMode}
         onLongPress={onOptionsPress}
-        onPress={onPress}
+        onPress={editMode ? onOptionsPress : onPress}
         scaleTo={editMode ? 1 : 0.98}
       >
         <Row align="center">
@@ -180,15 +180,10 @@ export default function AddressRow({ data, editMode, onPress, onEditWallet }) {
             {!editMode && isSelected && (
               <CoinCheckButton style={sx.coinCheckIcon} toggle={isSelected} />
             )}
-            {editMode && <OptionsIcon onPress={onOptionsPress} />}
+            {editMode && <OptionsIcon onPress={NOOP} />}
           </Column>
         </Row>
       </ButtonPressAnimation>
     </View>
   );
 }
-
-AddressRow.propTypes = {
-  data: PropTypes.object,
-  onPress: PropTypes.func,
-};

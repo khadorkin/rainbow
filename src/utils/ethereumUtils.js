@@ -1,24 +1,37 @@
+import { Wallet } from '@ethersproject/wallet';
 import AsyncStorage from '@react-native-community/async-storage';
 import { captureException } from '@sentry/react-native';
-import { addHexPrefix, isValidAddress } from 'ethereumjs-util';
+import { mnemonicToSeed } from 'bip39';
+import {
+  addHexPrefix,
+  isValidAddress,
+  toChecksumAddress,
+} from 'ethereumjs-util';
+import { hdkey } from 'ethereumjs-wallet';
 import { find, get, isEmpty, matchesProperty, replace, toLower } from 'lodash';
+import { NativeModules } from 'react-native';
 import { ETHERSCAN_API_KEY } from 'react-native-dotenv';
 import URL from 'url-parse';
-import networkTypes from '../helpers/networkTypes';
 import {
-  add,
-  convertNumberToString,
+  DEFAULT_HD_PATH,
+  identifyWalletType,
+  WalletLibraryType,
+} from '../model/wallet';
+import networkTypes from '@rainbow-me/helpers/networkTypes';
+import {
   fromWei,
   greaterThan,
   isZero,
   subtract,
-} from '../helpers/utilities';
-import { chains } from '../references';
+} from '@rainbow-me/helpers/utilities';
+import WalletTypes from '@rainbow-me/helpers/walletTypes';
+import { chains } from '@rainbow-me/references';
 import logger from 'logger';
 
-const getEthPriceUnit = assets => {
-  const ethAsset = getAsset(assets);
-  return get(ethAsset, 'price.value', 0);
+const { RNBip39 } = NativeModules;
+
+const getEthPriceUnit = genericAssets => {
+  return genericAssets?.eth?.price?.value || 0;
 };
 
 const getBalanceAmount = async (selectedGasPrice, selected) => {
@@ -37,7 +50,7 @@ const getBalanceAmount = async (selectedGasPrice, selected) => {
 const getHash = txn => txn.hash.split('-').shift();
 
 const getAsset = (assets, address = 'eth') =>
-  find(assets, matchesProperty('address', address));
+  find(assets, matchesProperty('address', toLower(address)));
 
 export const checkWalletEthZero = assets => {
   const ethAsset = find(assets, asset => asset.address === 'eth');
@@ -107,29 +120,6 @@ const getEtherscanHostFromNetwork = network => {
   } else {
     return `${network}.${base_host}`;
   }
-};
-
-/**
- * @desc returns an object
- * @param  {Array} assets
- * @param  {String} assetAmount
- * @param  {String} gasPrice
- * @return {Object} ethereum, balanceAmount, balance, requestedAmount, txFeeAmount, txFee, amountWithFees
- */
-const transactionData = (assets, assetAmount, gasPrice) => {
-  const ethereum = getAsset(assets);
-  const balance = get(ethereum, 'balance.amount', 0);
-  const requestedAmount = convertNumberToString(assetAmount);
-  const txFee = fromWei(get(gasPrice, 'txFee.value.amount'));
-  const amountWithFees = add(requestedAmount, txFee);
-
-  return {
-    amountWithFees,
-    balance,
-    ethereum,
-    requestedAmount,
-    txFee,
-  };
 };
 
 /**
@@ -210,8 +200,63 @@ const checkIfUrlIsAScam = async url => {
   }
 };
 
+const deriveAccountFromMnemonic = async (mnemonic, index = 0) => {
+  let seed;
+  if (ios) {
+    seed = await mnemonicToSeed(mnemonic);
+  } else {
+    const res = await RNBip39.mnemonicToSeed({ mnemonic, passphrase: null });
+    seed = new Buffer(res, 'base64');
+  }
+  const hdWallet = hdkey.fromMasterSeed(seed);
+  const root = hdWallet.derivePath(DEFAULT_HD_PATH);
+  const child = root.deriveChild(index);
+  const wallet = child.getWallet();
+  return {
+    address: toChecksumAddress(wallet.getAddress().toString('hex')),
+    isHDWallet: true,
+    root,
+    type: WalletTypes.mnemonic,
+    wallet,
+    walletType: WalletLibraryType.bip39,
+  };
+};
+
+const deriveAccountFromPrivateKey = privateKey => {
+  const ethersWallet = new Wallet(addHexPrefix(privateKey));
+  return {
+    address: ethersWallet.address,
+    isHDWallet: false,
+    root: null,
+    type: WalletTypes.privateKey,
+    wallet: ethersWallet,
+    walletType: WalletLibraryType.ethers,
+  };
+};
+
+const deriveAccountFromWalletInput = input => {
+  const type = identifyWalletType(input);
+  if (type === WalletTypes.privateKey) {
+    return deriveAccountFromPrivateKey(input);
+  } else if (type === WalletTypes.readOnly) {
+    const ethersWallet = { address: addHexPrefix(input), privateKey: null };
+    return {
+      address: addHexPrefix(input),
+      isHDWallet: false,
+      root: null,
+      type: WalletTypes.readOnly,
+      wallet: ethersWallet,
+      walletType: WalletLibraryType.ethers,
+    };
+  }
+  return deriveAccountFromMnemonic(input);
+};
+
 export default {
   checkIfUrlIsAScam,
+  deriveAccountFromMnemonic,
+  deriveAccountFromPrivateKey,
+  deriveAccountFromWalletInput,
   getAsset,
   getBalanceAmount,
   getChainIdFromNetwork,
@@ -224,5 +269,4 @@ export default {
   isEthAddress,
   padLeft,
   removeHexPrefix,
-  transactionData,
 };

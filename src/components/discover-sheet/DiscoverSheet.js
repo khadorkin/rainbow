@@ -1,73 +1,79 @@
 import { useIsFocused } from '@react-navigation/native';
-import React, { Fragment } from 'react';
-import { Platform } from 'react-native';
-import Animated from 'react-native-reanimated';
+import React, { useMemo, useRef } from 'react';
+import { findNodeHandle, NativeModules, View } from 'react-native';
 import { useSafeArea } from 'react-native-safe-area-context';
 // eslint-disable-next-line import/no-unresolved
 import SlackBottomSheet from 'react-native-slack-bottom-sheet';
+import DiscoverSheetContent from './DiscoverSheetContent';
+import DiscoverSheetContext from './DiscoverSheetContext';
+import { deviceUtils } from '@rainbow-me/utils';
+import {
+  YABSForm,
+  YABSScrollView,
+} from 'react-native-yet-another-bottom-sheet';
 
-import BottomSheet from 'reanimated-bottom-sheet';
-import { ColumnWithMargins } from '../layout';
-import { SlackSheet } from '../sheet';
-import DiscoverSheetHeader from './DiscoverSheetHeader';
-import TopMoversSection from './TopMoversSection';
-import { position } from '@rainbow-me/styles';
-
-// eslint-disable-next-line import/no-named-as-default-member
-const { SpringUtils } = Animated;
-
-const discoverSheetSpring = SpringUtils.makeConfigFromBouncinessAndSpeed({
-  ...SpringUtils.makeDefaultConfig(),
-  bounciness: 0,
-  mass: 1,
-  overshootClamping: false,
-  restDisplacementThreshold: 0.99,
-  restSpeedThreshold: 100,
-  speed: 18,
-  toss: 6,
-});
-
-const DiscoverSheetContent = () => (
-  <Fragment>
-    <DiscoverSheetHeader />
-    <ColumnWithMargins flex={1} margin={42}>
-      <TopMoversSection />
-    </ColumnWithMargins>
-  </Fragment>
-);
-
-export default function DiscoverSheet() {
-  const insets = useSafeArea();
-  const isFocused = useIsFocused();
-
-  // noinspection JSConstructorReturnsPrimitive
-  return Platform.OS === 'ios' ? (
-    <SlackBottomSheet
-      allowsDragToDismiss={false}
-      allowsTapToDismiss={false}
-      backgroundOpacity={0}
-      blocksBackgroundTouches={false}
-      cornerRadius={30}
-      initialAnimation={false}
-      interactsWithOuterScrollView
-      isHapticFeedbackEnabled={false}
-      presentGlobally={false}
-      scrollsToTopOnTapStatusBar={isFocused}
-      showDragIndicator={false}
-      topOffset={insets.top}
-      unmountAnimation={false}
+function DiscoverSheetAndroid() {
+  return (
+    <YABSForm
+      panGHProps={{
+        simultaneousHandlers: 'AnimatedScrollViewPager',
+      }}
+      points={[0, 200, deviceUtils.dimensions.height - 200]}
+      style={[
+        StyleSheet.absoluteFillObject,
+        {
+          backgroundColor: 'white',
+          bottom: 0,
+          top: 100,
+        },
+      ]}
     >
-      <SlackSheet contentOffset={position.current}>
+      <View style={{ backgroundColor: 'yellow', height: 40, width: '100%' }} />
+      <YABSScrollView>
         <DiscoverSheetContent />
-      </SlackSheet>
-    </SlackBottomSheet>
-  ) : (
-    <BottomSheet
-      borderRadius={20}
-      overdragResistanceFactor={0}
-      renderContent={DiscoverSheetContent}
-      snapPoints={[300, 744]}
-      springConfig={discoverSheetSpring}
-    />
+      </YABSScrollView>
+    </YABSForm>
   );
 }
+
+function DiscoverSheetIOS() {
+  const insets = useSafeArea();
+  const isFocused = useIsFocused();
+  const ref = useRef();
+  const value = useMemo(
+    () => ({
+      jumpToShort() {
+        const screen = findNodeHandle(ref.current);
+        if (screen) {
+          NativeModules.ModalView.jumpTo(false, screen);
+        }
+      },
+    }),
+    []
+  );
+
+  // noinspection JSConstructorReturnsPrimitive
+  return (
+    <DiscoverSheetContext.Provider value={value}>
+      <SlackBottomSheet
+        allowsDragToDismiss={false}
+        allowsTapToDismiss={false}
+        backgroundOpacity={0}
+        blocksBackgroundTouches={false}
+        cornerRadius={30}
+        initialAnimation={false}
+        interactsWithOuterScrollView
+        isHapticFeedbackEnabled={false}
+        presentGlobally={false}
+        scrollsToTopOnTapStatusBar={isFocused}
+        showDragIndicator={false}
+        topOffset={insets.top}
+        unmountAnimation={false}
+      >
+        <DiscoverSheetContent />
+      </SlackBottomSheet>
+    </DiscoverSheetContext.Provider>
+  );
+}
+
+export default ios ? DiscoverSheetIOS : DiscoverSheetAndroid;

@@ -1,10 +1,10 @@
 import React, { Fragment } from 'react';
 import styled from 'styled-components/primitives';
-import { useDimensions } from '../../hooks';
-import supportedNativeCurrencies from '../../references/native-currencies.json';
-import { removeLeadingZeros } from '../../utils/formatters';
 import { Column, ColumnWithMargins } from '../layout';
 import SendAssetFormField from './SendAssetFormField';
+import { useDimensions } from '@rainbow-me/hooks';
+import { supportedNativeCurrencies } from '@rainbow-me/references';
+import { removeLeadingZeros } from '@rainbow-me/utils';
 
 const footerMargin = 31;
 const FooterContainer = styled(ColumnWithMargins).attrs(({ deviceHeight }) => ({
@@ -17,7 +17,7 @@ const FooterContainer = styled(ColumnWithMargins).attrs(({ deviceHeight }) => ({
 `;
 
 const FormContainer = styled(Column)`
-  flex: ${({ isSmallPhone }) => (isSmallPhone ? 1.75 : 1)};
+  flex: ${({ isSmallPhone }) => (android ? 1.8 : isSmallPhone ? 1.75 : 1)};
   width: 100%;
 `;
 
@@ -45,7 +45,6 @@ export default function SendAssetFormToken({
     <Fragment>
       <FormContainer isSmallPhone={isSmallPhone} {...props}>
         <SendAssetFormField
-          animatedKey="assetInput"
           format={removeLeadingZeros}
           label={selected.symbol}
           onChange={onChangeAssetAmount}
@@ -56,7 +55,6 @@ export default function SendAssetFormToken({
           value={assetAmount}
         />
         <SendAssetFormField
-          animatedKey="nativeInput"
           autoFocus
           label={nativeCurrency}
           mask={nativeMask}

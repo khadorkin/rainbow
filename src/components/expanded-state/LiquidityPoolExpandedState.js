@@ -1,6 +1,5 @@
-import React, { useMemo } from 'react';
-import { tokenOverrides } from '../../references';
-import { magicMemo } from '../../utils';
+import { map } from 'lodash';
+import React from 'react';
 import {
   DepositActionButton,
   SheetActionButtonRow,
@@ -14,59 +13,85 @@ import {
   TokenInfoRow,
   TokenInfoSection,
 } from '../token-info';
-import { LiquidityPoolExpandedStateHeader } from './liquidity-pool';
+import { Chart } from '../value-chart';
+import { ChartPathProvider } from '@rainbow-me/animated-charts';
+import { useChartThrottledPoints } from '@rainbow-me/hooks';
+import { magicMemo } from '@rainbow-me/utils';
 
-export const LiquidityPoolExpandedStateSheetHeight = 369;
+const heightWithoutChart = 373 + (android && 80);
+const heightWithChart = heightWithoutChart + 292;
 
-const LiquidityPoolExpandedState = ({
-  asset: { ethBalance, totalNativeDisplay, uniBalance, ...asset },
-}) => {
-  const ethAsset = useMemo(
-    () => ({
-      color: tokenOverrides['eth'].color,
-      symbol: 'ETH',
-      value: ethBalance,
-    }),
-    [ethBalance]
-  );
+export const initialLiquidityPoolExpandedStateSheetHeight =
+  heightWithChart + (android && 40);
 
-  const tokenAsset = useMemo(() => {
-    const { tokenAddress, tokenBalance, tokenSymbol, ...tokenAsset } = asset;
-    return {
-      ...tokenAsset,
-      ...(tokenAddress ? tokenOverrides[tokenAddress.toLowerCase()] : {}),
-      address: tokenAddress,
-      symbol: tokenSymbol,
-      value: tokenBalance,
-    };
-  }, [asset]);
+const LiquidityPoolExpandedState = ({ asset }) => {
+  const { tokenNames, tokens, totalNativeDisplay, type, uniBalance } = asset;
+
+  const tokenType = type === 'uniswap' ? 'UNI-V1' : 'UNI-V2';
+  const uniBalanceLabel = `${uniBalance} ${tokenType}`;
+
+  const {
+    chart,
+    chartData,
+    chartType,
+    color,
+    fetchingCharts,
+    initialChartDataLabels,
+    showChart,
+    throttledData,
+  } = useChartThrottledPoints({
+    asset,
+    heightWithChart,
+    heightWithoutChart,
+    isPool: true,
+  });
+
+  const liquidityPoolExpandedStateSheetHeight =
+    (ios || showChart ? heightWithChart : heightWithoutChart) + (android && 40);
 
   return (
-    <SlackSheet contentHeight={LiquidityPoolExpandedStateSheetHeight}>
-      <LiquidityPoolExpandedStateHeader asset={tokenAsset} />
+    <SlackSheet
+      additionalTopPadding={android}
+      contentHeight={liquidityPoolExpandedStateSheetHeight}
+    >
+      <ChartPathProvider data={throttledData}>
+        <Chart
+          {...chartData}
+          {...initialChartDataLabels}
+          asset={asset}
+          chart={chart}
+          chartType={chartType}
+          color={color}
+          fetchingCharts={fetchingCharts}
+          isPool
+          nativePoints={chart}
+          showChart={showChart}
+          throttledData={throttledData}
+        />
+      </ChartPathProvider>
       <SheetDivider />
       <TokenInfoSection>
         <TokenInfoRow>
-          <TokenInfoItem
-            asset={tokenAsset}
-            title={`${tokenAsset.symbol} balance`}
-          >
-            <TokenInfoBalanceValue />
-          </TokenInfoItem>
-          <TokenInfoItem asset={ethAsset} title="ETH balance">
-            <TokenInfoBalanceValue />
-          </TokenInfoItem>
+          {map(tokens, tokenAsset => (
+            <TokenInfoItem
+              asset={tokenAsset}
+              key={`tokeninfo-${tokenAsset.symbol}`}
+              title={`${tokenAsset.symbol} balance`}
+            >
+              <TokenInfoBalanceValue />
+            </TokenInfoItem>
+          ))}
         </TokenInfoRow>
         <TokenInfoRow>
-          <TokenInfoItem title="Pool shares">{uniBalance}</TokenInfoItem>
-          <TokenInfoItem title="Total value">
+          <TokenInfoItem title="Pool shares">{uniBalanceLabel}</TokenInfoItem>
+          <TokenInfoItem title="Total value" weight="bold">
             {totalNativeDisplay}
           </TokenInfoItem>
         </TokenInfoRow>
       </TokenInfoSection>
       <SheetActionButtonRow>
-        <WithdrawActionButton symbol={tokenAsset.symbol} />
-        <DepositActionButton symbol={tokenAsset.symbol} />
+        <WithdrawActionButton symbol={tokenNames} weight="bold" />
+        <DepositActionButton symbol={tokenNames} weight="bold" />
       </SheetActionButtonRow>
     </SlackSheet>
   );

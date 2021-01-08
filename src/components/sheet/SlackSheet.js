@@ -1,15 +1,35 @@
-import React, { useMemo } from 'react';
-import { ScrollView } from 'react-native-gesture-handler';
+// FIXME unify with iOS
+import React, { Fragment, useMemo } from 'react';
+import { Pressable, StyleSheet, TouchableWithoutFeedback } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { useSafeArea } from 'react-native-safe-area-context';
 import styled from 'styled-components/primitives';
-import { useDimensions } from '../../hooks';
 import { Centered } from '../layout';
+import { useReanimatedValue } from '../list/MarqueeList';
 import SheetHandleFixedToTop, {
   SheetHandleFixedToTopHeight,
 } from './SheetHandleFixedToTop';
-import { colors } from '@rainbow-me/styles';
+import { useDimensions } from '@rainbow-me/hooks';
+import { useNavigation } from '@rainbow-me/navigation';
+import { colors, position } from '@rainbow-me/styles';
+
+const { event } = Animated;
+
+const AndroidBackground = styled.View`
+  ${position.cover};
+  background-color: ${({ backgroundColor }) => backgroundColor};
+`;
 
 const Container = styled(Centered).attrs({ direction: 'column' })`
+  ${({ additionalTopPadding, contentHeight, deferredHeight, deviceHeight }) =>
+    deferredHeight || ios
+      ? ''
+      : `top: ${
+          contentHeight && additionalTopPadding
+            ? deviceHeight - contentHeight
+            : 0
+        };`};
+  ${android ? 'border-radius: 20;' : ''}
   background-color: ${({ backgroundColor }) => backgroundColor};
   bottom: 0;
   left: 0;
@@ -18,15 +38,30 @@ const Container = styled(Centered).attrs({ direction: 'column' })`
   right: 0;
 `;
 
-const Content = styled(ScrollView).attrs({
+const Content = styled(Animated.ScrollView).attrs(({ y }) => ({
   directionalLockEnabled: true,
   keyboardShouldPersistTaps: 'always',
-})`
+  onScroll: event([
+    {
+      nativeEvent: {
+        contentOffset: {
+          y,
+        },
+      },
+    },
+  ]),
+  scrollEventThrottle: 16,
+}))`
   background-color: ${({ backgroundColor }) => backgroundColor};
   ${({ contentHeight, deviceHeight }) =>
     contentHeight ? `height: ${deviceHeight + contentHeight}` : null};
   padding-top: ${SheetHandleFixedToTopHeight};
   width: 100%;
+`;
+
+const ContentWrapper = styled.View`
+  ${position.size('100%')};
+  background-color: ${({ backgroundColor }) => backgroundColor};
 `;
 
 const Whitespace = styled.View`
@@ -37,15 +72,20 @@ const Whitespace = styled.View`
 `;
 
 export default function SlackSheet({
+  additionalTopPadding = false,
   backgroundColor = colors.white,
   borderRadius = 30,
   children,
   contentHeight,
+  deferredHeight = false,
   hideHandle = false,
+  renderHeader,
   scrollEnabled = true,
   ...props
 }) {
+  const yPosition = useReanimatedValue(0);
   const { height: deviceHeight } = useDimensions();
+  const { goBack } = useNavigation();
   const insets = useSafeArea();
   const bottomInset = useMemo(
     () => (insets.bottom || scrollEnabled ? 42 : 30),
@@ -68,25 +108,49 @@ export default function SlackSheet({
   );
 
   return (
-    <Container backgroundColor={backgroundColor} {...props}>
-      {!hideHandle && <SheetHandleFixedToTop showBlur={scrollEnabled} />}
-      <Content
+    <Fragment>
+      {android ? (
+        <Pressable onPress={goBack} style={[StyleSheet.absoluteFillObject]} />
+      ) : null}
+      <Container
+        additionalTopPadding={additionalTopPadding}
         backgroundColor={backgroundColor}
-        contentContainerStyle={scrollEnabled && contentContainerStyle}
         contentHeight={contentHeight}
+        deferredHeight={deferredHeight}
         deviceHeight={deviceHeight}
-        directionalLockEnabled
-        scrollEnabled={scrollEnabled}
-        scrollIndicatorInsets={scrollIndicatorInsets}
+        {...props}
       >
-        {children}
-        {!scrollEnabled && (
-          <Whitespace
+        {android && (
+          <AndroidBackground
+            as={TouchableWithoutFeedback}
             backgroundColor={backgroundColor}
-            deviceHeight={deviceHeight}
-          />
+          >
+            <AndroidBackground backgroundColor={backgroundColor} />
+          </AndroidBackground>
         )}
-      </Content>
-    </Container>
+        {!hideHandle && <SheetHandleFixedToTop showBlur={scrollEnabled} />}
+        <ContentWrapper backgroundColor={backgroundColor}>
+          {renderHeader?.(yPosition)}
+          <Content
+            backgroundColor={backgroundColor}
+            contentContainerStyle={scrollEnabled && contentContainerStyle}
+            contentHeight={contentHeight}
+            deviceHeight={deviceHeight}
+            directionalLockEnabled
+            scrollEnabled={scrollEnabled}
+            scrollIndicatorInsets={scrollIndicatorInsets}
+            y={yPosition}
+          >
+            {children}
+            {!scrollEnabled && (
+              <Whitespace
+                backgroundColor={backgroundColor}
+                deviceHeight={deviceHeight}
+              />
+            )}
+          </Content>
+        </ContentWrapper>
+      </Container>
+    </Fragment>
   );
 }

@@ -64,8 +64,9 @@ class TransactionListViewCell: TransactionListBaseCell {
     setIcon(transaction)
 
     transactionType.isAccessibilityElement = true;
-    transactionType.accessibilityIdentifier = "\(transaction.title!)-\(transaction.transactionDescription!)";
-
+    if transaction.title != nil && transaction.transactionDescription != nil {
+      transactionType.accessibilityIdentifier = "\(transaction.title!)-\(transaction.transactionDescription!)";
+    }
 
     
     if transaction.symbol != nil {
@@ -75,7 +76,7 @@ class TransactionListViewCell: TransactionListBaseCell {
         let url = URL(string: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/\(transaction.address!)/logo.png");
         coinImage.sd_setImage(with: url) { (image, error, cache, urls) in
           if (error != nil) {
-            let colorIndex = transaction.symbol.lowercased().utf8.compactMap{ Int($0) }.reduce(0, +) % TransactionListViewCell.avatarColors.count
+            let colorIndex = transaction.address!.lowercased().utf8.compactMap{ Int($0) }.reduce(0, +) % TransactionListViewCell.avatarColors.count
             let color = TransactionListViewCell.avatarColors[colorIndex]
             self.coinImage.image = self.generateTextImage(transaction.symbol, backgroundColor: color)
           } else {
@@ -115,6 +116,11 @@ class TransactionListViewCell: TransactionListBaseCell {
       transactionIcon.image = UIImage.init(named: "self")
     }
     
+    // Cancelled Overrides
+    if transaction.status == "cancelled" {
+      transactionIcon.image = UIImage.init(named: "self")
+    }
+    
     // Failed Overrides
     if transaction.status == "failed" {
       statusFrame = CGRect(x: 85, y: 9, width: 206, height: 16)
@@ -128,7 +134,7 @@ class TransactionListViewCell: TransactionListBaseCell {
     }
     
     // Self Overrides
-    if (transaction.status ==  "self" || transaction.status == "approved") {
+    if (transaction.status ==  "self" || transaction.status == "approved" || transaction.status == "cancelled") {
       statusFrame = CGRect(x: 80, y: 9, width: 206, height: 16)
     }
     

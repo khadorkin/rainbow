@@ -1,10 +1,10 @@
 import { toUpper } from 'lodash';
 import React, { useMemo } from 'react';
-import ShadowStack from 'react-native-shadow-stack/dist/ShadowStack';
 import { getFirstGrapheme } from '../../utils';
 import { Centered } from '../layout';
 import { Text } from '../text';
 import { borders, colors } from '@rainbow-me/styles';
+import ShadowStack from 'react-native-shadow-stack';
 
 const buildShadows = (color, size) => {
   if (size === 'small' || size === 'smaller') {
@@ -12,8 +12,8 @@ const buildShadows = (color, size) => {
       [0, 3, 5, colors.dark, 0.14],
       [0, 6, 10, colors.avatarColor[color] || color, 0.2],
     ];
-  } else if (size === 'smedium') {
-    return [[0, 4, 12, colors.avatarColor[color] || color, 0.4]];
+  } else if (size === 'medium' || size === 'smedium') {
+    return [[0, 4, android ? 5 : 12, colors.avatarColor[color] || color, 0.4]];
   } else {
     return sizeConfigs[size]['shadow'];
   }

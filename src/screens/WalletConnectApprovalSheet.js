@@ -11,15 +11,19 @@ import styled from 'styled-components/primitives';
 import Divider from '../components/Divider';
 import { Alert } from '../components/alerts';
 import { RequestVendorLogoIcon } from '../components/coin-icon';
-import { Centered, Row, RowWithMargins } from '../components/layout';
-import { Sheet, SheetActionButton } from '../components/sheet';
+import { Centered, Row } from '../components/layout';
+import {
+  Sheet,
+  SheetActionButton,
+  SheetActionButtonRow,
+} from '../components/sheet';
 import { Text } from '../components/text';
 import {
   getDappHostname,
   isDappAuthenticated,
 } from '@rainbow-me/helpers/dappNameHandler';
 import { useNavigation } from '@rainbow-me/navigation';
-import { colors, padding } from '@rainbow-me/styles';
+import { colors } from '@rainbow-me/styles';
 import { ethereumUtils } from '@rainbow-me/utils';
 
 const DappLogo = styled(RequestVendorLogoIcon).attrs({
@@ -114,9 +118,14 @@ export default function WalletConnectApprovalSheet() {
 
   return (
     <Sheet hideHandle>
-      <Centered direction="column" paddingHorizontal={19} paddingTop={17}>
+      <Centered
+        direction="column"
+        paddingBottom={5}
+        paddingHorizontal={19}
+        paddingTop={17}
+      >
         <DappLogo dappName={dappName || ''} imageUrl={imageUrl} />
-        <Centered paddingHorizontal={23}>
+        <Centered paddingHorizontal={24}>
           <Row>
             <Text
               align="center"
@@ -137,22 +146,24 @@ export default function WalletConnectApprovalSheet() {
           </Text>
         </Row>
         <Divider color={colors.rowDividerLight} inset={[0, 84]} />
-        <RowWithMargins css={padding(24, 0, 21)} margin={15}>
-          <SheetActionButton
-            color={colors.white}
-            label="Cancel"
-            onPress={handleCancel}
-            size="big"
-            textColor={colors.dark}
-          />
-          <SheetActionButton
-            color={colors.appleBlue}
-            label="Connect"
-            onPress={handleConnect}
-            size="big"
-          />
-        </RowWithMargins>
       </Centered>
+      <SheetActionButtonRow>
+        <SheetActionButton
+          color={colors.white}
+          label="Cancel"
+          onPress={handleCancel}
+          size="big"
+          textColor={colors.alpha(colors.blueGreyDark, 0.8)}
+          weight="bold"
+        />
+        <SheetActionButton
+          color={colors.appleBlue}
+          label="Connect"
+          onPress={handleConnect}
+          size="big"
+          weight="bold"
+        />
+      </SheetActionButtonRow>
     </Sheet>
   );
 }
