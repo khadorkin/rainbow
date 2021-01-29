@@ -42,13 +42,14 @@ import {
   MessageSigningSection,
   TransactionConfirmationSection,
 } from '../components/transaction';
-import { estimateGas, getTransactionCount, toHex } from '../handlers/web3';
+import { estimateGas, toHex } from '../handlers/web3';
 import { isDappAuthenticated } from '../helpers/dappNameHandler';
 import {
   convertAmountToNativeDisplay,
   convertHexToString,
   fromWei,
   greaterThanOrEqualTo,
+  multiply,
 } from '../helpers/utilities';
 import {
   sendTransaction,
@@ -138,9 +139,6 @@ const NOOP = () => undefined;
 
 const TransactionConfirmationScreen = () => {
   const { allAssets } = useAccountAssets();
-  const { genericAssets } = useSelector(({ data: { genericAssets } }) => ({
-    genericAssets,
-  }));
   const [isAuthorizing, setIsAuthorizing] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [methodName, setMethodName] = useState(null);
@@ -168,8 +166,6 @@ const TransactionConfirmationScreen = () => {
   const {
     dataAddNewTransaction,
     removeRequest,
-    transactionCountNonce,
-    updateTransactionCountNonce,
     walletConnectSendStatus,
   } = useTransactionConfirmation();
 
@@ -234,6 +230,10 @@ const TransactionConfirmationScreen = () => {
     },
     [setMethodName]
   );
+
+  useEffect(() => {
+    analytics.track('Shown Walletconnect signing request');
+  }, []);
 
   useEffect(() => {
     if (openAutomatically && !isEmulatorSync()) {
@@ -420,30 +420,26 @@ const TransactionConfirmationScreen = () => {
       }
     }
 
-    const web3TxnCount = await getTransactionCount(txPayload.from);
-    const maxTxnCount = Math.max(transactionCountNonce, web3TxnCount);
-    const nonce = maxTxnCount;
     const calculatedGasLimit = gas || gasLimitFromPayload || gasLimit;
-    let txPayloadLatestNonce = {
+    let txPayloadUpdated = {
       ...txPayload,
       gasPrice,
-      nonce,
     };
     if (calculatedGasLimit) {
-      txPayloadLatestNonce.gasLimit = calculatedGasLimit;
+      txPayloadUpdated.gasLimit = calculatedGasLimit;
     }
 
-    txPayloadLatestNonce = omit(txPayloadLatestNonce, ['from', 'gas']);
+    txPayloadUpdated = omit(txPayloadUpdated, ['from', 'gas']);
     let result = null;
 
     try {
       if (sendInsteadOfSign) {
         result = await sendTransaction({
-          transaction: txPayloadLatestNonce,
+          transaction: txPayloadUpdated,
         });
       } else {
         result = await signTransaction({
-          transaction: txPayloadLatestNonce,
+          transaction: txPayloadUpdated,
         });
       }
     } catch (e) {
@@ -455,10 +451,9 @@ const TransactionConfirmationScreen = () => {
 
     if (result) {
       if (callback) {
-        callback({ result });
+        callback({ result: result.hash });
       }
       if (sendInsteadOfSign) {
-        dispatch(updateTransactionCountNonce(maxTxnCount + 1));
         const txDetails = {
           amount: get(displayDetails, 'request.value'),
           asset: get(displayDetails, 'request.asset'),
@@ -466,8 +461,8 @@ const TransactionConfirmationScreen = () => {
           from: get(displayDetails, 'request.from'),
           gasLimit,
           gasPrice,
-          hash: result,
-          nonce,
+          hash: result.hash,
+          nonce: result.nonce,
           to: get(displayDetails, 'request.to'),
         };
 
@@ -476,7 +471,7 @@ const TransactionConfirmationScreen = () => {
       analytics.track('Approved WalletConnect transaction request');
       if (requestId) {
         dispatch(removeRequest(requestId));
-        await dispatch(walletConnectSendStatus(peerId, requestId, result));
+        await dispatch(walletConnectSendStatus(peerId, requestId, result.hash));
       }
       closeScreen(false);
     } else {
@@ -486,13 +481,11 @@ const TransactionConfirmationScreen = () => {
     method,
     params,
     selectedGasPrice,
-    transactionCountNonce,
     gasLimit,
     callback,
     requestId,
     closeScreen,
     dispatch,
-    updateTransactionCountNonce,
     displayDetails,
     dappName,
     dataAddNewTransaction,
@@ -636,9 +629,9 @@ const TransactionConfirmationScreen = () => {
     }
 
     if (isTransactionDisplayType(method) && get(request, 'asset')) {
-      const ethAsset = ethereumUtils.getAsset(genericAssets);
+      const priceOfEther = ethereumUtils.getEthPriceUnit();
       const amount = get(request, 'value', '0.00');
-      const nativeAmount = Number(ethAsset.price.value) * Number(amount);
+      const nativeAmount = multiply(priceOfEther, amount);
       const nativeAmountDisplay = convertAmountToNativeDisplay(
         nativeAmount,
         nativeCurrency
@@ -663,7 +656,7 @@ const TransactionConfirmationScreen = () => {
         value={request?.value}
       />
     );
-  }, [genericAssets, isMessageRequest, method, nativeCurrency, request]);
+  }, [isMessageRequest, method, nativeCurrency, request]);
 
   const handleCustomGasFocus = useCallback(() => {
     setKeyboardVisible(true);
@@ -704,6 +697,16 @@ const TransactionConfirmationScreen = () => {
 
   const amount = get(request, 'value', '0.00');
 
+  const isAndroidApprovalRequest = useMemo(
+    () =>
+      android &&
+      isTransactionDisplayType(method) &&
+      !!get(request, 'asset', false) &&
+      amount === 0 &&
+      isBalanceEnough,
+    [amount, isBalanceEnough, method, request]
+  );
+
   const ShortSheetHeight = 457 + safeAreaInsetValues.bottom;
   const TallSheetHeight = 604 + safeAreaInsetValues.bottom;
   const MessageSheetHeight =
@@ -713,7 +716,7 @@ const TransactionConfirmationScreen = () => {
   const balanceTooLow =
     isBalanceEnough === false && isSufficientGas !== undefined;
 
-  const sheetHeight =
+  let sheetHeight =
     (isMessageRequest
       ? MessageSheetHeight
       : (amount && amount !== '0.00') || !isBalanceEnough
@@ -728,6 +731,10 @@ const TransactionConfirmationScreen = () => {
 
   if (isTransactionDisplayType(method) && !get(request, 'asset', false)) {
     marginTop += 50;
+  }
+
+  if (isAndroidApprovalRequest) {
+    sheetHeight += 140;
   }
 
   return (
@@ -773,19 +780,21 @@ const TransactionConfirmationScreen = () => {
               >
                 {isAuthenticated ? dappName : formattedDappUrl}
               </Text>
-              {//We only show the checkmark
-              // if it's on the override list (dappNameHandler.js)
-              isAuthenticated && (
-                <Text
-                  align="center"
-                  color={colors.appleBlue}
-                  letterSpacing="roundedMedium"
-                  size="large"
-                  weight="bold"
-                >
-                  {' 􀇻'}
-                </Text>
-              )}
+              {
+                //We only show the checkmark
+                // if it's on the override list (dappNameHandler.js)
+                isAuthenticated && (
+                  <Text
+                    align="center"
+                    color={colors.appleBlue}
+                    letterSpacing="roundedMedium"
+                    size="large"
+                    weight="bold"
+                  >
+                    {' 􀇻'}
+                  </Text>
+                )
+              }
             </Row>
             <Centered marginBottom={24} paddingHorizontal={24}>
               <Text
@@ -798,7 +807,9 @@ const TransactionConfirmationScreen = () => {
                 {methodName || 'Placeholder'}
               </Text>
             </Centered>
-            <Divider color={colors.rowDividerLight} inset={[0, 143.5]} />
+            {(!keyboardVisible || ios) && (
+              <Divider color={colors.rowDividerLight} inset={[0, 143.5]} />
+            )}
             {renderTransactionSection()}
             {renderTransactionButtons()}
             <RowWithMargins css={padding(0, 24, 30)} margin={15}>

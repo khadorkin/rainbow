@@ -1,19 +1,18 @@
 import { ChainId, Pair, Token } from '@uniswap/sdk';
 import { filter, flatMap, map, toLower, uniqBy } from 'lodash';
 import { useMemo } from 'react';
-import { getTokenForCurrency, SwapCurrency } from '../handlers/uniswap';
+import { getTokenForCurrency } from '../handlers/uniswap';
+import useAccountSettings from './useAccountSettings';
+import useSwapInputOutputTokens from './useSwapInputOutputTokens';
+
 import {
   PAIR_GET_RESERVES_CALL_DATA,
   UNISWAP_V2_BASES,
-} from '../references/uniswap';
+} from '@rainbow-me/references';
 
-import useAccountSettings from './useAccountSettings';
-
-export default function useUniswapCalls(
-  inputCurrency: SwapCurrency | null,
-  outputCurrency: SwapCurrency | null
-) {
+export default function useUniswapCalls() {
   const { chainId } = useAccountSettings();
+  const { inputCurrency, outputCurrency } = useSwapInputOutputTokens();
 
   const inputToken: Token | null = useMemo(() => {
     if (!inputCurrency) return null;

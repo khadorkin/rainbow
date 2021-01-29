@@ -3,19 +3,18 @@ import { ChainId, WETH } from '@uniswap/sdk';
 import { abi as IUniswapV2PairABI } from '@uniswap/v2-core/build/IUniswapV2Pair.json';
 import contractMap from 'eth-contract-metadata';
 import { compact, get, keyBy, map, partition, toLower } from 'lodash';
-import { SwapCurrency } from '../handlers/uniswap';
+import { web3Provider } from './web3';
+import { Asset, ParsedAddressAsset } from '@rainbow-me/entities';
+import { parseAssetsNative } from '@rainbow-me/parsers';
+import { erc20ABI, UNISWAP_V1_EXCHANGE_ABI } from '@rainbow-me/references';
 import {
   convertAmountToRawAmount,
   convertRawAmountToDecimalFormat,
   divide,
   fromWei,
   multiply,
-} from '../helpers/utilities';
-import { parseAssetsNative } from '../parsers/accounts';
-import { erc20ABI } from '../references';
-import { UNISWAP_V1_EXCHANGE_ABI } from '../references/uniswap';
-import { web3Provider } from './web3';
-import { Asset, ParsedAddressAsset } from '@rainbow-me/entities';
+} from '@rainbow-me/utilities';
+
 import logger from 'logger';
 
 interface UnderlyingToken extends Asset {
@@ -30,7 +29,7 @@ export interface LiquidityInfo extends ParsedAddressAsset {
 const getTokenDetails = async (
   chainId: ChainId,
   tokenAddress: string,
-  pairs: Record<string, SwapCurrency>
+  pairs: Record<string, Asset>
 ): Promise<Asset> => {
   if (toLower(tokenAddress) === toLower(WETH[chainId].address)) {
     return {
@@ -110,7 +109,7 @@ export const getLiquidityInfo = async (
   accountAddress: string,
   nativeCurrency: string,
   liquidityPoolTokens: ParsedAddressAsset[],
-  pairs: Record<string, SwapCurrency>
+  pairs: Record<string, Asset>
 ): Promise<Record<string, LiquidityInfo>> => {
   const liquidityPoolTokensWithNative = parseAssetsNative(
     liquidityPoolTokens,
@@ -143,7 +142,7 @@ const getLiquidityInfoV2 = async (
   chainId: ChainId,
   accountAddress: string,
   liquidityTokens: ParsedAddressAsset[],
-  pairs: Record<string, SwapCurrency>
+  pairs: Record<string, Asset>
 ): Promise<Record<string, LiquidityInfo>> => {
   const promises = map(liquidityTokens, async lpToken => {
     try {
@@ -226,7 +225,7 @@ const getLiquidityInfoV1 = async (
   chainId: ChainId,
   accountAddress: string,
   liquidityTokens: ParsedAddressAsset[],
-  pairs: Record<string, SwapCurrency>
+  pairs: Record<string, Asset>
 ): Promise<Record<string, LiquidityInfo>> => {
   const promises = map(liquidityTokens, async lpToken => {
     try {

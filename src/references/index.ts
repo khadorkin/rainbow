@@ -1,10 +1,17 @@
 import { mapKeys, mapValues } from 'lodash';
 import savingAssets from './compound/saving-assets.json';
-import { Asset } from '@rainbow-me/entities';
+import { Asset, SavingsAsset } from '@rainbow-me/entities';
 
 export {
+  CURATED_UNISWAP_TOKENS,
+  PAIR_GET_RESERVES_CALL_DATA,
+  PAIR_GET_RESERVES_FRAGMENT,
+  PAIR_INTERFACE,
   RAINBOW_TOKEN_LIST,
+  TOKEN_SAFE_LIST,
   UNISWAP_TESTNET_TOKEN_LIST,
+  UNISWAP_V1_EXCHANGE_ABI,
+  UNISWAP_V2_BASES,
   UNISWAP_V2_ROUTER_ABI,
   UNISWAP_V2_ROUTER_ADDRESS,
 } from './uniswap';
@@ -18,6 +25,7 @@ export { default as supportedNativeCurrencies } from './native-currencies.json';
 export { default as shitcoins } from './shitcoins.json';
 
 export const ETH_ADDRESS = 'eth';
+export const WETH_ADDRESS = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2';
 export const CDAI_CONTRACT = '0x5d3a536e4d6dbd6114cc1ead35777bab948e3643';
 export const SAI_ADDRESS = '0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359';
 export const DAI_ADDRESS = '0x6b175474e89094c44da98b954eedeac495271d0f';
@@ -79,14 +87,15 @@ export const DefaultUniswapFavorites = {
 
 export const savingsAssetsList = savingAssets;
 
-export const savingsAssetsListByUnderlying = mapValues(
-  savingAssets,
-  (assetsByNetwork: Record<string, Asset>) =>
-    mapKeys(
-      mapValues(assetsByNetwork, (assetByContract, contractAddress) => ({
-        ...assetByContract,
-        contractAddress,
-      })),
-      value => value.address
-    )
+export const savingsAssetsListByUnderlying: Record<
+  string,
+  Record<string, SavingsAsset>
+> = mapValues(savingAssets, (assetsByNetwork: Record<string, Asset>) =>
+  mapKeys(
+    mapValues(assetsByNetwork, (assetByContract, contractAddress) => ({
+      ...assetByContract,
+      contractAddress,
+    })),
+    value => value.address
+  )
 );

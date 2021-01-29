@@ -122,6 +122,7 @@ export const toWei = ether => {
  * @return {Promise}
  */
 export const getTransaction = hash => web3Provider.getTransaction(hash);
+
 /**
  * @desc get address transaction count
  * @param {String} address
@@ -136,17 +137,15 @@ export const getTransactionCount = address =>
  * @return {Object}
  */
 export const getTxDetails = async transaction => {
-  const { from, to } = transaction;
+  const { to } = transaction;
   const data = transaction.data ? transaction.data : '0x';
   const value = transaction.amount ? toHex(toWei(transaction.amount)) : '0x00';
   const gasLimit = toHex(transaction.gasLimit) || undefined;
   const gasPrice = toHex(transaction.gasPrice) || undefined;
-  const nonce = await getTransactionCount(from);
   const tx = {
     data,
     gasLimit,
     gasPrice,
-    nonce: toHex(nonce),
     to,
     value,
   };
@@ -284,8 +283,7 @@ export const estimateGasLimit = async ({
       ? convertAmountToRawAmount(amount, asset.decimals)
       : estimateAssetBalancePortion(asset);
   const value = _amount.toString();
-  let _recipient = await resolveNameOrAddress(recipient);
-  _recipient = _recipient || '0x737e583620f4ac1842d4e354789ca0c5e0651fbb';
+  const _recipient = await resolveNameOrAddress(recipient);
   let estimateGasData = {
     data: '0x',
     from: address,

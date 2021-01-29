@@ -2,14 +2,16 @@
 import { useRoute } from '@react-navigation/native';
 import analytics from '@segment/analytics-react-native';
 import { find, get, isEmpty } from 'lodash';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { InteractionManager } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
+
 import { useNavigation } from '../navigation/Navigation';
 import useAccountAssets from './useAccountAssets';
 import useAccountSettings from './useAccountSettings';
 import { delayNext } from './useMagicAutofocus';
 import usePrevious from './usePrevious';
+import useSwapInputOutputTokens from './useSwapInputOutputTokens';
 import useUniswapAssetsInWallet from './useUniswapAssetsInWallet';
 import useUniswapCalls from './useUniswapCalls';
 import CurrencySelectionTypes from '@rainbow-me/helpers/currencySelectionTypes';
@@ -18,6 +20,10 @@ import {
   multicallAddListeners,
   multicallUpdateOutdatedListeners,
 } from '@rainbow-me/redux/multicall';
+import {
+  updateSwapInputCurrency,
+  updateSwapOutputCurrency,
+} from '@rainbow-me/redux/swap';
 import Routes from '@rainbow-me/routes';
 import { ethereumUtils, isNewValueForPath } from '@rainbow-me/utils';
 import logger from 'logger';
@@ -48,7 +54,6 @@ const createMissingAsset = (asset, underlyingPrice, priceOfEther) => {
 };
 
 export default function useUniswapCurrencies({
-  category,
   defaultInputAsset,
   inputHeaderTitle,
   isDeposit,
@@ -59,16 +64,12 @@ export default function useUniswapCurrencies({
   const dispatch = useDispatch();
   const { allAssets } = useAccountAssets();
   const { chainId } = useAccountSettings();
-  const { genericAssets } = useSelector(({ data: { genericAssets } }) => ({
-    genericAssets,
-  }));
   const { navigate, setParams, dangerouslyGetParent } = useNavigation();
   const {
     params: { blockInteractions },
   } = useRoute();
 
   const defaultInputAddress = get(defaultInputAsset, 'address');
-
   const {
     defaultChosenInputItem,
     defaultInputItemInWallet,
@@ -84,7 +85,7 @@ export default function useUniswapCurrencies({
 
     // If default input asset not found in wallet, create the missing asset
     if (!defaultChosenInputItem && defaultInputAsset) {
-      const priceOfEther = ethereumUtils.getEthPriceUnit(genericAssets);
+      const priceOfEther = ethereumUtils.getEthPriceUnit();
 
       defaultChosenInputItem = createMissingAsset(
         defaultInputAsset,
@@ -117,20 +118,16 @@ export default function useUniswapCurrencies({
       defaultInputItemInWallet,
       defaultOutputItem,
     };
-  }, [
-    allAssets,
-    defaultInputAddress,
-    defaultInputAsset,
-    genericAssets,
-    isDeposit,
-    isWithdrawal,
-    underlyingPrice,
-  ]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [inputCurrency, setInputCurrency] = useState(defaultInputItemInWallet);
-  const [outputCurrency, setOutputCurrency] = useState(defaultOutputItem);
+  useEffect(() => {
+    dispatch(updateSwapInputCurrency(defaultInputItemInWallet));
+    dispatch(updateSwapOutputCurrency(defaultOutputItem));
+  }, [defaultInputItemInWallet, dispatch, defaultOutputItem]);
 
-  const { calls } = useUniswapCalls(inputCurrency, outputCurrency);
+  const { inputCurrency, outputCurrency } = useSwapInputOutputTokens();
+
+  const { calls } = useUniswapCalls();
 
   const previousInputCurrency = usePrevious(inputCurrency);
   const previousOutputCurrency = usePrevious(outputCurrency);
@@ -167,7 +164,7 @@ export default function useUniswapCurrencies({
 
       logger.log('[update input curr] prev input curr', previousInputCurrency);
 
-      setInputCurrency(newInputCurrency);
+      dispatch(updateSwapInputCurrency(newInputCurrency));
 
       if (userSelected && isSameAsset(newInputCurrency, outputCurrency)) {
         logger.log(
@@ -185,14 +182,13 @@ export default function useUniswapCurrencies({
         get(newInputCurrency, 'address') !== defaultInputAddress
       ) {
         logger.log(
-          '[update input curr] new deposit output for deposit or withdraw',
+          '[update input curr] new deposit output for deposit',
           defaultChosenInputItem
         );
         updateOutputCurrency(defaultChosenInputItem, false);
       }
 
       analytics.track('Switched input asset', {
-        category,
         defaultInputAsset: get(defaultInputAsset, 'symbol', ''),
         from: get(previousInputCurrency, 'symbol', ''),
         label: get(newInputCurrency, 'symbol', ''),
@@ -200,10 +196,10 @@ export default function useUniswapCurrencies({
       });
     },
     [
-      category,
       defaultChosenInputItem,
       defaultInputAddress,
       defaultInputAsset,
+      dispatch,
       isDeposit,
       isWithdrawal,
       outputCurrency,
@@ -225,7 +221,7 @@ export default function useUniswapCurrencies({
         inputCurrency
       );
 
-      setOutputCurrency(newOutputCurrency);
+      dispatch(updateSwapOutputCurrency(newOutputCurrency));
 
       logger.log(
         '[update output curr] prev output curr',
@@ -249,7 +245,6 @@ export default function useUniswapCurrencies({
       }
 
       analytics.track('Switched output asset', {
-        category,
         defaultInputAsset: get(defaultInputAsset, 'symbol', ''),
         from: get(previousOutputCurrency, 'symbol', ''),
         label: get(newOutputCurrency, 'symbol', ''),
@@ -257,8 +252,8 @@ export default function useUniswapCurrencies({
       });
     },
     [
-      category,
       defaultInputAsset,
+      dispatch,
       inputCurrency,
       previousOutputCurrency,
       type,
@@ -273,7 +268,6 @@ export default function useUniswapCurrencies({
       setParams({ focused: false });
       delayNext();
       navigate(Routes.CURRENCY_SELECT_SCREEN, {
-        category,
         headerTitle: inputHeaderTitle,
         onSelectCurrency: updateInputCurrency,
         restoreFocusOnSwapModal: () => setParams({ focused: true }),
@@ -283,7 +277,6 @@ export default function useUniswapCurrencies({
     });
   }, [
     blockInteractions,
-    category,
     dangerouslyGetParent,
     inputHeaderTitle,
     navigate,
@@ -297,7 +290,6 @@ export default function useUniswapCurrencies({
       dangerouslyGetParent().dangerouslyGetState().index = 0;
       delayNext();
       navigate(Routes.CURRENCY_SELECT_SCREEN, {
-        category,
         headerTitle: 'Receive',
         onSelectCurrency: updateOutputCurrency,
         restoreFocusOnSwapModal: () => setParams({ focused: true }),
@@ -307,7 +299,6 @@ export default function useUniswapCurrencies({
     });
   }, [
     blockInteractions,
-    category,
     dangerouslyGetParent,
     navigate,
     setParams,
@@ -316,10 +307,8 @@ export default function useUniswapCurrencies({
 
   return {
     defaultInputAddress,
-    inputCurrency,
     navigateToSelectInputCurrency,
     navigateToSelectOutputCurrency,
-    outputCurrency,
     previousInputCurrency,
   };
 }

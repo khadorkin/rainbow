@@ -3,7 +3,6 @@ import PropTypes from 'prop-types';
 import React, { Component, Fragment } from 'react';
 import { LayoutAnimation, RefreshControl, View } from 'react-native';
 import { connect } from 'react-redux';
-import { compose } from 'recompact';
 import {
   BaseItemAnimator,
   DataProvider,
@@ -11,14 +10,6 @@ import {
   RecyclerListView,
 } from 'recyclerlistview';
 import StickyContainer from 'recyclerlistview/dist/reactnative/core/StickyContainer';
-import {
-  withAccountSettings,
-  withCoinListEdited,
-  withOpenBalances,
-  withOpenFamilyTabs,
-  withOpenInvestmentCards,
-  withOpenSavings,
-} from '../../hoc';
 import {
   deviceUtils,
   isNewValueForPath,
@@ -504,14 +495,15 @@ class RecyclerAssetList extends Component {
         ) {
           const safeIndex = i;
           const safeCollectibles = collectibles;
-          const familyIndex = findIndex(this.state.dataProvider._data, function(
-            data
-          ) {
-            return (
-              data.item?.familyName ===
-              safeCollectibles.data[safeIndex].familyName
-            );
-          });
+          const familyIndex = findIndex(
+            this.state.dataProvider._data,
+            function (data) {
+              return (
+                data.item?.familyName ===
+                safeCollectibles.data[safeIndex].familyName
+              );
+            }
+          );
 
           const focusedFamilyItem = this.state.dataProvider._data[familyIndex]
             .item;
@@ -577,11 +569,12 @@ class RecyclerAssetList extends Component {
         prevCollectibles.data[0]?.childrenAmount ||
         prevCollectibles.data[0]?.familyName !== 'Showcase')
     ) {
-      const familyIndex = findIndex(this.state.dataProvider._data, function(
-        data
-      ) {
-        return data.item?.familyName === 'Showcase';
-      });
+      const familyIndex = findIndex(
+        this.state.dataProvider._data,
+        function (data) {
+          return data.item?.familyName === 'Showcase';
+        }
+      );
 
       const startOfDesiredComponent =
         this.rlv.getLayout(familyIndex).y - AssetListHeaderHeight;
@@ -832,15 +825,19 @@ class RecyclerAssetList extends Component {
   }
 }
 
-export default compose(
-  withCoinListEdited,
-  withOpenFamilyTabs,
-  withOpenInvestmentCards,
-  withOpenBalances,
-  withOpenSavings,
-  withAccountSettings,
-  connect(({ openSmallBalances, openSavings }) => ({
+export default connect(
+  ({
+    editOptions: { isCoinListEdited },
     openSavings,
     openSmallBalances,
-  }))
+    openStateSettings: { openFamilyTabs, openInvestmentCards },
+    settings: { nativeCurrency },
+  }) => ({
+    isCoinListEdited,
+    nativeCurrency,
+    openFamilyTabs,
+    openInvestmentCards,
+    openSavings,
+    openSmallBalances,
+  })
 )(RecyclerAssetList);
