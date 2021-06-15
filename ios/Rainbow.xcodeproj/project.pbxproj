@@ -22,11 +22,14 @@
 		3CBE29CD2381E43900BE05AC /* Dummy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CBE29CC2381E43900BE05AC /* Dummy.swift */; };
 		6630540924A38A1900E5B030 /* RainbowText.m in Sources */ = {isa = PBXBuildFile; fileRef = 6630540824A38A1900E5B030 /* RainbowText.m */; };
 		6635730624939991006ACFA6 /* SafeStoreReview.m in Sources */ = {isa = PBXBuildFile; fileRef = 6635730524939991006ACFA6 /* SafeStoreReview.m */; };
+		6655FFB425BB2B0700642961 /* ThemeModule.m in Sources */ = {isa = PBXBuildFile; fileRef = 6655FFB325BB2B0700642961 /* ThemeModule.m */; };
 		66A1FEB424AB641100C3F539 /* RNCMScreenStack.m in Sources */ = {isa = PBXBuildFile; fileRef = 66A1FEB024AB641100C3F539 /* RNCMScreenStack.m */; };
 		66A1FEB524AB641100C3F539 /* UIViewController+slack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66A1FEB124AB641100C3F539 /* UIViewController+slack.swift */; };
 		66A1FEB624AB641100C3F539 /* RNCMScreen.m in Sources */ = {isa = PBXBuildFile; fileRef = 66A1FEB324AB641100C3F539 /* RNCMScreen.m */; };
 		66A1FEBC24ACBBE600C3F539 /* RNCMPortal.m in Sources */ = {isa = PBXBuildFile; fileRef = 66A1FEBB24ACBBE600C3F539 /* RNCMPortal.m */; };
 		66A28EB024CAF1B500410A88 /* TestFlight.m in Sources */ = {isa = PBXBuildFile; fileRef = 66A28EAF24CAF1B500410A88 /* TestFlight.m */; };
+		66F889DB260CEF1E00E27D6E /* UIViewController+PanModalPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F889D8260CEF1E00E27D6E /* UIViewController+PanModalPresenter.swift */; };
+		66F889DC260CEF1E00E27D6E /* SlackBottomSheet.m in Sources */ = {isa = PBXBuildFile; fileRef = 66F889DA260CEF1E00E27D6E /* SlackBottomSheet.m */; };
 		66FEC91623EDA14000A0F367 /* RoundedCornerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66FEC91523EDA13F00A0F367 /* RoundedCornerView.swift */; };
 		7287CE1EC33B4913AEE1F4B6 /* SFMono-Medium.otf in Resources */ = {isa = PBXBuildFile; fileRef = 668A9E253DAF444A90ECB997 /* SFMono-Medium.otf */; };
 		A4277D9F23CBD1910042BAF4 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4277D9E23CBD1910042BAF4 /* Extensions.swift */; };
@@ -120,6 +123,7 @@
 		466CDCBFE61F83D2AE1C7410 /* Pods-Rainbow.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Rainbow.debug.xcconfig"; path = "Target Support Files/Pods-Rainbow/Pods-Rainbow.debug.xcconfig"; sourceTree = "<group>"; };
 		6630540824A38A1900E5B030 /* RainbowText.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RainbowText.m; sourceTree = "<group>"; };
 		6635730524939991006ACFA6 /* SafeStoreReview.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SafeStoreReview.m; sourceTree = "<group>"; };
+		6655FFB325BB2B0700642961 /* ThemeModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ThemeModule.m; sourceTree = "<group>"; };
 		668A9E253DAF444A90ECB997 /* SFMono-Medium.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "SFMono-Medium.otf"; path = "../src/assets/fonts/SFMono-Medium.otf"; sourceTree = "<group>"; };
 		668ADB2C25A4E3A40050859D /* Stickers.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Stickers.xcassets; sourceTree = "<group>"; };
 		668ADB2E25A4E3A40050859D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -131,6 +135,9 @@
 		66A1FEBB24ACBBE600C3F539 /* RNCMPortal.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = RNCMPortal.m; path = "../src/react-native-cool-modals/ios/RNCMPortal.m"; sourceTree = "<group>"; };
 		66A28EAF24CAF1B500410A88 /* TestFlight.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TestFlight.m; sourceTree = "<group>"; };
 		66A29CCA2511074500481F4A /* ReaHeader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ReaHeader.h; sourceTree = SOURCE_ROOT; };
+		66F889D8260CEF1E00E27D6E /* UIViewController+PanModalPresenter.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "UIViewController+PanModalPresenter.swift"; sourceTree = "<group>"; };
+		66F889D9260CEF1E00E27D6E /* SlackBottomSheet.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SlackBottomSheet.h; sourceTree = "<group>"; };
+		66F889DA260CEF1E00E27D6E /* SlackBottomSheet.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SlackBottomSheet.m; sourceTree = "<group>"; };
 		66FEC91523EDA13F00A0F367 /* RoundedCornerView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RoundedCornerView.swift; sourceTree = "<group>"; };
 		95F2888C850F40C8A26E083B /* SFMono-Regular.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "SFMono-Regular.otf"; path = "../src/assets/fonts/SFMono-Regular.otf"; sourceTree = "<group>"; };
 		98AED33BAB4247CEBEF8464D /* libz.tbd */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
@@ -205,6 +212,7 @@
 		13B07FAE1A68108700A75B9A /* Rainbow */ = {
 			isa = PBXGroup;
 			children = (
+				66F889D0260CEE0E00E27D6E /* DiscoverSheet */,
 				1539422B24C7CF7B00E4A9D1 /* Settings */,
 				66A1FEAE24AB63D600C3F539 /* RNCoolModals */,
 				15E531D7242DAB3500797B89 /* NSNotifications */,
@@ -229,6 +237,7 @@
 				1539422724C7C7E100E4A9D1 /* Settings.bundle */,
 				66A28EAF24CAF1B500410A88 /* TestFlight.m */,
 				C04D10EF25AFC8C1003BEF7A /* Extras.json */,
+				6655FFB325BB2B0700642961 /* ThemeModule.m */,
 			);
 			name = Rainbow;
 			sourceTree = "<group>";
@@ -324,6 +333,16 @@
 				66A1FEB124AB641100C3F539 /* UIViewController+slack.swift */,
 			);
 			name = RNCoolModals;
+			sourceTree = "<group>";
+		};
+		66F889D0260CEE0E00E27D6E /* DiscoverSheet */ = {
+			isa = PBXGroup;
+			children = (
+				66F889D9260CEF1E00E27D6E /* SlackBottomSheet.h */,
+				66F889DA260CEF1E00E27D6E /* SlackBottomSheet.m */,
+				66F889D8260CEF1E00E27D6E /* UIViewController+PanModalPresenter.swift */,
+			);
+			path = DiscoverSheet;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -463,6 +482,7 @@
 				A4451ED5032E4036E311CE0C /* [CP-User] [RNFB] Crashlytics Configuration */,
 				9FF961FEA7AF435FA18ED988 /* Upload Debug Symbols to Sentry */,
 				668ADB3225A4E3A40050859D /* Embed App Extensions */,
+				793E10FC2D2DE55DE5BE1675 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -485,7 +505,7 @@
 					13B07F861A680F5B00A75B9A = {
 						DevelopmentTeam = L74NQAQB8H;
 						LastSwiftMigration = 1120;
-						ProvisioningStyle = Automatic;
+						ProvisioningStyle = Manual;
 						SystemCapabilities = {
 							com.apple.Push = {
 								enabled = 1;
@@ -555,7 +575,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "export SENTRY_PROPERTIES=sentry.properties\nexport NODE_ARGS=--max-old-space-size=2048\nif [[ ! \"$CONFIGURATION\" = *Debug* ]]; then\n    DEST=$CONFIGURATION_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH\n    export EXTRA_PACKAGER_ARGS=\"--sourcemap-output $DEST/main.jsbundle.map\"\nfi\n\n../node_modules/@sentry/cli/bin/sentry-cli react-native xcode  ../node_modules/react-native/scripts/react-native-xcode.sh\n\nif [[ ! \"$CONFIGURATION\" = *Debug* ]]; then\n    cp $DEST/main.jsbundle* ../ios/\nfi\n";
+			shellScript = "export SENTRY_PROPERTIES=sentry.properties\nexport NODE_ARGS=--max-old-space-size=2048\nif [[ ! \"$CONFIGURATION\" = *Debug* ]]; then\n    DEST=$CONFIGURATION_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH\n    export EXTRA_PACKAGER_ARGS=\"--sourcemap-output $DEST/main.jsbundle.map\"\nfi\n\nsentry-cli react-native xcode  ../node_modules/react-native/scripts/react-native-xcode.sh\n\nif [[ ! \"$CONFIGURATION\" = *Debug* ]]; then\n    cp $DEST/main.jsbundle* ../ios/\nfi\n";
+			showEnvVarsInLog = 0;
+		};
+		793E10FC2D2DE55DE5BE1675 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Rainbow/Pods-Rainbow-frameworks.sh",
+				"${PODS_ROOT}/hermes-engine/destroot/Library/Frameworks/iphoneos/hermes.framework",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/OpenSSL/OpenSSL.framework/OpenSSL",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/OpenSSL.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Rainbow/Pods-Rainbow-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 		9FF961FEA7AF435FA18ED988 /* Upload Debug Symbols to Sentry */ = {
@@ -570,7 +610,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "export SENTRY_PROPERTIES=sentry.properties\n../node_modules/@sentry/cli/bin/sentry-cli upload-dsym";
+			shellScript = "export SENTRY_PROPERTIES=sentry.properties\nsentry-cli upload-dsym\n";
 		};
 		A4451ED5032E4036E311CE0C /* [CP-User] [RNFB] Crashlytics Configuration */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -640,6 +680,7 @@
 				153D1AAC24777130007E4723 /* TransactionListLoadingViewCell.swift in Sources */,
 				6635730624939991006ACFA6 /* SafeStoreReview.m in Sources */,
 				13B07FC11A68108700A75B9A /* main.m in Sources */,
+				66F889DB260CEF1E00E27D6E /* UIViewController+PanModalPresenter.swift in Sources */,
 				A49B52B623DB5D5600A00918 /* TransactionViewModelProtocol.swift in Sources */,
 				15E531DA242DAB7100797B89 /* NotificationManager.m in Sources */,
 				A4F8DACB23DF85DF00560E47 /* TransactionListBaseCell.swift in Sources */,
@@ -651,11 +692,13 @@
 				66FEC91623EDA14000A0F367 /* RoundedCornerView.swift in Sources */,
 				A477567E23DB3A85005AE8FD /* TransactionListViewManager.m in Sources */,
 				66A1FEB424AB641100C3F539 /* RNCMScreenStack.m in Sources */,
+				66F889DC260CEF1E00E27D6E /* SlackBottomSheet.m in Sources */,
 				A477567C23DB2FAA005AE8FD /* Transaction.swift in Sources */,
 				A4277DA323CFE85F0042BAF4 /* Theme.swift in Sources */,
 				15E531D5242B28EF00797B89 /* UIImageViewWithPersistentAnimations.swift in Sources */,
 				A4277D9F23CBD1910042BAF4 /* Extensions.swift in Sources */,
 				A4D04BAC23D12FD5008C1DEC /* ButtonManager.m in Sources */,
+				6655FFB425BB2B0700642961 /* ThemeModule.m in Sources */,
 				1539422D24C7CF9300E4A9D1 /* SettingsBundleHelper.swift in Sources */,
 				66A1FEB624AB641100C3F539 /* RNCMScreen.m in Sources */,
 				A49B52B823DB5F7200A00918 /* TransactionViewModelTransactionRequestItem.swift in Sources */,
@@ -693,8 +736,8 @@
 				ASSETCATALOG_COMPILER_OPTIMIZATION = time;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Rainbow/RainbowDebug.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = NO;
@@ -737,7 +780,7 @@
 					"$(PROJECT_DIR)",
 				);
 				LLVM_LTO = YES;
-				MARKETING_VERSION = 1.2.49;
+				MARKETING_VERSION = 1.5.12;
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-DFB_SONARKIT_ENABLED=1",
@@ -750,7 +793,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = me.rainbow;
 				PRODUCT_NAME = Rainbow;
 				PROVISIONING_PROFILE = "";
-				PROVISIONING_PROFILE_SPECIFIER = "";
+				PROVISIONING_PROFILE_SPECIFIER = "match Development me.rainbow";
 				SWIFT_OBJC_BRIDGING_HEADER = "Rainbow-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -765,7 +808,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_OPTIMIZATION = "";
 				CLANG_ENABLE_MODULES = YES;
-				CODEPUSH_KEY = "CHq9hB40PBZqHTxL-f-Wd_rK4anl1e7a8912-936f-4ce7-8505-32a075039f51";
 				CODE_SIGN_ENTITLEMENTS = Rainbow/RainbowRelease.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Distribution";
 				CODE_SIGN_STYLE = Manual;
@@ -797,7 +839,7 @@
 					"$(PROJECT_DIR)",
 				);
 				LLVM_LTO = YES;
-				MARKETING_VERSION = 1.2.49;
+				MARKETING_VERSION = 1.5.12;
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-DFB_SONARKIT_ENABLED=1",
@@ -835,12 +877,12 @@
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODEPUSH_KEY = "<STAGING_DEPLOYMENT_KEY>";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CONFIGURATION_BUILD_DIR = "$(BUILD_DIR)/Release$(EFFECTIVE_PLATFORM_NAME)";
 				COPY_PHASE_STRIP = YES;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = "arm64 i386";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
@@ -862,7 +904,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_OPTIMIZATION = "";
 				CLANG_ENABLE_MODULES = YES;
-				CODEPUSH_KEY = "Xf8eimmB0-W22TRNCwL9tZNO9xev1e7a8912-936f-4ce7-8505-32a075039f51";
 				CODE_SIGN_ENTITLEMENTS = Rainbow/Rainbow.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
@@ -893,7 +934,7 @@
 					"$(PROJECT_DIR)",
 				);
 				LLVM_LTO = YES;
-				MARKETING_VERSION = 1.2.49;
+				MARKETING_VERSION = 1.5.12;
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-DFB_SONARKIT_ENABLED=1",
@@ -931,12 +972,12 @@
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODEPUSH_KEY = "";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CONFIGURATION_BUILD_DIR = "$(BUILD_DIR)/Release$(EFFECTIVE_PLATFORM_NAME)";
 				COPY_PHASE_STRIP = YES;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = "arm64 i386";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_PREPROCESSOR_DEFINITIONS = "LOCAL_RELEASE=1";
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -959,10 +1000,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_OPTIMIZATION = time;
 				CLANG_ENABLE_MODULES = YES;
-				CODEPUSH_KEY = "";
 				CODE_SIGN_ENTITLEMENTS = Rainbow/Rainbow.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = L74NQAQB8H;
@@ -990,7 +1030,7 @@
 					"$(PROJECT_DIR)",
 				);
 				LLVM_LTO = YES;
-				MARKETING_VERSION = 1.2.49;
+				MARKETING_VERSION = 1.5.12;
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-DFB_SONARKIT_ENABLED=1",
@@ -1003,7 +1043,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = me.rainbow;
 				PRODUCT_NAME = Rainbow;
 				PROVISIONING_PROFILE = "";
-				PROVISIONING_PROFILE_SPECIFIER = "";
+				PROVISIONING_PROFILE_SPECIFIER = "match Development me.rainbow";
 				SWIFT_OBJC_BRIDGING_HEADER = "Rainbow-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -1028,10 +1068,10 @@
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODEPUSH_KEY = "";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = "arm64 i386";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
@@ -1071,11 +1111,11 @@
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODEPUSH_KEY = "<PRODUCTION_DEPLOYMENT_KEY>";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = YES;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = "arm64 i386";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;

@@ -10,7 +10,6 @@ import {
 import { hdkey } from 'ethereumjs-wallet';
 import {
   find,
-  get,
   isEmpty,
   isString,
   matchesProperty,
@@ -19,9 +18,12 @@ import {
 } from 'lodash';
 import { Linking, NativeModules } from 'react-native';
 import { ETHERSCAN_API_KEY } from 'react-native-dotenv';
+import { useSelector } from 'react-redux';
 import URL from 'url-parse';
 import networkTypes from '@rainbow-me/helpers/networkTypes';
 import {
+  convertAmountAndPriceToNativeDisplay,
+  convertAmountToPercentageDisplay,
   fromWei,
   greaterThan,
   isZero,
@@ -34,22 +36,50 @@ import {
   WalletLibraryType,
 } from '@rainbow-me/model/wallet';
 import store from '@rainbow-me/redux/store';
-import { chains } from '@rainbow-me/references';
+import { chains, ETH_ADDRESS } from '@rainbow-me/references';
 import logger from 'logger';
 
 const { RNBip39 } = NativeModules;
 
-const getEthPriceUnit = () => {
+const getAsset = (assets, address = 'eth') =>
+  find(assets, matchesProperty('address', toLower(address)));
+
+const getAssetPrice = (address = ETH_ADDRESS) => {
   const { assets, genericAssets } = store.getState().data;
-  const genericEthPrice = genericAssets?.eth?.price?.value;
-  return genericEthPrice || getAsset(assets)?.price?.value || 0;
+  const genericPrice = genericAssets[address]?.price?.value;
+  return genericPrice || getAsset(assets, address)?.price?.value || 0;
 };
 
-const getBalanceAmount = async (selectedGasPrice, selected) => {
-  let amount = get(selected, 'balance.amount', 0);
-  if (get(selected, 'address') === 'eth') {
+export const useEth = () => {
+  return useSelector(
+    ({
+      data: {
+        genericAssets: { [ETH_ADDRESS]: asset },
+      },
+    }) => asset
+  );
+};
+
+export const useEthUSDPrice = () => {
+  return useSelector(({ data: { ethUSDPrice } }) => ethUSDPrice);
+};
+
+export const useEthUSDMonthChart = () => {
+  return useSelector(({ charts: { chartsEthUSDMonth } }) => chartsEthUSDMonth);
+};
+
+const getEthPriceUnit = () => getAssetPrice();
+
+const getBalanceAmount = (selectedGasPrice, selected) => {
+  const { assets } = store.getState().data;
+  let amount =
+    selected?.balance?.amount ??
+    getAsset(assets, selected?.address)?.balance?.amount ??
+    0;
+
+  if (selected?.address === ETH_ADDRESS) {
     if (!isEmpty(selectedGasPrice)) {
-      const txFeeRaw = get(selectedGasPrice, 'txFee.value.amount');
+      const txFeeRaw = selectedGasPrice?.txFee?.value?.amount;
       const txFeeAmount = fromWei(txFeeRaw);
       const remaining = subtract(amount, txFeeAmount);
       amount = greaterThan(remaining, 0) ? remaining : '0';
@@ -60,12 +90,27 @@ const getBalanceAmount = async (selectedGasPrice, selected) => {
 
 const getHash = txn => txn.hash.split('-').shift();
 
-const getAsset = (assets, address = 'eth') =>
-  find(assets, matchesProperty('address', toLower(address)));
+const formatGenericAsset = (asset, nativeCurrency) => {
+  return {
+    ...asset,
+    native: {
+      change: asset?.price?.relative_change_24h
+        ? convertAmountToPercentageDisplay(
+            `${asset?.price?.relative_change_24h}`
+          )
+        : '',
+      price: convertAmountAndPriceToNativeDisplay(
+        1,
+        asset?.price?.value,
+        nativeCurrency
+      ),
+    },
+  };
+};
 
 export const checkWalletEthZero = assets => {
-  const ethAsset = find(assets, asset => asset.address === 'eth');
-  let amount = get(ethAsset, 'balance.amount', 0);
+  const ethAsset = find(assets, asset => asset.address === ETH_ADDRESS);
+  let amount = ethAsset?.balance?.amount ?? 0;
   return isZero(amount);
 };
 
@@ -107,7 +152,7 @@ const getDataString = (func, arrVals) => {
  */
 const getNetworkFromChainId = chainId => {
   const networkData = find(chains, ['chain_id', chainId]);
-  return get(networkData, 'network', networkTypes.mainnet);
+  return networkData?.network ?? networkTypes.mainnet;
 };
 
 /**
@@ -116,7 +161,7 @@ const getNetworkFromChainId = chainId => {
  */
 const getChainIdFromNetwork = network => {
   const chainData = find(chains, ['network', network]);
-  return get(chainData, 'chain_id', 1);
+  return chainData?.chain_id ?? 1;
 };
 
 /**
@@ -281,7 +326,9 @@ export default {
   deriveAccountFromMnemonic,
   deriveAccountFromPrivateKey,
   deriveAccountFromWalletInput,
+  formatGenericAsset,
   getAsset,
+  getAssetPrice,
   getBalanceAmount,
   getChainIdFromNetwork,
   getDataString,

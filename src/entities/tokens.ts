@@ -1,3 +1,11 @@
+import { AssetType } from './assetTypes';
+
+interface ZerionAssetPrice {
+  value: number;
+  relative_change_24h: number | null;
+  changed_at: number;
+}
+
 export interface Asset {
   address: string;
   decimals: number;
@@ -5,33 +13,48 @@ export interface Asset {
   symbol: string;
 }
 
+export interface ZerionAsset {
+  asset_code: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+  type: AssetType | null;
+  icon_url?: string | null;
+  price?: ZerionAssetPrice | null;
+}
+
 export interface SavingsAsset extends Asset {
   contractAddress: string;
 }
 
-export interface ParsedAddressAsset {
-  address: string;
+export interface ParsedAddressAsset extends Asset {
   balance?: {
     amount?: string;
     display?: string;
   };
   color?: string;
-  decimals: number;
   icon_url?: string;
-  is_displayable?: boolean;
-  name: string;
   price?: {
     changed_at?: number;
     relative_change_24h?: number;
     value?: number;
   };
-  symbol: string;
   type?: string;
   uniqueId: string;
 }
 
+export interface UniswapCurrency extends ParsedAddressAsset {
+  native?: {
+    price?: {
+      amount?: string;
+    };
+  };
+}
+
 export interface RainbowToken extends Asset {
   color?: string;
+  highLiquidity?: boolean;
+  totalLiquidity?: number;
   favorite?: boolean;
   isRainbowCurated?: boolean;
   isVerified?: boolean;
@@ -39,11 +62,6 @@ export interface RainbowToken extends Asset {
   uniqueId: string;
 }
 
-export interface UniswapSubgraphAsset extends RainbowToken {
-  derivedETH: string;
-  totalLiquidity: string;
-}
-
-export interface RawUniswapSubgraphAsset extends UniswapSubgraphAsset {
-  id: string;
+export interface IndexToken extends Asset {
+  amount: string;
 }

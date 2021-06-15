@@ -8,7 +8,7 @@ import React, {
   useState,
 } from 'react';
 import { InteractionManager } from 'react-native';
-import styled from 'styled-components/primitives';
+import styled from 'styled-components';
 import Divider from '../components/Divider';
 import { Alert } from '../components/alerts';
 import { RequestVendorLogoIcon } from '../components/coin-icon';
@@ -24,19 +24,21 @@ import {
   isDappAuthenticated,
 } from '@rainbow-me/helpers/dappNameHandler';
 import { useNavigation } from '@rainbow-me/navigation';
-import { colors } from '@rainbow-me/styles';
 import { ethereumUtils } from '@rainbow-me/utils';
 
-const DappLogo = styled(RequestVendorLogoIcon).attrs({
-  backgroundColor: colors.transparent,
-  borderRadius: 18,
-  showLargeShadow: true,
-  size: 60,
-})`
+const DappLogo = styled(RequestVendorLogoIcon).attrs(
+  ({ theme: { colors } }) => ({
+    backgroundColor: colors.transparent,
+    borderRadius: 18,
+    showLargeShadow: true,
+    size: 60,
+  })
+)`
   margin-bottom: 24;
 `;
 
 export default function WalletConnectApprovalSheet() {
+  const { colors } = useTheme();
   const { goBack } = useNavigation();
   const { params } = useRoute();
   const [scam, setScam] = useState(false);
@@ -125,6 +127,7 @@ export default function WalletConnectApprovalSheet() {
         paddingBottom={5}
         paddingHorizontal={19}
         paddingTop={17}
+        testID="wc-approval-sheet"
       >
         <DappLogo dappName={dappName || ''} imageUrl={imageUrl} />
         <Centered paddingHorizontal={24}>
@@ -163,6 +166,7 @@ export default function WalletConnectApprovalSheet() {
           label="Connect"
           onPress={handleConnect}
           size="big"
+          testID="wc-connect"
           weight="bold"
         />
       </SheetActionButtonRow>

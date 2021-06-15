@@ -1,12 +1,21 @@
+import { Logger } from '@ethersproject/logger';
 import { Wallet } from '@ethersproject/wallet';
 import analytics from '@segment/analytics-react-native';
 import { captureException } from '@sentry/react-native';
 import { Trade } from '@uniswap/sdk';
-import { get, join, map } from 'lodash';
-import { rapsAddOrUpdate } from '../redux/raps';
-import store from '../redux/store';
+import { join, map } from 'lodash';
 import { depositCompound, swap, unlock, withdrawCompound } from './actions';
-import { Asset, SelectedGasPrice } from '@rainbow-me/entities';
+import {
+  createSwapAndDepositCompoundRap,
+  estimateSwapAndDepositCompound,
+} from './swapAndDepositCompound';
+import { createUnlockAndSwapRap, estimateUnlockAndSwap } from './unlockAndSwap';
+import {
+  createWithdrawFromCompoundRap,
+  estimateWithdrawFromCompound,
+} from './withdrawFromCompound';
+import { Asset } from '@rainbow-me/entities';
+import ExchangeModalTypes from '@rainbow-me/helpers/exchangeModalTypes';
 
 import logger from 'logger';
 
@@ -18,58 +27,27 @@ export enum RapActionType {
 }
 
 export interface RapActionParameters {
-  accountAddress?: string;
   amount?: string | null;
   assetToUnlock?: Asset;
   contractAddress?: string;
   inputAmount?: string | null;
-  inputCurrency?: Asset;
-  isMax?: boolean;
-  network?: string; // Network;
-  outputCurrency?: Asset;
-  override?: string | null | void;
-  selectedGasPrice?: SelectedGasPrice;
+  outputAmount?: string | null;
   tradeDetails?: Trade;
 }
 
-export interface DepositActionParameters {
-  accountAddress: string;
-  inputAmount: string;
-  inputCurrency: Asset;
-  network: string;
-  override?: string | null;
-  selectedGasPrice: SelectedGasPrice;
-}
-
 export interface UnlockActionParameters {
-  accountAddress: string;
   amount: string;
   assetToUnlock: Asset;
   contractAddress: string;
-  override?: string | null;
-  selectedGasPrice: SelectedGasPrice;
 }
 
 export interface SwapActionParameters {
-  accountAddress: string;
   inputAmount: string;
-  inputCurrency: Asset;
-  outputCurrency: Asset;
-  selectedGasPrice: SelectedGasPrice;
+  outputAmount: string;
   tradeDetails: Trade;
 }
 
-export interface WithdrawActionParameters {
-  accountAddress: string;
-  inputAmount: string;
-  inputCurrency: Asset;
-  isMax: boolean;
-  network: string;
-  selectedGasPrice: SelectedGasPrice;
-}
-
 export interface RapActionTransaction {
-  confirmed: boolean | null;
   hash: string | null;
 }
 
@@ -81,19 +59,54 @@ export interface RapAction {
 
 export interface Rap {
   actions: RapAction[];
-  callback: () => void;
-  completedAt: string | null;
-  id: string;
-  startedAt: string;
 }
 
-const NOOP = () => {};
+interface RapActionResponse {
+  baseNonce?: number | null;
+  errorMessage: string | null;
+}
+
+interface EthersError extends Error {
+  code?: string | null;
+}
+
+const NOOP = () => null;
 
 export const RapActionTypes = {
   depositCompound: 'depositCompound' as RapActionType,
   swap: 'swap' as RapActionType,
   unlock: 'unlock' as RapActionType,
   withdrawCompound: 'withdrawCompound' as RapActionType,
+};
+
+const createRapByType = (
+  type: string,
+  swapParameters: SwapActionParameters
+) => {
+  switch (type) {
+    case ExchangeModalTypes.deposit:
+      return createSwapAndDepositCompoundRap(swapParameters);
+    case ExchangeModalTypes.withdrawal:
+      return createWithdrawFromCompoundRap(swapParameters);
+    default:
+      return createUnlockAndSwapRap(swapParameters);
+  }
+};
+
+export const getRapEstimationByType = (
+  type: string,
+  swapParameters: SwapActionParameters
+) => {
+  switch (type) {
+    case ExchangeModalTypes.deposit:
+      return estimateSwapAndDepositCompound(swapParameters);
+    case ExchangeModalTypes.swap:
+      return estimateUnlockAndSwap(swapParameters);
+    case ExchangeModalTypes.withdrawal:
+      return estimateWithdrawFromCompound();
+    default:
+      return null;
+  }
 };
 
 const findActionByType = (type: RapActionType) => {
@@ -116,13 +129,64 @@ const getRapFullName = (actions: RapAction[]) => {
   return join(actionTypes, ' + ');
 };
 
-const defaultPreviousAction = {
-  transaction: {
-    confirmed: true,
-  },
+const parseError = (error: EthersError): string => {
+  const errorCode = error?.code;
+  switch (errorCode) {
+    case Logger.errors.UNPREDICTABLE_GAS_LIMIT:
+      return 'Oh no! We were unable to estimate the gas limit. Please try again.';
+    case Logger.errors.INSUFFICIENT_FUNDS:
+      return 'Oh no! The gas price changed and you no longer have enough funds for this transaction. Please try again with a lower amount.';
+    default:
+      return 'Oh no! There was a problem submitting the transaction. Please try again.';
+  }
 };
 
-export const executeRap = async (wallet: Wallet, rap: Rap) => {
+const executeAction = async (
+  action: RapAction,
+  wallet: Wallet,
+  rap: Rap,
+  index: number,
+  rapName: string,
+  baseNonce?: number
+): Promise<RapActionResponse> => {
+  logger.log('[1 INNER] index', index);
+  const { parameters, type } = action;
+  const actionPromise = findActionByType(type);
+  logger.log('[2 INNER] executing type', type);
+  try {
+    const nonce = await actionPromise(
+      wallet,
+      rap,
+      index,
+      parameters,
+      baseNonce
+    );
+    return { baseNonce: nonce, errorMessage: null };
+  } catch (error) {
+    logger.sentry('[3 INNER] error running action, code:', error?.code);
+    captureException(error);
+    analytics.track('Rap failed', {
+      category: 'raps',
+      failed_action: type,
+      label: rapName,
+    });
+    // If the first action failed, return an error message
+    if (index === 0) {
+      const errorMessage = parseError(error);
+      logger.log('[4 INNER] displaying error message', errorMessage);
+      return { baseNonce: null, errorMessage };
+    }
+    return { baseNonce: null, errorMessage: null };
+  }
+};
+
+export const executeRap = async (
+  wallet: Wallet,
+  type: string,
+  swapParameters: SwapActionParameters,
+  callback: (success?: boolean, errorMessage?: string | null) => void
+) => {
+  const rap: Rap = await createRapByType(type, swapParameters);
   const { actions } = rap;
   const rapName = getRapFullName(actions);
 
@@ -132,57 +196,24 @@ export const executeRap = async (wallet: Wallet, rap: Rap) => {
   });
 
   logger.log('[common - executing rap]: actions', actions);
-  for (let index = 0; index < actions.length; index++) {
-    logger.log('[1 INNER] index', index);
-    const previousAction = index ? actions[index - 1] : defaultPreviousAction;
-    logger.log('[2 INNER] previous action', previousAction);
-    const previousActionWasSuccess = get(
-      previousAction,
-      'transaction.confirmed',
-      false
+  if (actions.length) {
+    const firstAction = actions[0];
+    const { baseNonce, errorMessage } = await executeAction(
+      firstAction,
+      wallet,
+      rap,
+      0,
+      rapName
     );
-    logger.log(
-      '[3 INNER] previous action was successful',
-      previousActionWasSuccess
-    );
-    if (!previousActionWasSuccess) break;
-
-    const action = actions[index];
-    const currentActionHasBeenCompleted = get(
-      action,
-      'transaction.confirmed',
-      false
-    );
-
-    // If the action is complete, skip it (we're resuming a rap!)
-    if (currentActionHasBeenCompleted) {
-      logger.log(
-        '[3.5 INNER] ignoring current action because it was completed!'
-      );
-      continue;
-    }
-
-    const { parameters, type } = action;
-    const actionPromise = findActionByType(type);
-    logger.log('[4 INNER] executing type', type);
-    try {
-      const output = await actionPromise(wallet, rap, index, parameters);
-      logger.log('[5 INNER] action output', output);
-      const nextAction = index < actions.length - 1 ? actions[index + 1] : null;
-      logger.log('[6 INNER] next action', nextAction);
-      if (nextAction) {
-        logger.log('[7 INNER] updating params override');
-        nextAction.parameters.override = output;
+    if (baseNonce) {
+      for (let index = 1; index < actions.length; index++) {
+        const action = actions[index];
+        await executeAction(action, wallet, rap, index, rapName, baseNonce);
       }
-    } catch (error) {
-      logger.sentry('[5 INNER] error running action');
-      captureException(error);
-      analytics.track('Rap failed', {
-        category: 'raps',
-        failed_action: type,
-        label: rapName,
-      });
-      break;
+      callback(true);
+    } else {
+      // Callback with failure state
+      callback(false, errorMessage);
     }
   }
 
@@ -193,20 +224,10 @@ export const executeRap = async (wallet: Wallet, rap: Rap) => {
   logger.log('[common - executing rap] finished execute rap function');
 };
 
-export const createNewRap = (actions: RapAction[], callback = NOOP) => {
-  const { dispatch } = store;
-  const now = Date.now();
-  const currentRap = {
+export const createNewRap = (actions: RapAction[]) => {
+  return {
     actions,
-    callback,
-    completedAt: null,
-    id: `rap_${now}`,
-    startedAt: now,
   };
-
-  logger.log('[common] Creating a new rap', currentRap);
-  dispatch(rapsAddOrUpdate(currentRap.id, currentRap));
-  return currentRap;
 };
 
 export const createNewAction = (
