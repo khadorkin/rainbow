@@ -6,6 +6,7 @@ import {
   joinSignature,
 } from '@ethersproject/bytes';
 import { HDNode } from '@ethersproject/hdnode';
+import { Provider } from '@ethersproject/providers';
 import { SigningKey } from '@ethersproject/signing-key';
 import { Transaction } from '@ethersproject/transactions';
 import { Wallet } from '@ethersproject/wallet';
@@ -21,7 +22,8 @@ import lang from 'i18n-js';
 import { find, findKey, forEach, get, isEmpty } from 'lodash';
 import { Alert } from 'react-native';
 import { ACCESSIBLE, getSupportedBiometryType } from 'react-native-keychain';
-import { getRandomColor, lightModeThemeColors } from '../styles/colors';
+import { lightModeThemeColors } from '../styles/colors';
+import { addressHashedColorIndex } from '../utils/defaultProfileUtils';
 import {
   addressKey,
   allWalletsKey,
@@ -76,6 +78,7 @@ interface WalletInitialized {
 interface TransactionRequestParam {
   transaction: TransactionRequest;
   existingWallet?: Wallet;
+  provider?: Provider;
 }
 
 interface MessageTypeProperty {
@@ -222,14 +225,15 @@ export const walletInit = async (
 
 export const loadWallet = async (
   address?: EthereumAddress | undefined,
-  showErrorIfNotLoaded = true
+  showErrorIfNotLoaded = true,
+  provider?: Provider
 ): Promise<null | Wallet> => {
   const privateKey = await loadPrivateKey(address);
   if (privateKey === -1 || privateKey === -2) {
     return null;
   }
   if (privateKey) {
-    return new Wallet(privateKey, web3Provider);
+    return new Wallet(privateKey, provider || web3Provider);
   }
   if (ios && showErrorIfNotLoaded) {
     showWalletErrorAlert();
@@ -240,10 +244,12 @@ export const loadWallet = async (
 export const sendTransaction = async ({
   transaction,
   existingWallet,
+  provider,
 }: TransactionRequestParam): Promise<null | Transaction> => {
   try {
     logger.sentry('about to send transaction', transaction);
-    const wallet = existingWallet || (await loadWallet());
+    const wallet =
+      existingWallet || (await loadWallet(undefined, true, provider));
     if (!wallet) return null;
     try {
       const result = await wallet.sendTransaction(transaction);
@@ -268,10 +274,13 @@ export const sendTransaction = async ({
 
 export const signTransaction = async ({
   transaction,
+  existingWallet,
+  provider,
 }: TransactionRequestParam): Promise<null | string> => {
   try {
     logger.sentry('about to sign transaction', transaction);
-    const wallet = await loadWallet();
+    const wallet =
+      existingWallet || (await loadWallet(undefined, true, provider));
     if (!wallet) return null;
     try {
       return wallet.signTransaction(transaction);
@@ -292,11 +301,14 @@ export const signTransaction = async ({
 };
 
 export const signMessage = async (
-  message: BytesLike | Hexable | number
+  message: BytesLike | Hexable | number,
+  existingWallet?: Wallet,
+  provider?: Provider
 ): Promise<null | string> => {
   try {
     logger.sentry('about to sign message', message);
-    const wallet = await loadWallet();
+    const wallet =
+      existingWallet || (await loadWallet(undefined, true, provider));
     try {
       if (!wallet) return null;
       const signingKey = new SigningKey(wallet.privateKey);
@@ -317,11 +329,14 @@ export const signMessage = async (
 };
 
 export const signPersonalMessage = async (
-  message: string | Uint8Array
+  message: string | Uint8Array,
+  existingWallet?: Wallet,
+  provider?: Provider
 ): Promise<null | string> => {
   try {
     logger.sentry('about to sign personal message', message);
-    const wallet = await loadWallet();
+    const wallet =
+      existingWallet || (await loadWallet(undefined, true, provider));
     try {
       if (!wallet) return null;
       return wallet.signMessage(
@@ -346,11 +361,14 @@ export const signPersonalMessage = async (
 };
 
 export const signTypedDataMessage = async (
-  message: string | TypedData
+  message: string | TypedData,
+  existingWallet?: Wallet,
+  provider?: Provider
 ): Promise<null | string> => {
   try {
     logger.sentry('about to sign typed data  message', message);
-    const wallet = await loadWallet();
+    const wallet =
+      existingWallet || (await loadWallet(undefined, true, provider));
     if (!wallet) return null;
     try {
       const pkeyBuffer = toBuffer(addHexPrefix(wallet.privateKey));
@@ -639,11 +657,12 @@ export const createWallet = async (
     }
     logger.sentry('[createWallet] - saved private key');
 
-    const colorForWallet = color !== null ? color : getRandomColor();
+    const colorIndexForWallet =
+      color !== null ? color : addressHashedColorIndex(walletAddress) || 0;
     addresses.push({
       address: walletAddress,
       avatar: null,
-      color: colorForWallet,
+      color: colorIndexForWallet,
       index: 0,
       label: name || '',
       visible: true,
@@ -657,7 +676,8 @@ export const createWallet = async (
       store.dispatch(updateWebDataEnabled(true, walletAddress));
       // Save the color
       setPreference(PreferenceActionType.init, 'profile', address, {
-        accountColor: lightModeThemeColors.avatarColor[colorForWallet],
+        accountColor:
+          lightModeThemeColors.avatarBackgrounds[colorIndexForWallet],
       });
       logger.sentry(`[createWallet] - enabled web profile`);
     }
@@ -704,12 +724,13 @@ export const createWallet = async (
 
         // Remove any discovered wallets if they already exist
         // and copy over label and color if account was visible
-        let color = getRandomColor();
+        let colorIndexForWallet =
+          addressHashedColorIndex(nextWallet.address) || 0;
         let label = '';
 
         if (discoveredAccount && discoveredWalletId) {
           if (discoveredAccount.visible) {
-            color = discoveredAccount.color;
+            colorIndexForWallet = discoveredAccount.color;
             label = discoveredAccount.label ?? '';
           }
           // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
@@ -739,7 +760,7 @@ export const createWallet = async (
           addresses.push({
             address: nextWallet.address,
             avatar: null,
-            color,
+            color: colorIndexForWallet,
             index,
             label,
             visible: true,
@@ -756,7 +777,8 @@ export const createWallet = async (
             'profile',
             nextWallet.address,
             {
-              accountColor: lightModeThemeColors.avatarColor[color],
+              accountColor:
+                lightModeThemeColors.avatarBackgrounds[colorIndexForWallet],
             }
           );
 

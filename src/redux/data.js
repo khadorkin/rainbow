@@ -80,6 +80,7 @@ const BACKUP_SHEET_DELAY_MS = 3000;
 let pendingTransactionsHandle = null;
 let genericAssetsHandle = null;
 const TXN_WATCHER_MAX_TRIES = 60;
+const TXN_WATCHER_MAX_TRIES_LAYER_2 = 200;
 const TXN_WATCHER_POLL_INTERVAL = 5000; // 5 seconds
 const GENERIC_ASSETS_REFRESH_INTERVAL = 60000; // 1 minute
 const GENERIC_ASSETS_FALLBACK_TIMEOUT = 10000; // 10 seconds
@@ -173,6 +174,25 @@ export const fetchAssetPrices = async (coingeckoIds, nativeCurrency) => {
   }
 };
 
+export const fetchCoingeckoIds = async () => {
+  let ids;
+  try {
+    const request = await fetch(COINGECKO_IDS_ENDPOINT);
+    ids = await request.json();
+  } catch (e) {
+    ids = coingeckoIdsFallback;
+  }
+
+  const idsMap = {};
+  ids.forEach(({ id, platforms: { ethereum: tokenAddress } }) => {
+    const address = tokenAddress && toLower(tokenAddress);
+    if (address && address.substr(0, 2) === '0x') {
+      idsMap[address] = id;
+    }
+  });
+  return idsMap;
+};
+
 const genericAssetsFallback = () => async (dispatch, getState) => {
   logger.log('ZERION IS DOWN! ENABLING GENERIC ASSETS FALLBACK');
   const { nativeCurrency } = getState().settings;
@@ -202,7 +222,7 @@ const genericAssetsFallback = () => async (dispatch, getState) => {
     },
   ];
 
-  keys(TokensListenedCache).forEach(address => {
+  keys(TokensListenedCache?.[nativeCurrency]).forEach(address => {
     const coingeckoAsset = ids.find(
       ({ platforms: { ethereum: tokenAddress } }) =>
         toLower(tokenAddress) === address
@@ -295,6 +315,7 @@ export const dataResetState = () => (dispatch, getState) => {
     uniswapPricesSubscription.unsubscribe &&
     uniswapPricesSubscription.unsubscribe();
   pendingTransactionsHandle && clearTimeout(pendingTransactionsHandle);
+  genericAssetsHandle && clearTimeout(genericAssetsHandle);
   dispatch({ type: DATA_CLEAR_STATE });
 };
 
@@ -468,13 +489,11 @@ export const addressAssetsReceived = (
     uniswapUpdateLiquidityTokens(liquidityTokens, append || change || removed)
   );
 
-  if (append || change || removed) {
-    const { assets: existingAssets } = getState().data;
-    parsedAssets = uniqBy(
-      concat(parsedAssets, existingAssets),
-      item => item.uniqueId
-    );
-  }
+  const { assets: existingAssets } = getState().data;
+  parsedAssets = uniqBy(
+    concat(parsedAssets, existingAssets),
+    item => item.uniqueId
+  );
 
   parsedAssets = parsedAssets.filter(asset => !!Number(asset?.balance?.amount));
 
@@ -483,6 +502,7 @@ export const addressAssetsReceived = (
     // Change the state since the account isn't empty anymore
     saveAccountEmptyState(false, accountAddress, network);
   }
+
   dispatch({
     payload: parsedAssets,
     type: DATA_UPDATE_ASSETS,
@@ -662,7 +682,8 @@ export const assetPricesChanged = message => (dispatch, getState) => {
 export const dataAddNewTransaction = (
   txDetails,
   accountAddressToUpdate = null,
-  disableTxnWatcher = false
+  disableTxnWatcher = false,
+  provider = null
 ) => async (dispatch, getState) => {
   const { transactions } = getState().data;
   const { accountAddress, nativeCurrency, network } = getState().settings;
@@ -683,8 +704,21 @@ export const dataAddNewTransaction = (
       type: DATA_ADD_NEW_TRANSACTION_SUCCESS,
     });
     saveLocalTransactions(_transactions, accountAddress, network);
-    if (!disableTxnWatcher || network !== networkTypes.mainnet) {
-      dispatch(watchPendingTransactions(accountAddress));
+    if (
+      !disableTxnWatcher ||
+      network !== networkTypes.mainnet ||
+      parsedTransaction?.network
+    ) {
+      dispatch(
+        watchPendingTransactions(
+          accountAddress,
+          parsedTransaction.network
+            ? TXN_WATCHER_MAX_TRIES_LAYER_2
+            : TXN_WATCHER_MAX_TRIES,
+          null,
+          provider
+        )
+      );
     }
     return parsedTransaction;
     // eslint-disable-next-line no-empty
@@ -708,10 +742,10 @@ const getConfirmedState = type => {
   }
 };
 
-export const dataWatchPendingTransactions = (cb = null) => async (
-  dispatch,
-  getState
-) => {
+export const dataWatchPendingTransactions = (
+  cb = null,
+  provider = null
+) => async (dispatch, getState) => {
   const { transactions } = getState().data;
   if (!transactions.length) return true;
   let txStatusesDidChange = false;
@@ -729,7 +763,7 @@ export const dataWatchPendingTransactions = (cb = null) => async (
       const txHash = ethereumUtils.getHash(tx);
       try {
         logger.log('Checking pending tx with hash', txHash);
-        const txObj = await getTransactionReceipt(txHash);
+        const txObj = await getTransactionReceipt(txHash, provider);
         if (txObj && txObj.blockNumber) {
           // When speeding up a non "normal tx" we need to resubscribe
           // because zerion "append" event isn't reliable
@@ -815,7 +849,11 @@ export const dataUpdateTransaction = (txHash, txObj, watch, cb) => (
   // Always watch cancellation and speed up
   if (watch) {
     dispatch(
-      watchPendingTransactions(accountAddress, TXN_WATCHER_MAX_TRIES, cb)
+      watchPendingTransactions(
+        accountAddress,
+        txObj.network ? TXN_WATCHER_MAX_TRIES_LAYER_2 : TXN_WATCHER_MAX_TRIES,
+        cb
+      )
     );
   }
 };
@@ -833,7 +871,8 @@ const updatePurchases = updatedTransactions => dispatch => {
 const watchPendingTransactions = (
   accountAddressToWatch,
   remainingTries = TXN_WATCHER_MAX_TRIES,
-  cb = null
+  cb = null,
+  provider = null
 ) => async (dispatch, getState) => {
   pendingTransactionsHandle && clearTimeout(pendingTransactionsHandle);
   if (remainingTries === 0) return;
@@ -841,12 +880,17 @@ const watchPendingTransactions = (
   const { accountAddress: currentAccountAddress } = getState().settings;
   if (currentAccountAddress !== accountAddressToWatch) return;
 
-  const done = await dispatch(dataWatchPendingTransactions(cb));
+  const done = await dispatch(dataWatchPendingTransactions(cb, provider));
 
   if (!done) {
     pendingTransactionsHandle = setTimeout(() => {
       dispatch(
-        watchPendingTransactions(accountAddressToWatch, remainingTries - 1, cb)
+        watchPendingTransactions(
+          accountAddressToWatch,
+          remainingTries - 1,
+          cb,
+          provider
+        )
       );
     }, TXN_WATCHER_POLL_INTERVAL);
   }

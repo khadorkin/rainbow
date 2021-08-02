@@ -3,6 +3,7 @@ import { captureException } from '@sentry/react-native';
 import WalletConnect from '@walletconnect/client';
 import lang from 'i18n-js';
 import {
+  clone,
   forEach,
   get,
   isEmpty,
@@ -25,7 +26,11 @@ import { Navigation } from '../navigation';
 import { isSigningMethod } from '../utils/signingMethods';
 import { addRequestToApprove } from './requests';
 import { enableActionsOnReadOnlyWallet } from '@rainbow-me/config/debug';
+import networkTypes from '@rainbow-me/helpers/networkTypes';
+import { convertHexToString } from '@rainbow-me/helpers/utilities';
+import WalletConnectApprovalSheetType from '@rainbow-me/helpers/walletConnectApprovalSheetTypes';
 import Routes from '@rainbow-me/routes';
+import { ethereumUtils, watchingAlert } from '@rainbow-me/utils';
 import logger from 'logger';
 
 // -- Constants --------------------------------------- //
@@ -39,6 +44,9 @@ const WALLETCONNECT_REMOVE_SESSION =
   'walletconnect/WALLETCONNECT_REMOVE_SESSION';
 
 const WALLETCONNECT_INIT_SESSIONS = 'walletconnect/WALLETCONNECT_INIT_SESSIONS';
+const WALLETCONNECT_UPDATE_CONNECTORS =
+  'walletconnect/WALLETCONNECT_UPDATE_CONNECTORS';
+
 const WALLETCONNECT_CLEAR_STATE = 'walletconnect/WALLETCONNECT_CLEAR_STATE';
 
 const WALLETCONNECT_SET_PENDING_REDIRECT =
@@ -107,62 +115,47 @@ export const walletConnectOnSessionRequest = (
   callback
 ) => async dispatch => {
   let walletConnector = null;
+  const receivedTimestamp = Date.now();
   try {
     const { clientMeta, push } = await getNativeOptions();
     try {
       walletConnector = new WalletConnect({ clientMeta, uri }, push);
-      walletConnector.on('session_request', (error, payload) => {
-        if (error) {
-          analytics.track('Error on wc session_request', {
-            error,
-            payload,
-          });
-          logger.log('Error on wc session_request', payload);
-          captureException(error);
-          throw error;
-        }
-
-        const { peerId, peerMeta } = payload.params[0];
-
-        const imageUrl =
-          dappLogoOverride(peerMeta.url) || get(peerMeta, 'icons[0]');
-        const dappName = dappNameOverride(peerMeta.url) || peerMeta.name;
-        const dappUrl = peerMeta.url;
-        const dappScheme = peerMeta.scheme;
-
-        analytics.track('Showing Walletconnect session request', {
+      Navigation.handleAction(Routes.WALLET_CONNECT_APPROVAL_SHEET, {
+        callback: async (
+          approved,
+          chainId,
+          accountAddress,
+          peerId,
+          dappScheme,
           dappName,
-          dappUrl,
-        });
-
-        Navigation.handleAction(Routes.WALLET_CONNECT_APPROVAL_SHEET, {
-          callback: async approved => {
-            if (approved) {
-              dispatch(setPendingRequest(peerId, walletConnector));
-              dispatch(
-                walletConnectApproveSession(peerId, callback, dappScheme)
-              );
-              analytics.track('Approved new WalletConnect session', {
-                dappName,
-                dappUrl,
-              });
-            } else {
-              await dispatch(
-                walletConnectRejectSession(peerId, walletConnector)
-              );
-              callback && callback('reject', dappScheme);
-              analytics.track('Rejected new WalletConnect session', {
-                dappName,
-                dappUrl,
-              });
-            }
-          },
-          meta: {
-            dappName,
-            dappUrl,
-            imageUrl,
-          },
-        });
+          dappUrl
+        ) => {
+          if (approved) {
+            dispatch(setPendingRequest(peerId, walletConnector));
+            dispatch(
+              walletConnectApproveSession(
+                peerId,
+                callback,
+                dappScheme,
+                chainId,
+                accountAddress
+              )
+            );
+            analytics.track('Approved new WalletConnect session', {
+              dappName,
+              dappUrl,
+            });
+          } else {
+            await dispatch(walletConnectRejectSession(peerId, walletConnector));
+            callback && callback('reject', dappScheme);
+            analytics.track('Rejected new WalletConnect session', {
+              dappName,
+              dappUrl,
+            });
+          }
+        },
+        receivedTimestamp,
+        walletConnector,
       });
     } catch (error) {
       logger.log('Exception during wc session_request');
@@ -195,8 +188,77 @@ const listenOnNewMessages = walletConnector => (dispatch, getState) => {
       throw error;
     }
     const { clientId, peerId, peerMeta } = walletConnector;
+    const imageUrl =
+      dappLogoOverride(peerMeta.url) || get(peerMeta, 'icons[0]');
+    const dappName = dappNameOverride(peerMeta.url) || peerMeta.name;
+    const dappUrl = peerMeta.url;
     const requestId = payload.id;
-    if (!isSigningMethod(payload.method)) {
+    if (payload.method === 'wallet_addEthereumChain') {
+      const { chainId } = payload.params[0];
+      const supportedChains = [
+        networkTypes.mainnet,
+        networkTypes.ropsten,
+        networkTypes.kovan,
+        networkTypes.goerli,
+        networkTypes.polygon,
+        networkTypes.optimism,
+        networkTypes.arbitrum,
+      ].map(network => ethereumUtils.getChainIdFromNetwork(network).toString());
+      const numericChainId = convertHexToString(chainId);
+      if (supportedChains.includes(numericChainId)) {
+        dispatch(walletConnectSetPendingRedirect());
+        Navigation.handleAction(Routes.WALLET_CONNECT_APPROVAL_SHEET, {
+          callback: async approved => {
+            if (approved) {
+              walletConnector.approveRequest({
+                id: requestId,
+                result: null,
+              });
+              const { accountAddress } = getState().settings;
+              logger.log('Updating session for chainID', numericChainId);
+              await walletConnector.updateSession({
+                accounts: [accountAddress],
+                chainId: numericChainId,
+              });
+              saveWalletConnectSession(
+                walletConnector.peerId,
+                walletConnector.session
+              );
+              analytics.track('Approved WalletConnect network switch', {
+                chainId,
+                dappName,
+                dappUrl,
+              });
+              dispatch(walletConnectRemovePendingRedirect('connect'));
+            } else {
+              walletConnector.rejectRequest({
+                error: { message: 'Chain currently not supported' },
+                id: requestId,
+              });
+              analytics.track('Rejected new WalletConnect chain request', {
+                dappName,
+                dappUrl,
+              });
+            }
+          },
+          chainId: Number(numericChainId),
+          meta: {
+            dappName,
+            dappUrl,
+            imageUrl,
+          },
+          type: WalletConnectApprovalSheetType.switch_chain,
+        });
+      } else {
+        logger.log('NOT SUPPORTED CHAIN');
+        walletConnector.rejectRequest({
+          error: { message: 'Chain currently not supported' },
+          id: requestId,
+        });
+      }
+
+      return;
+    } else if (!isSigningMethod(payload.method)) {
       sendRpcCall(payload)
         .then(result => {
           walletConnector.approveRequest({
@@ -216,7 +278,7 @@ const listenOnNewMessages = walletConnector => (dispatch, getState) => {
       const selectedWallet = selected || {};
       const isReadOnlyWallet = selectedWallet.type === WalletTypes.readOnly;
       if (isReadOnlyWallet && !enableActionsOnReadOnlyWallet) {
-        Alert.alert(`You need to import the wallet in order to do this`);
+        watchingAlert();
         walletConnector.rejectRequest({
           error: { message: 'JSON RPC method not supported' },
           id: payload.id,
@@ -369,11 +431,37 @@ export const walletConnectUpdateSessions = () => (dispatch, getState) => {
   });
 };
 
-export const walletConnectApproveSession = (peerId, callback, dappScheme) => (
-  dispatch,
-  getState
-) => {
-  const { accountAddress, chainId } = getState().settings;
+export const walletConnectUpdateSessionConnectorByDappName = (
+  dappName,
+  accountAddress,
+  chainId
+) => (dispatch, getState) => {
+  const { walletConnectors } = getState().walletconnect;
+  const connectors = pickBy(
+    walletConnectors,
+    connector => connector.peerMeta.name === dappName
+  );
+  const newSessionData = {
+    accounts: [accountAddress],
+    chainId,
+  };
+  values(connectors).forEach(connector => {
+    connector.updateSession(newSessionData);
+    saveWalletConnectSession(connector.peerId, connector.session);
+  });
+  dispatch({
+    payload: clone(walletConnectors),
+    type: WALLETCONNECT_UPDATE_CONNECTORS,
+  });
+};
+
+export const walletConnectApproveSession = (
+  peerId,
+  callback,
+  dappScheme,
+  chainId,
+  accountAddress
+) => dispatch => {
   const walletConnector = dispatch(getPendingRequest(peerId));
   walletConnector.approveSession({
     accounts: [accountAddress],
@@ -472,6 +560,8 @@ export default (state = INITIAL_STATE, action) => {
     case WALLETCONNECT_REMOVE_SESSION:
       return { ...state, walletConnectors: action.payload };
     case WALLETCONNECT_INIT_SESSIONS:
+      return { ...state, walletConnectors: action.payload };
+    case WALLETCONNECT_UPDATE_CONNECTORS:
       return { ...state, walletConnectors: action.payload };
     case WALLETCONNECT_CLEAR_STATE:
       return { ...state, ...INITIAL_STATE };

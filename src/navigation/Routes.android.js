@@ -17,6 +17,7 @@ import PinAuthenticationScreen from '../screens/PinAuthenticationScreen';
 import ReceiveModal from '../screens/ReceiveModal';
 import RestoreSheet from '../screens/RestoreSheet';
 import SavingsSheet from '../screens/SavingsSheet';
+import SendConfirmationSheet from '../screens/SendConfirmationSheet';
 import SendSheet from '../screens/SendSheet';
 import SettingsModal from '../screens/SettingsModal';
 import ShowcaseSheet from '../screens/ShowcaseSheet';
@@ -24,6 +25,7 @@ import SpeedUpAndCancelSheet from '../screens/SpeedUpAndCancelSheet';
 import TransactionConfirmationScreen from '../screens/TransactionConfirmationScreen';
 import WalletConnectApprovalSheet from '../screens/WalletConnectApprovalSheet';
 import WalletConnectRedirectSheet from '../screens/WalletConnectRedirectSheet';
+import WalletDiagnosticsSheet from '../screens/WalletDiagnosticsSheet';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import WithdrawModal from '../screens/WithdrawModal';
 import WyreWebview from '../screens/WyreWebview';
@@ -66,6 +68,11 @@ function SendFlowNavigator() {
         component={ModalScreen}
         name={Routes.MODAL_SCREEN}
         options={overlayExpandedPreset}
+      />
+      <Stack.Screen
+        component={SendConfirmationSheet}
+        name={Routes.SEND_CONFIRMATION_SHEET}
+        options={sheetPreset}
       />
       <Stack.Screen
         component={SendSheet}
@@ -297,6 +304,10 @@ function BSNavigator() {
         options={{
           height: '100%',
         }}
+      />
+      <BSStack.Screen
+        component={WalletDiagnosticsSheet}
+        name={Routes.WALLET_DIAGNOSTICS_SHEET}
       />
       <BSStack.Screen component={SavingsSheet} name={Routes.SAVINGS_SHEET} />
       <BSStack.Screen component={SettingsModal} name={Routes.SETTINGS_MODAL} />

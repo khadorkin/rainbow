@@ -12,12 +12,12 @@ import { useSelector } from 'react-redux';
 import styled from 'styled-components';
 import useAdditionalAssetData from '../../../hooks/useAdditionalAssetData';
 import { ModalContext } from '../../../react-native-cool-modals/NativeStackView';
+import L2Disclaimer from '../../L2Disclaimer';
 import { ButtonPressAnimation } from '../../animations';
 import { CoinDividerHeight } from '../../coin-divider';
 import CoinDividerOpenButton from '../../coin-divider/CoinDividerOpenButton';
 import EdgeFade from '../../discover-sheet/EdgeFade';
 import UniswapPools from '../../discover-sheet/UniswapPoolsSection';
-
 import {
   BuyActionButton,
   SendActionButton,
@@ -37,6 +37,7 @@ import { Chart } from '../../value-chart';
 import ExpandedStateSection from '../ExpandedStateSection';
 import SocialLinks from './SocialLinks';
 import { ChartPathProvider } from '@rainbow-me/animated-charts';
+import { isL2Network } from '@rainbow-me/handlers/web3';
 import AssetInputTypes from '@rainbow-me/helpers/assetInputTypes';
 import {
   useAccountSettings,
@@ -45,6 +46,8 @@ import {
   useDimensions,
   useUniswapAssetsInWallet,
 } from '@rainbow-me/hooks';
+import { useNavigation } from '@rainbow-me/navigation';
+import Routes from '@rainbow-me/routes';
 import { ethereumUtils, safeAreaInsetValues } from '@rainbow-me/utils';
 
 const defaultCarouselHeight = 60;
@@ -125,8 +128,8 @@ const Spacer = styled.View`
 
 // truncate after the first paragraph or 4th dot
 function truncate(text) {
-  const firstParagraph = text.split('\n')[0];
-  const first4Sentences = text.split('.').slice(0, 4).join('.') + '.';
+  const firstParagraph = text?.split('\n')[0];
+  const first4Sentences = text?.split('.').slice(0, 4).join('.') + '.';
   const shorterOne =
     first4Sentences.length < firstParagraph.length
       ? first4Sentences
@@ -189,6 +192,16 @@ export default function ChartExpandedState({ asset }) {
         nativeCurrency
       )
     : asset;
+
+  if (assetWithPrice?.mainnet_address) {
+    assetWithPrice.address = assetWithPrice.mainnet_address;
+  }
+
+  // This one includes the original l2 address if exists
+  const ogAsset = { ...assetWithPrice, address: assetWithPrice.uniqueId };
+  const isL2 = useMemo(() => isL2Network(assetWithPrice.type), [
+    assetWithPrice.type,
+  ]);
 
   const { height: screenHeight } = useDimensions();
   const {
@@ -265,6 +278,14 @@ export default function ChartExpandedState({ asset }) {
     ChartExpandedStateSheetHeight -= 60;
   }
 
+  const { navigate } = useNavigation();
+
+  const handleL2DisclaimerPress = useCallback(() => {
+    navigate(Routes.EXPLAIN_SHEET, {
+      type: assetWithPrice.type,
+    });
+  }, [assetWithPrice.type, navigate]);
+
   const { layout } = useContext(ModalContext) || {};
 
   const [morePoolsVisible, setMorePoolsVisible] = useState(false);
@@ -272,6 +293,8 @@ export default function ChartExpandedState({ asset }) {
   const delayedMorePoolsVisible = useDelayedValueWithLayoutAnimation(
     morePoolsVisible
   );
+
+  const { colors } = useTheme();
 
   const MoreButton = useCallback(() => {
     return (
@@ -316,25 +339,30 @@ export default function ChartExpandedState({ asset }) {
             <TokenInfoItem asset={asset} title="Balance">
               <TokenInfoBalanceValue />
             </TokenInfoItem>
-            {asset?.native?.balance.display && (
-              <TokenInfoItem title="Value" weight="bold">
-                {asset?.native?.balance.display}
-              </TokenInfoItem>
-            )}
+            <TokenInfoItem
+              title={asset?.native?.balance.display ? 'Value' : ' '}
+              weight="bold"
+            >
+              {asset?.native?.balance.display || ' '}
+            </TokenInfoItem>
           </TokenInfoRow>
         </TokenInfoSection>
       )}
       {needsEth ? (
-        <SheetActionButtonRow>
+        <SheetActionButtonRow paddingBottom={isL2 && 19}>
           <BuyActionButton color={color} fullWidth />
         </SheetActionButtonRow>
       ) : (
-        <SheetActionButtonRow>
+        <SheetActionButtonRow paddingBottom={isL2 && 19}>
           {showSwapButton && (
             <SwapActionButton color={color} inputType={AssetInputTypes.in} />
           )}
           {hasBalance ? (
-            <SendActionButton color={color} fullWidth={!showSwapButton} />
+            <SendActionButton
+              asset={ogAsset}
+              color={color}
+              fullWidth={!showSwapButton}
+            />
           ) : (
             <SwapActionButton
               color={color}
@@ -348,40 +376,51 @@ export default function ChartExpandedState({ asset }) {
           )}
         </SheetActionButtonRow>
       )}
-      <CarouselWrapper
-        isAnyItemLoading={
-          totalVolumeLoading || totalLiquidityLoading || marketCapLoading
-        }
-        isAnyItemVisible={!!(totalVolume || totalLiquidity || marketCap)}
-        setCarouselHeight={setCarouselHeight}
-      >
-        <Carousel>
-          <CarouselItem
-            loading={totalVolumeLoading}
-            showDivider
-            title="24h volume"
-            weight="bold"
-          >
-            {totalVolume}
-          </CarouselItem>
-          <CarouselItem
-            loading={totalLiquidityLoading}
-            showDivider
-            title="Uniswap liquidity"
-            weight="bold"
-          >
-            {totalLiquidity}
-          </CarouselItem>
-          <CarouselItem
-            loading={marketCapLoading}
-            title="Market cap"
-            weight="bold"
-          >
-            {marketCap}
-          </CarouselItem>
-        </Carousel>
-        <EdgeFade />
-      </CarouselWrapper>
+      {isL2 && (
+        <L2Disclaimer
+          assetType={assetWithPrice.type}
+          colors={colors}
+          onPress={handleL2DisclaimerPress}
+          symbol={assetWithPrice.symbol}
+        />
+      )}
+
+      {!isL2 && (
+        <CarouselWrapper
+          isAnyItemLoading={
+            totalVolumeLoading || totalLiquidityLoading || marketCapLoading
+          }
+          isAnyItemVisible={!!(totalVolume || totalLiquidity || marketCap)}
+          setCarouselHeight={setCarouselHeight}
+        >
+          <Carousel>
+            <CarouselItem
+              loading={totalVolumeLoading}
+              showDivider
+              title="24h volume"
+              weight="bold"
+            >
+              {totalVolume}
+            </CarouselItem>
+            <CarouselItem
+              loading={totalLiquidityLoading}
+              showDivider
+              title="Uniswap liquidity"
+              weight="bold"
+            >
+              {totalLiquidity}
+            </CarouselItem>
+            <CarouselItem
+              loading={marketCapLoading}
+              title="Market cap"
+              weight="bold"
+            >
+              {marketCap}
+            </CarouselItem>
+          </Carousel>
+          <EdgeFade />
+        </CarouselWrapper>
+      )}
       <AdditionalContentWrapper
         onLayout={({
           nativeEvent: {
@@ -392,21 +431,28 @@ export default function ChartExpandedState({ asset }) {
           layout?.();
         }}
       >
-        <UniswapPools
-          ShowMoreButton={MoreButton}
-          alwaysShowMoreButton
-          forceShowAll={delayedMorePoolsVisible}
-          hideIfEmpty
-          initialPageAmount={3}
-          token={asset?.address}
-        />
+        {!isL2 && (
+          <UniswapPools
+            ShowMoreButton={MoreButton}
+            alwaysShowMoreButton
+            forceShowAll={delayedMorePoolsVisible}
+            hideIfEmpty
+            initialPageAmount={3}
+            token={asset?.address}
+          />
+        )}
 
         {!!delayedDescriptions && (
           <ExpandedStateSection title={`About ${asset?.name}`}>
             <Description text={description} />
           </ExpandedStateSection>
         )}
-        <SocialLinks address={asset?.address} color={color} links={links} />
+        <SocialLinks
+          color={color}
+          links={links}
+          type={asset?.type}
+          uniqueId={asset?.uniqueId}
+        />
         <Spacer />
       </AdditionalContentWrapper>
     </SlackSheet>

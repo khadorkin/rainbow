@@ -1,6 +1,6 @@
 import Clipboard from '@react-native-community/clipboard';
 import analytics from '@segment/analytics-react-native';
-import { toLower } from 'lodash';
+import { startCase, toLower } from 'lodash';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { requireNativeComponent } from 'react-native';
 import { useDispatch } from 'react-redux';
@@ -128,7 +128,7 @@ export default function TransactionList({
     e => {
       const { index } = e.nativeEvent;
       const item = transactions[index];
-      const { hash, from, minedAt, pending, to, status, type } = item;
+      const { hash, from, minedAt, network, pending, to, status, type } = item;
 
       const date = getHumanReadableDate(minedAt);
 
@@ -164,11 +164,15 @@ export default function TransactionList({
       const canBeCancelled =
         canBeResubmitted && status !== TransactionStatusTypes.cancelling;
 
+      const blockExplorerAction = `View on ${startCase(
+        ethereumUtils.getBlockExplorer(network)
+      )}`;
+
       if (hash) {
         let buttons = [
           ...(canBeResubmitted ? [TransactionActions.speedUp] : []),
           ...(canBeCancelled ? [TransactionActions.cancel] : []),
-          TransactionActions.viewOnEtherscan,
+          blockExplorerAction,
           ...(ios ? [TransactionActions.close] : []),
         ];
         if (showContactInfo) {
@@ -218,11 +222,12 @@ export default function TransactionList({
                   type: 'cancel',
                 });
                 break;
-              case TransactionActions.viewOnEtherscan: {
-                ethereumUtils.openTransactionEtherscanURL(hash);
+              case TransactionActions.close:
+                return;
+              default: {
+                ethereumUtils.openTransactionInBlockExplorer(hash, network);
                 break;
               }
-              default:
             }
           }
         );
@@ -274,7 +279,7 @@ export default function TransactionList({
     <Container>
       <Container
         accountAddress={accountName}
-        accountColor={colors.avatarColor[accountColor]}
+        accountColor={colors.avatarBackgrounds[accountColor]}
         accountImage={safeAccountImage}
         accountName={accountSymbol}
         addCashAvailable={addCashAvailable}

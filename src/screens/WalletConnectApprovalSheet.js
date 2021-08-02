@@ -1,5 +1,7 @@
 import { useRoute } from '@react-navigation/native';
 import analytics from '@segment/analytics-react-native';
+import { captureException } from '@sentry/react-native';
+import { capitalize, get } from 'lodash';
 import React, {
   useCallback,
   useEffect,
@@ -7,24 +9,49 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { InteractionManager } from 'react-native';
+import { ActivityIndicator, InteractionManager } from 'react-native';
+import { ContextMenuButton } from 'react-native-ios-context-menu';
 import styled from 'styled-components';
+import ChainLogo from '../components/ChainLogo';
 import Divider from '../components/Divider';
+import Spinner from '../components/Spinner';
 import { Alert } from '../components/alerts';
+import ButtonPressAnimation from '../components/animations/ButtonPressAnimation';
 import { RequestVendorLogoIcon } from '../components/coin-icon';
-import { Centered, Row } from '../components/layout';
+import { ContactAvatar } from '../components/contacts';
+import ImageAvatar from '../components/contacts/ImageAvatar';
+import { Centered, Column, Flex, Row } from '../components/layout';
 import {
   Sheet,
   SheetActionButton,
   SheetActionButtonRow,
 } from '../components/sheet';
 import { Text } from '../components/text';
+import { getAccountProfileInfo } from '@rainbow-me/helpers/accountInfo';
 import {
+  dappLogoOverride,
+  dappNameOverride,
   getDappHostname,
   isDappAuthenticated,
 } from '@rainbow-me/helpers/dappNameHandler';
-import { useNavigation } from '@rainbow-me/navigation';
+import networkInfo from '@rainbow-me/helpers/networkInfo';
+import WalletConnectApprovalSheetType from '@rainbow-me/helpers/walletConnectApprovalSheetTypes';
+import {
+  androidShowNetworksActionSheet,
+  NETWORK_MENU_ACTION_KEY_FILTER,
+  networksMenuItems,
+} from '@rainbow-me/helpers/walletConnectNetworks';
+import { useAccountSettings, useWallets } from '@rainbow-me/hooks';
+import { Navigation, useNavigation } from '@rainbow-me/navigation';
+import Routes from '@rainbow-me/routes';
 import { ethereumUtils } from '@rainbow-me/utils';
+import logger from 'logger';
+
+const LoadingSpinner = styled(android ? Spinner : ActivityIndicator).attrs(
+  ({ theme: { colors } }) => ({
+    color: colors.alpha(colors.blueGreyDark, 0.3),
+  })
+)``;
 
 const DappLogo = styled(RequestVendorLogoIcon).attrs(
   ({ theme: { colors } }) => ({
@@ -37,15 +64,56 @@ const DappLogo = styled(RequestVendorLogoIcon).attrs(
   margin-bottom: 24;
 `;
 
+const NetworkLabelText = styled(Text).attrs(({ theme: { colors } }) => ({
+  color: colors.alpha(colors.blueGreyDark, 0.6),
+  letterSpacing: 'roundedMedium',
+  size: 'smedium',
+  weight: 'semibold',
+}))`
+  margin-bottom: 4;
+`;
+
+const LabelText = styled(Text).attrs(({ theme: { colors } }) => ({
+  color: colors.dark,
+  size: 'large',
+  weight: 'heavy',
+}))``;
+
+const AvatarWrapper = styled(Column)`
+  margin-right: 5;
+  margin-top: 1;
+`;
+
+const SwitchText = styled(Text).attrs(({ theme: { colors } }) => ({
+  color: colors.dark,
+  size: 'large',
+  weight: 'heavy',
+}))``;
+
 export default function WalletConnectApprovalSheet() {
   const { colors } = useTheme();
   const { goBack } = useNavigation();
   const { params } = useRoute();
-  const [scam, setScam] = useState(false);
+  const { network, accountAddress } = useAccountSettings();
+  const { selectedWallet, walletNames } = useWallets();
   const handled = useRef(false);
-  const meta = params?.meta || {};
-  const { dappName, dappUrl, imageUrl } = meta;
+
+  const [meta, setMeta] = useState({});
+  const [scam, setScam] = useState(false);
+  const [approvalNetwork, setApprovalNetwork] = useState(network);
+  const [approvalAccount, setApprovalAccount] = useState({
+    address: accountAddress,
+    wallet: selectedWallet,
+  });
+
+  const type = params?.type || WalletConnectApprovalSheetType.connect;
+  const chainId = params?.chainId || 1;
+
   const callback = params?.callback;
+  const walletConnector = params?.walletConnector;
+  const receivedTimestamp = params?.receivedTimestamp;
+
+  const { dappName, dappUrl, dappScheme, imageUrl, peerId } = meta;
 
   const checkIfScam = useCallback(
     async dappUrl => {
@@ -79,19 +147,78 @@ export default function WalletConnectApprovalSheet() {
     return getDappHostname(dappUrl);
   }, [dappUrl]);
 
+  const approvalAccountInfo = useMemo(() => {
+    const approvalAccountInfo = getAccountProfileInfo(
+      approvalAccount.wallet,
+      walletNames,
+      approvalNetwork,
+      approvalAccount.address
+    );
+    return {
+      ...approvalAccountInfo,
+      accountLabel:
+        approvalAccountInfo.accountENS ||
+        approvalAccountInfo.accountName ||
+        approvalAccount.address,
+    };
+  }, [
+    walletNames,
+    approvalNetwork,
+    approvalAccount.wallet,
+    approvalAccount.address,
+  ]);
+
+  const approvalNetworkInfo = useMemo(() => {
+    const value = networkInfo[approvalNetwork]?.value;
+    return {
+      chainId: ethereumUtils.getChainIdFromNetwork(approvalNetwork),
+      color: networkInfo[approvalNetwork]?.color,
+      name: capitalize(value?.charAt(0)) + value?.slice(1),
+      value,
+    };
+  }, [approvalNetwork]);
+
+  const handleOnPressNetworksMenuItem = useCallback(
+    ({ nativeEvent }) =>
+      setApprovalNetwork(
+        nativeEvent.actionKey?.replace(NETWORK_MENU_ACTION_KEY_FILTER, '')
+      ),
+    [setApprovalNetwork]
+  );
+
   const handleSuccess = useCallback(
     (success = false) => {
       if (callback) {
-        setTimeout(() => callback(success), 300);
+        setTimeout(
+          () =>
+            callback(
+              success,
+              approvalNetworkInfo.chainId,
+              approvalAccount.address,
+              peerId,
+              dappScheme,
+              dappName,
+              dappUrl
+            ),
+          300
+        );
       }
     },
-    [callback]
+    [
+      approvalAccount.address,
+      callback,
+      approvalNetworkInfo,
+      peerId,
+      dappScheme,
+      dappName,
+      dappUrl,
+    ]
   );
 
   useEffect(() => {
     InteractionManager.runAfterInteractions(() => {
       analytics.track('Shown Walletconnect session request');
-      checkIfScam(dappUrl);
+      type === WalletConnectApprovalSheetType.connect && checkIfScam(dappUrl);
     });
     // Reject if the modal is dismissed
     return () => {
@@ -114,6 +241,63 @@ export default function WalletConnectApprovalSheet() {
     handleSuccess(false);
   }, [handleSuccess, goBack]);
 
+  const onPressAndroid = useCallback(() => {
+    androidShowNetworksActionSheet(({ network }) =>
+      setApprovalNetwork(network)
+    );
+  }, []);
+
+  const handlePressChangeWallet = useCallback(() => {
+    Navigation.handleAction(Routes.CHANGE_WALLET_SHEET, {
+      currentAccountAddress: approvalAccount.address,
+      onChangeWallet: (address, wallet) => {
+        setApprovalAccount({ address, wallet });
+        goBack();
+      },
+      watchOnly: true,
+    });
+  }, [approvalAccount.address, goBack]);
+
+  useEffect(() => {
+    walletConnector?.on('session_request', (error, payload) => {
+      if (error) {
+        analytics.track('Error on wc session_request', {
+          error,
+          payload,
+        });
+        logger.log('Error on wc session_request', payload);
+        captureException(error);
+        throw error;
+      }
+      const { peerId, peerMeta } = payload.params[0];
+
+      const imageUrl =
+        dappLogoOverride(peerMeta.url) || get(peerMeta, 'icons[0]');
+      const dappName = dappNameOverride(peerMeta.url) || peerMeta.name;
+      const dappUrl = peerMeta.url;
+      const dappScheme = peerMeta.scheme;
+      analytics.track('Showing Walletconnect session request', {
+        dappName,
+        dappUrl,
+      });
+      const meta = {
+        dappName,
+        dappScheme,
+        dappUrl,
+        imageUrl,
+        peerId,
+      };
+      setMeta(meta);
+      InteractionManager.runAfterInteractions(() => {
+        analytics.track('Received wc connection', {
+          dappName,
+          dappUrl,
+          waitingTime: (Date.now() - receivedTimestamp) / 1000,
+        });
+      });
+    });
+  }, [receivedTimestamp, walletConnector]);
+
   useEffect(() => {
     if (scam) {
       handleCancel();
@@ -121,55 +305,139 @@ export default function WalletConnectApprovalSheet() {
   }, [handleCancel, scam]);
 
   return (
-    <Sheet hideHandle>
-      <Centered
-        direction="column"
-        paddingBottom={5}
-        paddingHorizontal={19}
-        paddingTop={17}
-        testID="wc-approval-sheet"
-      >
-        <DappLogo dappName={dappName || ''} imageUrl={imageUrl} />
-        <Centered paddingHorizontal={24}>
-          <Row>
-            <Text
-              align="center"
-              color={colors.alpha(colors.blueGreyDark, 0.6)}
-              lineHeight={29}
-              size="big"
-            >
-              <Text color="dark" size="big" weight="bold">
-                {dappName}
-              </Text>{' '}
-              wants to connect to your wallet
-            </Text>
-          </Row>
+    <Sheet>
+      {!Object.keys(meta).length ? (
+        <Centered height={408}>
+          <LoadingSpinner size="large" />
         </Centered>
-        <Row marginBottom={30} marginTop={15}>
-          <Text color="appleBlue" lineHeight={29} size="large" weight="bold">
-            {isAuthenticated ? `􀇻 ${formattedDappUrl}` : formattedDappUrl}
-          </Text>
-        </Row>
-        <Divider color={colors.rowDividerLight} inset={[0, 84]} />
-      </Centered>
-      <SheetActionButtonRow>
-        <SheetActionButton
-          color={colors.white}
-          label="Cancel"
-          onPress={handleCancel}
-          size="big"
-          textColor={colors.alpha(colors.blueGreyDark, 0.8)}
-          weight="bold"
-        />
-        <SheetActionButton
-          color={colors.appleBlue}
-          label="Connect"
-          onPress={handleConnect}
-          size="big"
-          testID="wc-connect"
-          weight="bold"
-        />
-      </SheetActionButtonRow>
+      ) : (
+        <Flex direction="column" height={408}>
+          <Centered
+            direction="column"
+            paddingBottom={5}
+            paddingHorizontal={19}
+            paddingTop={17}
+            testID="wc-approval-sheet"
+          >
+            <DappLogo dappName={dappName || ''} imageUrl={imageUrl} />
+            <Centered paddingHorizontal={24}>
+              <Row>
+                <Text
+                  align="center"
+                  color={colors.alpha(colors.blueGreyDark, 0.6)}
+                  lineHeight={29}
+                  size="big"
+                  weight="medium"
+                >
+                  <Text color="dark" size="big" weight="heavy">
+                    {dappName}
+                  </Text>{' '}
+                  {type === WalletConnectApprovalSheetType.connect
+                    ? `wants to connect to your wallet`
+                    : `wants to connect to the ${ethereumUtils.getNetworkNameFromChainId(
+                        chainId
+                      )} network`}
+                </Text>
+              </Row>
+            </Centered>
+            <Row marginBottom={30} marginTop={15}>
+              <Text
+                color="appleBlue"
+                lineHeight={29}
+                size="large"
+                weight="heavy"
+              >
+                {isAuthenticated ? `􀇻 ${formattedDappUrl}` : formattedDappUrl}
+              </Text>
+            </Row>
+            <Divider color={colors.rowDividerLight} inset={[0, 84]} />
+          </Centered>
+          <SheetActionButtonRow paddingBottom={30}>
+            <SheetActionButton
+              color={colors.white}
+              label="Cancel"
+              onPress={handleCancel}
+              size="big"
+              textColor={colors.alpha(colors.blueGreyDark, 0.8)}
+              weight="bold"
+            />
+            <SheetActionButton
+              color={colors.appleBlue}
+              label="Connect"
+              onPress={handleConnect}
+              size="big"
+              testID="wc-connect"
+              weight="heavy"
+            />
+          </SheetActionButtonRow>
+          <SheetActionButtonRow
+            ignorePaddingTop
+            paddingBottom={21}
+            paddingHorizontal={16.5}
+          >
+            <Column>
+              <NetworkLabelText>Wallet</NetworkLabelText>
+              <ButtonPressAnimation onPress={handlePressChangeWallet}>
+                <Row>
+                  <AvatarWrapper>
+                    {approvalAccountInfo.accountImage ? (
+                      <ImageAvatar
+                        image={approvalAccountInfo.accountImage}
+                        size="smaller"
+                      />
+                    ) : (
+                      <ContactAvatar
+                        color={
+                          isNaN(approvalAccountInfo.accountColor)
+                            ? colors.skeleton
+                            : approvalAccountInfo.accountColor
+                        }
+                        size="smaller"
+                        value={approvalAccountInfo.accountSymbol}
+                      />
+                    )}
+                  </AvatarWrapper>
+                  <LabelText numberOfLines={1}>
+                    {approvalAccountInfo.accountLabel}
+                  </LabelText>
+                  <SwitchText> 􀁰</SwitchText>
+                </Row>
+              </ButtonPressAnimation>
+            </Column>
+            <Column align="flex-end">
+              <NetworkLabelText align="right">Network</NetworkLabelText>
+              <ContextMenuButton
+                activeOpacity={0}
+                isMenuPrimaryAction
+                {...(android ? { onPress: onPressAndroid } : {})}
+                menuConfig={{
+                  menuItems: networksMenuItems(),
+                  menuTitle: 'Available Networks',
+                }}
+                onPressMenuItem={handleOnPressNetworksMenuItem}
+                useActionSheetFallback={false}
+                wrapNativeComponent={false}
+              >
+                <ButtonPressAnimation>
+                  <Row>
+                    <Centered marginRight={5}>
+                      <ChainLogo network={approvalNetworkInfo.value} />
+                    </Centered>
+                    <LabelText
+                      align="right"
+                      color={colors.dark}
+                      numberOfLines={1}
+                    >
+                      {approvalNetworkInfo.name}
+                    </LabelText>
+                    <SwitchText align="right"> 􀁰</SwitchText>
+                  </Row>
+                </ButtonPressAnimation>
+              </ContextMenuButton>
+            </Column>
+          </SheetActionButtonRow>
+        </Flex>
+      )}
     </Sheet>
   );
 }
